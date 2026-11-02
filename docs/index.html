@@ -1,0 +1,2032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>American Income Explorer</title>
+<meta name="description" content="Visualize US household income distributions across work status, income source, geography, and demographics using CPS ASEC microdata (2020–2024).">
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://corey.sciu.to/am-inc-exp/docs/">
+<meta property="og:title" content="American Income Explorer">
+<meta property="og:description" content="Visualize US household income distributions across work status, income source, geography, and demographics using CPS ASEC microdata (2020–2024).">
+<meta property="og:image" content="https://corey.sciu.to/am-inc-exp/docs/preview.png">
+<meta property="og:image:width" content="1471">
+<meta property="og:image:height" content="777">
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="American Income Explorer">
+<meta name="twitter:description" content="Visualize US household income distributions across work status, income source, geography, and demographics using CPS ASEC microdata (2020–2024).">
+<meta name="twitter:image" content="https://corey.sciu.to/am-inc-exp/docs/preview.png">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --text: #e2e8f0;
+    --text-dim: #8892b0;
+    --text-dimmer: #4a5580;
+    --accent: #6c8ebf;
+    --accent2: #4a7c59;
+    --warn: #c9a227;
+    --danger: #c94040;
+    --chip-active: #3a4a70;
+    --chip-hover: #2a3350;
+  }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; font-size: 14px; }
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+
+  /* ---- header ---- */
+  #header { padding: 14px 20px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 16px; }
+  #header h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+  #header .sub { color: var(--text-dim); font-size: 12px; }
+
+  /* ---- main layout ---- */
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #sidebar { width: 260px; min-width: 220px; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  #chart-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ---- sidebar inner layout ---- */
+  #sidebar-stats { flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; }
+  #stats-tab-bar { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; padding: 0 4px; gap: 2px; }
+  .stats-tab-btn { flex: 1; background: none; border: none; border-bottom: 2px solid transparent; padding: 6px 4px; font-size: 11px; color: var(--text-dim); cursor: pointer; white-space: nowrap; }
+  .stats-tab-btn:hover { color: var(--text); }
+  .stats-tab-btn.active { color: var(--text); border-bottom-color: var(--accent); }
+  .stats-tab-panel { display: none; padding: 10px 12px; }
+  .stats-tab-panel.active { display: block; }
+  #stats-detail { max-height: 170px; overflow: hidden; }
+  #stats-range { max-height: 300px; overflow-y: auto; }
+  .expand-bar { display: flex; align-items: center; justify-content: center; width: 100%; border: none; border-top: 1px solid var(--border); background: none; padding: 5px 0; margin-top: 6px; color: var(--text-dimmer); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; }
+  .expand-bar:hover { color: var(--text-dim); background: var(--surface2); }
+  #sidebar-body { flex: 1; overflow-y: auto; min-height: 0; }
+  #sidebar-body::-webkit-scrollbar { width: 4px; }
+  #sidebar-body::-webkit-scrollbar-track { background: transparent; }
+  #sidebar-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ---- tab bar ---- */
+  #tab-bar { position: sticky; top: 0; background: var(--surface); z-index: 5; display: flex; border-bottom: 1px solid var(--border); padding: 6px 8px 0; gap: 2px; flex-shrink: 0; }
+  .tab-btn { background: none; border: none; border-bottom: 2px solid transparent; padding: 5px 6px; font-size: 11px; color: var(--text-dim); cursor: pointer; white-space: nowrap; }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--text); border-bottom-color: var(--accent); }
+  .tab-panel { display: none; padding: 12px; }
+  .tab-panel.active { display: block; }
+
+  /* ---- toolbar ---- */
+  #toolbar { padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  #active-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; background: var(--chip-active); border: 1px solid var(--accent); border-radius: 4px; padding: 3px 8px; font-size: 12px; cursor: pointer; }
+  .chip:hover { background: var(--border); }
+  .chip .x { color: var(--text-dim); font-size: 11px; margin-left: 2px; }
+  #btn-clear { font-size: 11px; color: var(--text-dim); background: none; border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+  #btn-clear:hover { color: var(--text); border-color: var(--text-dim); }
+  #btn-brush { font-size: 11px; color: var(--text-dim); background: none; border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+  #btn-brush:hover, #btn-brush.active { color: var(--accent); border-color: var(--accent); }
+  #view-toggle, #dots-toggle, #sample-toggle { display: flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .view-btn { font-size: 11px; color: var(--text-dim); background: none; border: none; padding: 4px 10px; cursor: pointer; }
+  .view-btn:hover { color: var(--text); background: var(--surface2); }
+  .view-btn.active { color: var(--bg); background: var(--accent); }
+.dots-btn, .sample-btn { font-size: 11px; color: var(--text-dim); background: none; border: none; padding: 4px 10px; cursor: pointer; }
+  .dots-btn:hover, .sample-btn:hover:not(:disabled) { color: var(--text); background: var(--surface2); }
+  .dots-btn.active, .sample-btn.active { color: var(--bg); background: var(--accent); }
+  .sample-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  #dot-count { font-size: 11px; color: var(--text-dimmer); padding: 4px 6px; white-space: nowrap; }
+  .brush-layer .selection { fill: var(--accent); fill-opacity: 0.12; stroke: var(--accent); stroke-width: 1; }
+  .brush-layer .handle { fill: var(--accent); fill-opacity: 0.6; rx: 2; }
+  .brush-layer .overlay { cursor: crosshair; }
+  #stats-range { color: var(--text-dim); font-size: 12px; }
+  #stats-range .no-range { padding: 16px 0; text-align: center; }
+
+
+  /* ---- canvas + axes ---- */
+  #chart-wrap { flex: 1; position: relative; overflow: hidden; }
+  #chart-svg { width: 100%; height: 100%; }
+
+  /* ---- stats panel ---- */
+  .panel-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 6px; }
+  #stats-panel { display: flex; flex-direction: column; gap: 6px; }
+  .stat-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .stat-label { color: var(--text-dim); font-size: 12px; }
+  .stat-val { font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .stat-se { font-size: 11px; color: var(--text-dim); }
+  .reliability { font-size: 11px; border-radius: 3px; padding: 2px 6px; margin-top: 4px; }
+  .rel-3 { background: #1a3a1a; color: #6bcc6b; }
+  .rel-2 { background: #3a3010; color: var(--warn); }
+  .rel-1 { background: #3a1a1a; color: #e07070; }
+  .rel-0 { background: #2a1a1a; color: #e07070; }
+  #n-info { font-size: 11px; color: var(--text-dimmer); margin-top: 4px; }
+
+  /* ---- color mode selector ---- */
+  #color-mode { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; margin-top: 4px; }
+  .cm-btn { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 5px 8px; color: var(--text-dim); font-size: 12px; cursor: pointer; text-align: left; }
+  .cm-btn:hover { border-color: var(--text-dim); color: var(--text); }
+  .cm-btn.active { border-color: var(--accent); color: var(--text); background: var(--chip-active); }
+
+  /* ---- group breakdown ---- */
+  #group-breakdown { margin-top: 4px; }
+  .breakdown-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 11px; }
+  .breakdown-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .breakdown-label { flex: 1; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .breakdown-med { font-variant-numeric: tabular-nums; color: var(--text); white-space: nowrap; }
+  .breakdown-n { color: var(--text-dimmer); min-width: 30px; text-align: right; font-size: 10px; }
+
+  /* ---- filter groups ---- */
+  .filter-group { display: flex; flex-direction: column; gap: 4px; }
+  .filter-group + .filter-group { margin-top: 12px; }
+  .filter-btns { display: flex; flex-wrap: wrap; gap: 4px; }
+  .f-btn { position: relative; background: none; border: 1px solid var(--border); border-radius: 3px; padding: 3px 7px; font-size: 11px; color: var(--text-dim); cursor: pointer; }
+  .f-btn:hover { border-color: var(--text-dim); color: var(--text); }
+  .f-btn.active { background: var(--chip-active); border-color: var(--accent); color: var(--text); }
+
+  /* ---- geography tab ---- */
+  #state-search { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 4px; font-size: 12px; outline: none; margin-top: 4px; }
+  #state-search:focus { border-color: var(--accent); }
+  #state-list { max-height: 200px; overflow-y: auto; margin-top: 4px; }
+  #state-list::-webkit-scrollbar { width: 4px; }
+  #state-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .state-region-header { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dimmer); margin: 8px 0 3px; padding: 0 2px; }
+  .state-check-label { display: flex; align-items: center; gap: 6px; padding: 3px 4px; font-size: 12px; color: var(--text-dim); cursor: pointer; border-radius: 3px; }
+  .state-check-label:hover { background: var(--surface2); color: var(--text); }
+  .state-check-label input { accent-color: var(--accent); cursor: pointer; }
+  #region-shortcuts { display: flex; flex-wrap: wrap; gap: 4px; }
+  .region-btn.partial { border-color: var(--accent); color: var(--text); opacity: 0.6; }
+
+  /* ---- tooltip ---- */
+  #tooltip { position: fixed; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-size: 12px; pointer-events: none; display: none; max-width: 220px; z-index: 1000; line-height: 1.6; }
+  #tooltip .tt-income { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  #tooltip .tt-topcode { color: var(--warn); font-size: 11px; }
+  #tooltip .tt-dim { color: var(--text-dim); }
+
+  /* ---- loading overlay ---- */
+  #loading { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 9999; }
+  #loading .msg { color: var(--text-dim); font-size: 13px; }
+  .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---- footer ---- */
+  #footer { padding: 8px 20px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-dimmer); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  #footer a { color: var(--text-dim); }
+
+  /* ---- chart about panel ---- */
+  #chart-about-wrap { padding: 0 16px 6px; }
+  #btn-about { background: none; border: none; color: var(--text-dimmer); font-size: 11px; cursor: pointer; padding: 2px 4px; border-radius: 3px; }
+  #btn-about:hover { color: var(--text-dim); background: var(--surface2); }
+  #chart-about { display: none; margin-top: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; font-size: 11px; color: var(--text-dim); line-height: 1.7; }
+  #chart-about dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 2px 10px; }
+  #chart-about dt { color: var(--text); font-weight: 600; white-space: nowrap; }
+  #chart-about dd { margin: 0; }
+
+  /* ---- legend ---- */
+  #legend { padding: 0 16px 8px; display: flex; flex-wrap: wrap; gap: 8px; font-size: 11px; }
+  .legend-item { display: flex; align-items: center; gap: 4px; cursor: pointer; border-radius: 3px; padding: 2px 4px; margin: -2px -4px; }
+  .legend-item:hover { background: var(--surface2); }
+  .legend-item.active { background: var(--chip-active); outline: 1px solid var(--accent); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-topcode { font-size: 13px; color: var(--warn); line-height: 10px; }
+
+  /* ================================================================
+     Mobile layout  (≤ 767px)
+     ================================================================ */
+  @media (max-width: 767px) {
+    /* Sidebar becomes a slide-up full-screen drawer */
+    #sidebar {
+      position: fixed; inset: 0; z-index: 200;
+      width: 100%; min-width: 0; border-right: none;
+      background: var(--bg);
+      transform: translateY(100%);
+      transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+      overflow-y: auto;
+      display: flex; flex-direction: column;
+    }
+    #sidebar.open { transform: none; }
+
+    #sidebar-backdrop {
+      position: fixed; inset: 0; z-index: 199;
+      background: rgba(0,0,0,0.5);
+      display: none;
+    }
+    #sidebar-backdrop.open { display: block; }
+
+    #sidebar-mobile-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px 10px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    #sidebar-mobile-header span { font-size: 15px; font-weight: 600; }
+    #btn-close-sidebar {
+      background: none; border: 1px solid var(--border); border-radius: 4px;
+      color: var(--text); font-size: 13px; padding: 6px 16px; cursor: pointer;
+    }
+
+    #btn-filters { display: flex; }
+
+    /* Chart area fills everything except header */
+    #chart-area { flex: 1; min-height: 0; }
+
+    /* Mini stats strip — always visible above chart */
+    #mobile-stats {
+      display: flex; flex-wrap: wrap; gap: 12px 20px;
+      padding: 7px 12px; flex-shrink: 0;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    .mstat { display: flex; flex-direction: column; }
+    .mstat-label { font-size: 10px; color: var(--text-dimmer); text-transform: uppercase; letter-spacing: 0.05em; }
+    .mstat-val   { font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+    /* Header compact */
+    #header { padding: 10px 14px 8px; gap: 10px; }
+    #header .sub { display: none; }
+
+    /* Toolbar */
+    #toolbar { padding: 8px 10px; gap: 6px; flex-wrap: wrap; }
+
+    /* Touch-sized tap targets */
+    .f-btn    { padding: 8px 12px; min-height: 36px; font-size: 12px; }
+    .tab-btn  { padding: 9px 8px;  min-height: 36px; }
+    .cm-btn   { padding: 9px 10px; min-height: 36px; }
+    .view-btn, .dots-btn, .sample-btn { padding: 7px 12px; }
+    #btn-brush, #btn-clear, #btn-filters { padding: 7px 12px; min-height: 36px; font-size: 11px; }
+    .stats-tab-btn  { padding: 9px 6px; min-height: 36px; }
+    .state-check-label { padding: 7px 4px; min-height: 36px; }
+    .expand-bar { padding: 9px 0; }
+    .legend-item { padding: 5px 6px; margin: -5px -6px; }
+    .chip { padding: 5px 10px; font-size: 12px; }
+
+    /* Tooltip pinned to top-centre on mobile */
+    #tooltip {
+      top: 56px !important; left: 50% !important;
+      transform: translateX(-50%) !important;
+      max-width: min(300px, 92vw);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.45);
+    }
+
+    #footer { display: none; }
+    #sidebar-body { flex: 1; }
+    #stats-detail { max-height: 200px; }
+    #stats-range  { max-height: 300px; }
+    #state-list   { max-height: 260px; }
+  }
+
+  @media (min-width: 768px) {
+    #sidebar-mobile-header { display: none; }
+    #btn-close-sidebar     { display: none; }
+    #btn-filters           { display: none; }
+    #mobile-stats          { display: none; }
+    #sidebar-backdrop      { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="msg" id="loading-msg">Loading data…</div>
+</div>
+
+<div id="header">
+  <h1>American Income Explorer</h1>
+  <span class="sub">CPS ASEC 2021–2025 · Household income · Weighted</span>
+</div>
+
+<div id="main">
+
+  <!-- sidebar (desktop: left column; mobile: slide-up drawer) -->
+  <div id="sidebar">
+    <div id="sidebar-mobile-header">
+      <span>Stats &amp; Filters</span>
+      <button id="btn-close-sidebar">Done</button>
+    </div>
+    <div id="sidebar-stats">
+      <div id="stats-tab-bar">
+        <button class="stats-tab-btn active" data-stats-tab="summary">Stats</button>
+        <button class="stats-tab-btn" data-stats-tab="detail">By group</button>
+        <button class="stats-tab-btn" data-stats-tab="range">Range</button>
+      </div>
+      <div id="stats-summary" class="stats-tab-panel active">
+        <div id="stats-panel">
+          <div class="stat-row"><span class="stat-label">Median</span><span class="stat-val" id="s-med">—</span></div>
+          <div class="stat-row"><span class="stat-label">Mean</span><span class="stat-val" id="s-mean">—</span></div>
+          <div class="stat-row"><span class="stat-label">P25 / P75</span><span class="stat-val" id="s-p2575">—</span></div>
+          <div id="rel-badge"></div>
+          <div id="n-info"></div>
+        </div>
+      </div>
+      <div id="stats-detail" class="stats-tab-panel">
+        <button id="btn-expand-breakdown" class="expand-bar">By group ▾</button>
+        <div id="group-breakdown"></div>
+      </div>
+      <div id="stats-range" class="stats-tab-panel">
+        <div id="brush-range-info"></div>
+        <button id="btn-expand-range" class="expand-bar" style="display:none">By group ▾</button>
+        <div id="range-breakdown" style="display:none"></div>
+      </div>
+    </div>
+
+    <div id="sidebar-body">
+
+      <div id="tab-bar">
+        <button class="tab-btn active" data-tab="color">Group</button>
+        <button class="tab-btn" data-tab="demo">Demo</button>
+        <button class="tab-btn" data-tab="geo">Geo</button>
+        <button class="tab-btn" data-tab="work">Econ</button>
+        <button class="tab-btn" data-tab="survey">Survey</button>
+      </div>
+
+      <!-- Group tab — color mode buttons -->
+      <div id="tab-color" class="tab-panel active">
+        <div id="color-mode">
+          <button class="cm-btn active" data-mode="passive_pct">Income mix</button>
+          <button class="cm-btn" data-mode="passive_source">Passive source</button>
+          <button class="cm-btn" data-mode="earner_count">Earners</button>
+          <button class="cm-btn" data-mode="breadwinner">Breadwinner</button>
+          <button class="cm-btn" data-mode="work_status">Work status</button>
+          <button class="cm-btn" data-mode="age_bucket">Age</button>
+          <button class="cm-btn" data-mode="sex">Sex</button>
+          <button class="cm-btn" data-mode="educ">Education</button>
+          <button class="cm-btn" data-mode="marst">Marital status</button>
+          <button class="cm-btn" data-mode="has_roommate">Roommates</button>
+          <button class="cm-btn" data-mode="race_ethnicity">Race/ethnicity</button>
+          <button class="cm-btn" data-mode="housing">Housing</button>
+          <button class="cm-btn" data-mode="kids">Kids</button>
+          <button class="cm-btn" data-mode="metro">Metro</button>
+          <button class="cm-btn" data-mode="multi_job_proxy">Secondary hours</button>
+          <button class="cm-btn" data-mode="state">State</button>
+          <button class="cm-btn" data-mode="year">Survey year</button>
+        </div>
+      </div>
+
+      <!-- Demographics tab -->
+      <div id="tab-demo" class="tab-panel">
+        <div class="filter-group">
+          <div class="stat-label">Age</div>
+          <div class="filter-btns" id="f-age_bucket"></div>
+        </div>
+        <div class="filter-group">
+          <div class="stat-label">Sex</div>
+          <div class="filter-btns" id="f-sex"></div>
+        </div>
+        <div class="filter-group">
+          <div class="stat-label">Marital status</div>
+          <div class="filter-btns" id="f-marst"></div>
+        </div>
+        <div class="filter-group">
+          <div class="stat-label">Roommates</div>
+          <div class="filter-btns" id="f-has_roommate"></div>
+        </div>
+        <div class="filter-group">
+          <div class="stat-label">Education</div>
+          <div class="filter-btns" id="f-educ"></div>
+        </div>
+        <div class="filter-group">
+          <div class="stat-label">Race/ethnicity</div>
+          <div class="filter-btns" id="f-race_ethnicity"></div>
+        </div>
+        <div class="filter-group">
+          <div class="stat-label">Kids present</div>
+          <div class="filter-btns" id="f-kids"></div>
+        </div>
+      </div>
+
+      <!-- Geography tab -->
+      <div id="tab-geo" class="tab-panel">
+        <div class="filter-group">
+          <div class="stat-label">Metro area</div>
+          <div class="filter-btns" id="f-metro"></div>
+        </div>
+        <div class="filter-group">
+          <div class="stat-label" style="display:flex;justify-content:space-between;align-items:baseline">
+            <span>States</span>
+            <span style="display:flex;align-items:center;gap:6px">
+              <span id="state-count" style="color:var(--text-dim);font-size:11px"></span>
+              <button id="btn-clear-states" style="display:none;font-size:10px;color:var(--text-dim);background:none;border:1px solid var(--border);border-radius:3px;padding:1px 6px;cursor:pointer">Clear</button>
+            </span>
+          </div>
+          <input type="text" id="state-search" placeholder="Search states…">
+          <div id="state-list"></div>
+        </div>
+      </div>
+
+      <!-- Econ tab -->
+      <div id="tab-work" class="tab-panel">
+        <div class="filter-group">
+          <div class="stat-label">Work status</div>
+          <div class="filter-btns" id="f-work_status"></div>
+        </div>
+        <div class="filter-group">
+          <div class="stat-label">Earners in household</div>
+          <div class="filter-btns" id="f-earner_count"></div>
+        </div>
+        <div class="filter-group">
+          <div class="stat-label">Breadwinner role</div>
+          <div class="filter-btns" id="f-breadwinner"></div>
+        </div>
+        <div class="filter-group">
+          <div class="stat-label">Income mix</div>
+          <div class="filter-btns" id="f-passive_pct"></div>
+        </div>
+        <div class="filter-group">
+          <div class="stat-label">Passive income source</div>
+          <div class="filter-btns" id="f-passive_source"></div>
+        </div>
+        <div class="filter-group">
+          <div class="stat-label">Housing</div>
+          <div class="filter-btns" id="f-housing"></div>
+        </div>
+        <div class="filter-group">
+          <div class="stat-label">Secondary work</div>
+          <div class="filter-btns" id="f-multi_job_proxy"></div>
+        </div>
+      </div>
+
+
+      <!-- Survey tab -->
+      <div id="tab-survey" class="tab-panel">
+        <div class="filter-group">
+          <div class="stat-label">Survey year</div>
+          <div class="filter-btns" id="f-year"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- right side -->
+  <div id="chart-area">
+    <div id="toolbar">
+      <div id="active-chips"></div>
+      <button id="btn-brush">Range</button>
+      <div id="view-toggle">
+        <button class="view-btn active" data-view="dots">Dots</button>
+        <button class="view-btn" data-view="bars">Bars</button>
+        <button class="view-btn" data-view="pct">100%</button>
+      </div>
+      <div id="dots-toggle">
+        <button class="dots-btn" data-maxdots="1000">1K</button>
+        <button class="dots-btn active" data-maxdots="3000">3K</button>
+        <button class="dots-btn" data-maxdots="5000">5K</button>
+      </div>
+      <div id="sample-toggle">
+        <button id="btn-static" class="sample-btn active" title="Static: randomly drawn from all households — same dots persist as you change filters and color">Static</button>
+        <button id="btn-showall" class="sample-btn" title="All: only matching households shown, up to the dot limit">All</button>
+      </div>
+      <span id="dot-count"></span>
+      <button id="btn-filters">Filters</button>
+      <button id="btn-clear">Clear all</button>
+    </div>
+    <div id="legend"></div>
+    <div id="chart-about-wrap">
+      <button id="btn-about">ⓘ About this chart</button>
+      <div id="chart-about">
+        <dl>
+          <dt>X axis</dt><dd>Household income on a log scale. Drag to select a range.</dd>
+          <dt>Y axis</dt><dd>Frequency — taller clusters mean more households near that income. Dots are also spread apart vertically to reduce overlap, so the exact y position of each dot isn't meaningful.</dd>
+          <dt>Dot size</dt><dd>Proportional to the household's sampling weight. A larger dot represents more US households.</dd>
+          <dt>Colors</dt><dd>Set by the <em>Group</em> tab. Click a legend swatch to filter by that category. Topcoded incomes (⊕) are censored at the survey year's reported maximum.</dd>
+          <dt>Dot count / Static / All</dt><dd><strong>1K / 3K / 5K</strong> sets the maximum dots drawn. <strong>Static</strong> draws randomly from all households and dims non-matching ones as you adjust filters — the same dots persist as you click around within a state or national view. <strong>All</strong> draws only from households that match your current filters, up to the dot limit; useful when zoomed into a state or narrow filter where you want to see the actual population.</dd>
+          <dt>Data</dt><dd>IPUMS CPS ASEC survey years 2021–2025 (income years 2020–2024), pooled. All statistics are weighted. Small samples are flagged — see the reliability indicator.</dd>
+        </dl>
+      </div>
+    </div>
+    <div id="mobile-stats"></div>
+    <div id="chart-wrap">
+      <svg id="chart-svg"></svg>
+    </div>
+  </div>
+</div>
+<div id="sidebar-backdrop"></div>
+
+<div id="tooltip"></div>
+
+<div id="footer">
+  <a href="https://cps.ipums.org" target="_blank">IPUMS CPS</a>
+  <a href="https://github.com/csciuto/am-inc-exp" target="_blank">GitHub</a>
+  <span id="version-stamp" style="color:var(--text-dimmer);font-size:10px"></span>
+</div>
+
+<!-- Arrow JS from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/apache-arrow@latest/Arrow.es2015.min.js"></script>
+<!-- D3 v7 -->
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+
+<script>
+// ============================================================
+// State
+// ============================================================
+let codebook = null;
+let precomputed = null;
+let nationalTable = null;
+
+let selectedFips = new Set();        // multi-state selection
+let fipsToRegion = new Map();        // fips → regionCode
+let regionToFips = new Map();        // regionCode → Set<fips>
+let stateColorMap = new Map();       // fips → palette index
+
+let filters = {};
+let colorMode = 'passive_pct';
+
+let visibleRows = [];
+let dotData = [];
+let chartScope = null;
+let brushRange = null;   // {lo, hi} income values, or null
+let brushLayer = null;   // D3 selection of brush <g>
+let d3brush = null;      // D3 brush object
+let brushModeActive = false;
+let viewMode = 'dots';   // 'dots' | 'bars'
+let sampleMode = true;   // true=static (sample all rows, dim non-matching); false=all (only matching rows)
+let maxDots = 3000;      // dot cap: 1000 | 3000 | 5000
+
+function isMobile() { return window.innerWidth < 768; }
+
+// ============================================================
+// Color palettes
+// ============================================================
+const STATE_PALETTE = ['#4a7cbc', '#e07070', '#4a9c5e', '#c9a227', '#a97cc4', '#5bc8c8'];
+
+const PALETTES = {
+  passive_pct:     ['#4a9c5e', '#7ab87a', '#c9a227', '#bc7040', '#c94040'],
+  passive_source:  ['#4a7cbc', '#8892b0', '#c9a227', '#c94040', '#4a9c5e'],
+  earner_count:    ['#c94040', '#4a7cbc', '#4a9c5e', '#c9a227'],
+  breadwinner:     ['#4a7cbc', '#4a9c9a', '#c9a227', '#e07070', '#8892b0'],
+  work_status:     ['#4a7cbc', '#6bcc6b', '#c9a227', '#e07070', '#c94040', '#888', '#4a4a6a'],
+  educ:            ['#c94040', '#e07070', '#c9a227', '#4a9c5e', '#4a7cbc'],
+  marst:           ['#4a7cbc', '#c9a227', '#e07070', '#888', '#4a9c5e'],
+  has_roommate:    ['#8892b0', '#c9a227'],
+  race_ethnicity:  ['#4a7cbc', '#4a9c5e', '#c9a227', '#bc6e4a', '#888'],
+  multi_job_proxy: ['#666', '#c9a227', '#e07070', '#c94040'],
+  age_bucket:      ['#8fbcdb', '#4a7cbc', '#4a9c9a', '#4a9c5e', '#c9a227', '#e07070', '#c94040', '#7a2020'],
+  sex:             [null, '#4a7cbc', '#e07070'],
+  kids:            ['#8892b0', '#4a9c5e'],
+  metro:           ['#8892b0', '#4a7cbc'],
+  housing:         ['#4a7cbc', '#4a9c5e', '#c9a227', '#888'],
+  year:            ['#8892b0', '#4a7cbc', '#4a9c9a', '#c9a227', '#c94040'],
+};
+
+// ============================================================
+// Helpers
+// ============================================================
+function fmt$(n) {
+  if (n == null || isNaN(n)) return '—';
+  return '$' + Math.round(n).toLocaleString();
+}
+function fmtPct(n) {
+  if (n == null || isNaN(n)) return '—';
+  return (n * 100).toFixed(1) + '%';
+}
+function label(dim, val) {
+  if (dim === 'year') return codebook?.year_display?.[String(val)] ?? String(val);
+  const lb = codebook?.labels?.[dim];
+  if (!lb) return String(val);
+  return lb[String(val)] ?? String(val);
+}
+
+// ============================================================
+// Arrow column extraction
+// ============================================================
+function extractColumns(arrowTable) {
+  const cols = {};
+  for (const name of arrowTable.schema.fields.map(f => f.name)) {
+    cols[name] = arrowTable.getChild(name).toArray();
+  }
+  return cols;
+}
+
+// ============================================================
+// Data loading
+// ============================================================
+async function loadArrow(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
+  const buf = await res.arrayBuffer();
+  return Arrow.tableFromIPC(new Uint8Array(buf));
+}
+
+async function init() {
+  setLoading('Loading codebook and stats…');
+  const [cb, stats, natArrow, ver] = await Promise.all([
+    fetch('data/codebook.json').then(r => r.json()),
+    fetch('data/stats_precomputed.json').then(r => r.json()),
+    loadArrow('data/national.arrow'),
+    fetch('version.json').then(r => r.json()).catch(() => null),
+  ]);
+  if (ver) {
+    const el = document.getElementById('version-stamp');
+    if (el) el.textContent = `${ver.date} · ${ver.commit}`;
+  }
+
+  codebook = cb;
+  precomputed = stats;
+  nationalTable = extractColumns(natArrow);
+
+  // Add year labels dynamically
+  codebook.labels.year = Object.fromEntries(
+    Object.entries(codebook.year_display || {})
+  );
+
+  setLoading('Parsing data…');
+  buildFipsToRegion();
+
+  // Hide UI elements for columns not present in the Arrow file
+  if (!nationalTable.has_roommate) {
+    document.querySelector('.cm-btn[data-mode="has_roommate"]')?.remove();
+    document.getElementById('f-has_roommate')?.closest('.filter-group')?.remove();
+  }
+  for (const mode of ['earner_count', 'breadwinner', 'passive_pct', 'passive_source']) {
+    if (!nationalTable[mode]) {
+      document.querySelector(`.cm-btn[data-mode="${mode}"]`)?.remove();
+      document.getElementById(`f-${mode}`)?.closest('.filter-group')?.remove();
+    }
+  }
+
+  buildFilterUI();
+  buildGeographyTab();
+  applyUrl();
+  hideLoading();
+  renderLegend();
+  render();
+}
+
+// ============================================================
+// Default filters
+// ============================================================
+
+// ============================================================
+// State → region mapping (derived from nationalTable)
+// ============================================================
+function buildFipsToRegion() {
+  const cols = nationalTable;
+  for (let i = 0; i < cols.state.length; i++) {
+    const s = cols.state[i];
+    const r = cols.region[i];
+    if (!fipsToRegion.has(s)) {
+      fipsToRegion.set(s, r);
+      if (!regionToFips.has(r)) regionToFips.set(r, new Set());
+      regionToFips.get(r).add(s);
+    }
+  }
+}
+
+// ============================================================
+// State color map
+// ============================================================
+function updateStateColorMap() {
+  stateColorMap.clear();
+  let idx = 0;
+  for (const fips of selectedFips) {
+    stateColorMap.set(fips, idx++);
+  }
+}
+
+// ============================================================
+// Current table (always national)
+// ============================================================
+function currentCols() {
+  return nationalTable;
+}
+
+// ============================================================
+// Row filtering
+// ============================================================
+function computeVisibleRows() {
+  const cols = nationalTable;
+  const n = cols.inc.length;
+  const result = [];
+  for (let i = 0; i < n; i++) {
+    if (selectedFips.size > 0 && !selectedFips.has(cols.state[i])) continue;
+    let pass = true;
+    for (const [dim, vals] of Object.entries(filters)) {
+      if (!vals || vals.size === 0) continue;
+      if (!cols[dim]) continue;
+      if (!vals.has(cols[dim][i])) { pass = false; break; }
+    }
+    if (pass) result.push(i);
+  }
+  return result;
+}
+
+
+function computeScope() {
+  return selectedFips.size === 0 ? 'national' : [...selectedFips].sort().join(',');
+}
+
+function matchesFilters(i, cols) {
+  if (selectedFips.size > 0 && !selectedFips.has(cols.state[i])) return false;
+  for (const [dim, vals] of Object.entries(filters)) {
+    if (!vals || vals.size === 0) continue;
+    if (!cols[dim]) continue;
+    if (!vals.has(cols[dim][i])) return false;
+  }
+  return true;
+}
+
+function matchesBrush(i, cols) {
+  if (!brushRange) return true;
+  return cols.inc[i] >= brushRange.lo && cols.inc[i] <= brushRange.hi;
+}
+
+function isDimmed(i, cols, hasFilters) {
+  if (hasFilters && !matchesFilters(i, cols)) return true;
+  if (!matchesBrush(i, cols)) return true;
+  return false;
+}
+
+function updateDotOpacity() {
+  const cols = currentCols();
+  const hasFilters = selectedFips.size > 0 || Object.values(filters).some(s => s && s.size > 0);
+  d3.select('#chart-svg').selectAll('circle')
+    .attr('opacity', d => isDimmed(d.i, cols, hasFilters) ? 0.12 : 0.75)
+    .attr('pointer-events', d => isDimmed(d.i, cols, hasFilters) ? 'none' : 'all');
+}
+
+function renderBrushInfo(transient) {
+  const el = document.getElementById('brush-range-info');
+  const r = transient || brushRange;
+  if (!r) {
+    el.innerHTML = '<div class="no-range">Click Range, then drag on the chart to select an income band.</div>';
+    return;
+  }
+  if (!visibleRows || !visibleRows.length) { el.innerHTML = ''; return; }
+  const cols = currentCols();
+  const {lo, hi} = r;
+  const rangeRows = visibleRows.filter(i => cols.inc[i] >= lo && cols.inc[i] <= hi);
+  const totalW = visibleRows.reduce((s, i) => s + cols.weight[i], 0);
+  const rangeW = rangeRows.reduce((s, i) => s + cols.weight[i], 0);
+  const pct = totalW > 0 ? (rangeW / totalW * 100).toFixed(1) : '0';
+  let medStr = '—', meanStr = '—';
+  if (rangeRows.length >= 5) {
+    const inc = rangeRows.map(i => cols.inc[i]);
+    const w   = rangeRows.map(i => cols.weight[i]);
+    medStr  = fmt$(wPercentile(inc, w, 0.5));
+    meanStr = fmt$(inc.reduce((s, v, k) => s + v * w[k], 0) / w.reduce((a, b) => a + b, 0));
+  }
+  el.innerHTML = `<div class="stat-row" style="margin-bottom:4px"><span class="stat-label" style="font-weight:600">${fmt$(lo)} – ${fmt$(hi)}</span></div>
+    <div class="stat-row"><span class="stat-label">Households</span><span class="stat-val">${pct}% of slice</span></div>
+    <div class="stat-row"><span class="stat-label">Median</span><span class="stat-val">${medStr}</span></div>
+    <div class="stat-row"><span class="stat-label">Mean</span><span class="stat-val">${meanStr}</span></div>`;
+  renderRangeBreakdown(transient);
+}
+
+function renderRangeBreakdown(transient) {
+  const container = document.getElementById('range-breakdown');
+  const expandBtn = document.getElementById('btn-expand-range');
+  if (!container) return;
+  const r = transient || brushRange;
+  if (!r || !visibleRows || !visibleRows.length) {
+    container.innerHTML = '';
+    if (expandBtn) expandBtn.style.display = 'none';
+    return;
+  }
+
+  const cols = currentCols();
+  const rangeRows = visibleRows.filter(i => cols.inc[i] >= r.lo && cols.inc[i] <= r.hi);
+  if (rangeRows.length === 0) {
+    container.innerHTML = '';
+    if (expandBtn) expandBtn.style.display = 'none';
+    return;
+  }
+
+  if (expandBtn) expandBtn.style.display = '';
+  // Populate content; visibility controlled by the expand toggle
+  container.style.display = rangeBreakdownExpanded ? '' : 'none';
+
+  if (colorMode === 'state') {
+    const groups = new Map();
+    for (const i of rangeRows) {
+      const fips = cols.state[i];
+      const idx = stateColorMap.get(fips);
+      if (idx == null) continue;
+      const color = idx < STATE_PALETTE.length ? STATE_PALETTE[idx] : '#888';
+      if (!groups.has(fips)) groups.set(fips, { incs: [], weights: [], color });
+      groups.get(fips).incs.push(cols.inc[i]);
+      groups.get(fips).weights.push(cols.weight[i]);
+    }
+    const rows = [...groups.entries()].map(([fips, g]) => ({
+      lbl: codebook?.states?.[String(fips)]?.name ?? `State ${fips}`,
+      med: g.incs.length > 0 ? wPercentile(g.incs, g.weights, 0.5) : null,
+      mean: g.incs.length > 0 ? g.incs.reduce((s,v,i) => s + v * g.weights[i], 0) / g.weights.reduce((a,b)=>a+b,0) : null,
+      totalW: g.weights.reduce((a,b)=>a+b,0),
+      color: g.color,
+    }));
+    _renderBreakdownRows(container, rows, rangeRows.length);
+    return;
+  }
+
+  const palette = PALETTES[colorMode];
+  if (!palette) { container.innerHTML = ''; return; }
+
+  const lb = codebook?.labels?.[colorMode] || {};
+  const colName = colorMode === 'state' ? 'state' : colorMode;
+  const groups = new Map();
+
+  for (const i of rangeRows) {
+    const v = cols[colName]?.[i];
+    if (v == null || palette[v] == null) continue;
+    if (!groups.has(v)) groups.set(v, { incs: [], weights: [] });
+    groups.get(v).incs.push(cols.inc[i]);
+    groups.get(v).weights.push(cols.weight[i]);
+  }
+
+  const rows = [...groups.entries()]
+    .map(([v, g]) => {
+      const totalW = g.weights.reduce((a,b)=>a+b,0);
+      return {
+        v,
+        lbl: lb[String(v)] ?? String(v),
+        med: wPercentile(g.incs, g.weights, 0.5),
+        mean: g.incs.reduce((s,val,i) => s + val * g.weights[i], 0) / totalW,
+        totalW,
+        color: palette[v],
+      };
+    })
+    .sort((a,b) => a.v - b.v);
+
+  _renderBreakdownRows(container, rows, rangeRows.length);
+}
+
+// ============================================================
+// Dot color
+// ============================================================
+function dotColor(i, cols, palette) {
+  if (colorMode === 'state') {
+    const fips = cols.state[i];
+    const idx = stateColorMap.get(fips);
+    return (idx != null && idx < STATE_PALETTE.length) ? STATE_PALETTE[idx] : '#888';
+  }
+  if (!cols[colorMode]) return '#888';
+  const v = cols[colorMode][i];
+  return palette[v] ?? '#888';
+}
+
+function updateDotColors() {
+  const cols = currentCols();
+  const palette = PALETTES[colorMode] || PALETTES.passive_pct;
+  d3.select('#chart-svg').selectAll('circle')
+    .attr('fill', d => d.topcode ? 'none' : dotColor(d.i, cols, palette))
+    .attr('stroke', d => d.topcode ? '#c9a227' : dotColor(d.i, cols, palette));
+}
+
+// ============================================================
+// Subsample — partial Fisher-Yates shuffle
+// ============================================================
+function subsample(rows, limit) {
+  if (rows.length <= limit) return rows;
+  const arr = [...rows];
+  const n = arr.length;
+  for (let i = 0; i < limit; i++) {
+    const j = i + Math.floor(Math.random() * (n - i));
+    const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+  }
+  return arr.slice(0, limit);
+}
+
+function updateDotCountDisplay() {
+  const el = document.getElementById('dot-count');
+  if (!el || viewMode !== 'dots') { if (el) el.textContent = ''; return; }
+  const total = visibleRows.length;
+  const shown = dotData.length;
+  el.textContent = shown < total ? `${shown.toLocaleString()} of ${total.toLocaleString()} households` : '';
+}
+
+function syncSampleButtons() {
+  document.getElementById('btn-static').classList.toggle('active', sampleMode);
+  document.getElementById('btn-showall').classList.toggle('active', !sampleMode);
+}
+
+// ============================================================
+// Stats
+// ============================================================
+function buildKey(scopeStr, filterObj) {
+  const parts = scopeStr ? [scopeStr] : [];
+  for (const [k, v] of Object.entries(filterObj).sort((a,b) => a[0].localeCompare(b[0]))) {
+    parts.push(`${k}=${v}`);
+  }
+  return parts.join('|');
+}
+
+const DIM_TO_KEY = {
+  age_bucket: 'age', sex: 'sex', marst: 'marst', educ: 'educ',
+  work_status: 'work', passive_pct: 'ppct', passive_source: 'psrc', earner_count: 'earners', breadwinner: 'bread',
+  kids: 'kids', race_ethnicity: 'race', multi_job_proxy: 'mjob',
+  housing: 'house', metro: 'metro', year: 'yr',
+};
+
+function getStats() {
+  const cols = nationalTable;
+  const rows = visibleRows;
+  const n = rows.length;
+
+  let scope = 'national';
+  if (selectedFips.size === 1) scope = `state=${[...selectedFips][0]}`;
+
+  const dimFilter = {};
+  let hasMultiValue = selectedFips.size > 1;
+
+  for (const [dim, vals] of Object.entries(filters)) {
+    if (!vals || vals.size === 0) continue;
+    if (vals.size === 1) {
+      dimFilter[DIM_TO_KEY[dim] ?? dim] = [...vals][0];
+    } else {
+      hasMultiValue = true;
+    }
+  }
+
+  if (!hasMultiValue) {
+    const key = buildKey(scope, dimFilter);
+    if (precomputed[key]) {
+      return { ...precomputed[key], source: 'precomputed' };
+    }
+  }
+
+  if (n < 50) return { n, rel: 0, source: 'live' };
+
+  const inc = rows.map(i => cols.inc[i]);
+  const w = rows.map(i => cols.weight[i]);
+  const wTotal = w.reduce((a,b) => a+b, 0);
+
+  const wMed = wPercentile(inc, w, 0.5);
+  const wMean = inc.reduce((a, v, i) => a + v * w[i], 0) / wTotal;
+  const p25 = wPercentile(inc, w, 0.25);
+  const p75 = wPercentile(inc, w, 0.75);
+
+  return {
+    n, n_rep: wTotal,
+    med: Math.round(wMed), mean: Math.round(wMean),
+    p25: Math.round(p25), p75: Math.round(p75),
+    iqr: Math.round(p75 - p25),
+    rel: n >= 500 ? 3 : n >= 200 ? 2 : 1,
+    source: 'live',
+  };
+}
+
+function wPercentile(values, weights, q) {
+  const order = Array.from({length: values.length}, (_, i) => i).sort((a,b) => values[a]-values[b]);
+  const sortedV = order.map(i => values[i]);
+  const sortedW = order.map(i => weights[i]);
+  const cumW = [];
+  let cum = 0;
+  for (const w of sortedW) { cum += w; cumW.push(cum); }
+  const target = q * cumW[cumW.length - 1];
+  let idx = cumW.findIndex(c => c >= target);
+  if (idx < 0) idx = sortedV.length - 1;
+  return sortedV[idx];
+}
+
+// ============================================================
+// Stats display
+// ============================================================
+function renderStats(stats) {
+  if (!stats) { clearStats(); return; }
+  const { n, rel } = stats;
+
+  if (rel <= 0) {
+    document.getElementById('s-med').textContent = '—';
+    document.getElementById('s-mean').textContent = '—';
+    document.getElementById('s-p2575').textContent = '—';
+    document.getElementById('rel-badge').innerHTML = `<span class="reliability rel-0">⚠ Too few records (n=${n}) for statistics</span>`;
+    document.getElementById('n-info').textContent = '';
+    return;
+  }
+
+  const seStr = stats.se_med ? ` ±${fmt$(stats.se_med)} SE` : '';
+  document.getElementById('s-med').innerHTML = `${fmt$(stats.med)}<span class="stat-se">${seStr}</span>`;
+  document.getElementById('s-mean').textContent = fmt$(stats.mean);
+  document.getElementById('s-p2575').textContent = `${fmt$(stats.p25)} / ${fmt$(stats.p75)}`;
+  const relMsg = rel === 1 ? '⚠ Small sample — interpret with care' :
+                 rel === 2 ? '⚠ Moderate sample — interpret with care' : '';
+  document.getElementById('rel-badge').innerHTML = relMsg
+    ? `<span class="reliability rel-${rel}">${relMsg}</span>` : '';
+
+  const nRep = stats.n_rep ? ` · ~${(stats.n_rep / 1e6).toFixed(1)}M households` : '';
+  document.getElementById('n-info').textContent = `${n.toLocaleString()} survey records${nRep}`;
+}
+
+function clearStats() {
+  ['s-med','s-mean','s-p2575'].forEach(id => {
+    document.getElementById(id).textContent = '—';
+  });
+  document.getElementById('rel-badge').innerHTML = '';
+  document.getElementById('n-info').textContent = '';
+}
+
+// ============================================================
+// URL state (deep-link)
+// ============================================================
+function pushUrl() {
+  const params = new URLSearchParams();
+  if (colorMode !== 'passive_pct') params.set('cm', colorMode);
+  for (const [dim, vals] of Object.entries(filters)) {
+    if (vals && vals.size > 0) params.set(dim, [...vals].sort().join(','));
+  }
+  if (selectedFips.size > 0) params.set('states', [...selectedFips].sort().join(','));
+  if (brushRange) { params.set('brush_lo', brushRange.lo); params.set('brush_hi', brushRange.hi); }
+  if (viewMode !== 'dots') params.set('v', viewMode);
+  if (maxDots !== 3000) params.set('md', maxDots);
+  if (!sampleMode) params.set('sm', '0');
+  const qs = params.toString();
+  history.replaceState(null, '', qs ? '#' + qs : location.pathname + location.search);
+}
+
+function applyUrl() {
+  const hash = location.hash.slice(1);
+  if (!hash) return;
+  const params = new URLSearchParams(hash);
+
+  const cm = params.get('cm');
+  if (cm) {
+    colorMode = cm;
+    document.querySelectorAll('.cm-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === cm));
+    _legendColorMode = null;
+  }
+
+  const statesStr = params.get('states');
+  if (statesStr) {
+    selectedFips.clear();
+    statesStr.split(',').forEach(s => { const f = parseInt(s); if (!isNaN(f)) selectedFips.add(f); });
+    syncStateCheckboxes();
+    updateStateColorMap();
+  }
+
+  const brushLo = params.get('brush_lo');
+  const brushHi = params.get('brush_hi');
+  if (brushLo && brushHi) { brushRange = {lo: parseInt(brushLo), hi: parseInt(brushHi)}; switchStatsTab('range'); }
+
+  const v = params.get('v');
+  if (v) {
+    viewMode = v;
+    document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  }
+
+  const md = parseInt(params.get('md'));
+  if ([1000, 3000, 5000].includes(md)) {
+    maxDots = md;
+    document.querySelectorAll('.dots-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.maxdots) === md));
+  }
+
+  if (params.get('sm') === '0') {
+    sampleMode = false;
+    syncSampleButtons();
+  }
+
+  filters = {};
+  for (const [key, val] of params.entries()) {
+    if (['cm', 'states', 'brush_lo', 'brush_hi', 'v', 'md', 'sm'].includes(key)) continue;
+    const nums = val.split(',').map(Number).filter(v => !isNaN(v));
+    if (nums.length) filters[key] = new Set(nums);
+  }
+}
+
+window.addEventListener('popstate', () => { applyUrl(); render(); });
+
+// ============================================================
+// Dot chart
+function renderMobileStats(stats) {
+  const el = document.getElementById('mobile-stats');
+  if (!el) return;
+  if (!stats || stats.rel === 0) {
+    el.innerHTML = '<span style="color:var(--text-dim);font-size:11px">Insufficient data</span>';
+    return;
+  }
+  el.innerHTML = `
+    <div class="mstat"><span class="mstat-label">Median</span><span class="mstat-val">${fmt$(stats.med)}</span></div>
+    <div class="mstat"><span class="mstat-label">Mean</span><span class="mstat-val">${fmt$(stats.mean)}</span></div>
+    <div class="mstat"><span class="mstat-label">HH</span><span class="mstat-val">~${(stats.n_rep/1e6).toFixed(1)}M</span></div>
+    <div class="mstat"><span class="mstat-label">Records</span><span class="mstat-val">${stats.n.toLocaleString()}</span></div>
+  `;
+}
+
+function render() {
+  visibleRows = computeVisibleRows();
+  const stats = getStats();
+  renderStats(stats);
+  renderMobileStats(stats);
+  const scope = computeScope();
+  if (viewMode === 'bars' || viewMode === 'pct') {
+    renderStackedBars();
+  } else if (!sampleMode || scope !== chartScope || dotData.length === 0) {
+    renderChart();
+  } else {
+    updateDotOpacity();
+  }
+  syncFilterButtons();
+  renderActiveChips();
+  renderBrushInfo();
+  renderLegend();
+  renderGroupBreakdown();
+  pushUrl();
+}
+
+function renderChart() {
+  const svg = document.getElementById('chart-svg');
+  const W = svg.clientWidth || svg.parentElement.clientWidth;
+  const H = svg.clientHeight || svg.parentElement.clientHeight;
+  if (W < 10 || H < 10) return;
+
+  chartScope = computeScope();
+
+  const marginL = 60, marginR = 20, marginT = 20, marginB = 40;
+  const chartW = W - marginL - marginR;
+  const chartH = H - marginT - marginB;
+
+  const cols = currentCols();
+  const mobileMax = Math.min(maxDots, 800);
+  const limit = isMobile() ? mobileMax : maxDots;
+  const rowPool = sampleMode
+    ? Array.from({length: cols.inc.length}, (_, i) => i)
+    : visibleRows;
+  const dotRows = subsample(rowPool, limit);
+  const hasFilters = selectedFips.size > 0 || Object.values(filters).some(s => s && s.size > 0);
+
+  d3.select(svg).selectAll('*').remove();
+
+  const xScale = d3.scaleLog()
+    .domain([1000, 2500000])
+    .range([0, chartW])
+    .clamp(true);
+
+  const medWeight = d3.median(dotRows, i => cols.weight[i]) || 1;
+  const rScale = isMobile()
+    ? w => Math.max(3, Math.min(10, (w / medWeight) * 5))
+    : w => Math.max(2, Math.min(8,  (w / medWeight) * 4));
+
+  const BIN_PX = 8;
+  const binScale = d3.scaleLog().domain([1000, 2500000]).range([0, chartW / BIN_PX]);
+  const bins = {};
+  dotData = dotRows.map(i => {
+    const inc = Math.max(1000, cols.inc[i]);
+    const bx = Math.round(binScale(inc));
+    if (!bins[bx]) bins[bx] = [];
+    const slot = bins[bx].length;
+    bins[bx].push(i);
+    const jitter = (slot % 2 === 0 ? 1 : -1) * Math.ceil(slot / 2) * (BIN_PX - 1);
+    return {
+      i,
+      x: xScale(inc) + marginL,
+      y: chartH / 2 + jitter + marginT,
+      r: rScale(cols.weight[i]),
+      topcode: cols.topcoded[i] === 1,
+    };
+  });
+
+  const svgEl = d3.select(svg);
+  const palette = PALETTES[colorMode] || PALETTES.passive_pct;
+
+  // X axis
+  const gAxis = svgEl.append('g')
+    .attr('transform', `translate(${marginL},${marginT + chartH})`);
+  const dotTickValues = isMobile()
+    ? [10000, 50000, 100000, 500000, 2000000]
+    : [5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000];
+  gAxis.call(
+    d3.axisBottom(xScale)
+      .tickValues(dotTickValues)
+      .tickFormat(d => d >= 1e6 ? `$${d/1e6}M` : d >= 1e3 ? `$${d/1e3}k` : `$${d}`)
+  )
+  .selectAll('text').style('fill', '#8892b0').style('font-size', isMobile() ? '10px' : '11px');
+  gAxis.selectAll('line,path').style('stroke', '#2e3350');
+
+  // Gridlines
+  const gGrid = svgEl.append('g').attr('transform', `translate(${marginL},${marginT})`);
+  gGrid.call(
+    d3.axisLeft(d3.scaleLinear().domain([0,1]).range([chartH, 0]))
+      .tickSize(-chartW).tickValues([])
+  )
+  .select('.domain').remove();
+
+  // Y-axis frequency label
+  svgEl.append('text')
+    .attr('transform', `translate(10,${marginT + chartH / 2}) rotate(-90)`)
+    .attr('text-anchor', 'middle')
+    .attr('dominant-baseline', 'central')
+    .attr('fill', '#8892b0')
+    .attr('font-size', 10)
+    .style('letter-spacing', '0.05em')
+    .text('FREQ.');
+
+  // Dots
+  svgEl.append('g')
+    .selectAll('circle')
+    .data(dotData)
+    .join('circle')
+      .attr('cx', d => d.x)
+      .attr('cy', d => d.y)
+      .attr('r', d => d.r)
+      .attr('fill', d => d.topcode ? 'none' : dotColor(d.i, cols, palette))
+      .attr('stroke', d => d.topcode ? '#c9a227' : dotColor(d.i, cols, palette))
+      .attr('stroke-width', d => d.topcode ? 1.5 : 0.5)
+      .attr('opacity', d => isDimmed(d.i, cols, hasFilters) ? 0.12 : 0.75)
+      .attr('pointer-events', d => isDimmed(d.i, cols, hasFilters) ? 'none' : 'all')
+      .on('mouseover', (event, d) => showTooltip(event, d.i))
+      .on('mousemove', moveTooltip)
+      .on('mouseout', hideTooltip)
+      .on('touchstart', (event, d) => { event.preventDefault(); showTooltip(event, d.i); }, {passive: false});
+
+  // Topcode ⊕
+  svgEl.append('g')
+    .selectAll('text.tc')
+    .data(dotData.filter(d => d.topcode))
+    .join('text')
+      .attr('class', 'tc')
+      .attr('x', d => d.x)
+      .attr('y', d => d.y + 4)
+      .attr('text-anchor', 'middle')
+      .attr('font-size', d => d.r * 1.8)
+      .attr('fill', '#c9a227')
+      .attr('pointer-events', 'none')
+      .text('⊕');
+
+  attachBrushLayer(svgEl, xScale, marginL, marginT, chartW, chartH);
+  updateDotCountDisplay();
+}
+
+function attachBrushLayer(svgEl, xScale, marginL, marginT, chartW, chartH) {
+  d3brush = d3.brushX()
+    .extent([[0, 0], [chartW, chartH]])
+    .on('brush', function(event) {
+      if (!event.selection) return;
+      const [x0, x1] = event.selection;
+      const lo = Math.round(xScale.invert(x0));
+      const hi = Math.round(xScale.invert(x1));
+      renderBrushInfo({lo, hi});
+      switchStatsTab('range');
+    })
+    .on('end', function(event) {
+      if (!event.selection) {
+        brushModeActive = false;
+        document.getElementById('btn-brush').classList.remove('active');
+        brushLayer.select('.overlay').attr('pointer-events', 'none');
+        return;
+      }
+      const [x0, x1] = event.selection;
+      brushRange = {lo: Math.round(xScale.invert(x0)), hi: Math.round(xScale.invert(x1))};
+      brushModeActive = false;
+      document.getElementById('btn-brush').classList.remove('active');
+      brushLayer.select('.overlay').attr('pointer-events', 'none');
+      updateDotOpacity();
+      renderBrushInfo();
+      renderActiveChips();
+      switchStatsTab('range');
+      pushUrl();
+    });
+
+  brushLayer = svgEl.append('g')
+    .attr('class', 'brush-layer')
+    .attr('transform', `translate(${marginL},${marginT})`)
+    .call(d3brush);
+
+  if (brushRange) {
+    const x0 = xScale(Math.max(1000, brushRange.lo));
+    const x1 = xScale(Math.min(2500000, brushRange.hi));
+    brushLayer.call(d3brush.move, [x0, x1]);
+  }
+  brushLayer.select('.overlay').attr('pointer-events', brushModeActive ? 'all' : 'none');
+}
+
+// ============================================================
+// Stacked bars view
+// ============================================================
+function renderStackedBars() {
+  const svg = document.getElementById('chart-svg');
+  const W = svg.clientWidth || svg.parentElement.clientWidth;
+  const H = svg.clientHeight || svg.parentElement.clientHeight;
+  if (W < 10 || H < 10) return;
+
+  d3.select(svg).selectAll('*').remove();
+  brushLayer = null;
+  chartScope = null;  // force full renderChart() if we switch back to dots
+
+  const marginL = 60, marginR = 20, marginT = 20, marginB = 40;
+  const chartW = W - marginL - marginR;
+  const chartH = H - marginT - marginB;
+
+  const xScale = d3.scaleLog()
+    .domain([1000, 2500000])
+    .range([0, chartW])
+    .clamp(true);
+
+  const NUM_BINS = isMobile() ? 40 : 60;
+  const binEdges = d3.range(NUM_BINS + 1).map(k =>
+    xScale.invert(k * chartW / NUM_BINS)
+  );
+
+  const cols = currentCols();
+  const palette = PALETTES[colorMode] || [];
+  const colName = colorMode === 'state' ? 'state' : colorMode;
+
+  // Build per-bin stacks from visibleRows (weighted)
+  const bins = Array.from({length: NUM_BINS}, () => new Map());
+  for (const i of visibleRows) {
+    const inc = Math.max(1000, cols.inc[i]);
+    const bx = xScale(inc);
+    const b = Math.min(NUM_BINS - 1, Math.floor(bx / (chartW / NUM_BINS)));
+    const key = cols[colName] != null ? cols[colName][i] : 0;
+    const w = cols.weight[i];
+    bins[b].set(key, (bins[b].get(key) || 0) + w);
+  }
+
+  const isPct = viewMode === 'pct';
+
+  // Max total weight across bins (for y-scale in absolute mode)
+  const maxTotal = d3.max(bins, b => d3.sum(b.values())) || 1;
+
+  const yScale = isPct
+    ? d3.scaleLinear().domain([0, 1]).range([chartH, 0])
+    : d3.scaleLinear().domain([0, maxTotal]).range([chartH, 0]);
+  const barW = Math.max(1, chartW / NUM_BINS - 1);
+
+  const svgEl = d3.select(svg);
+
+  // X axis
+  const barTickValues = isMobile()
+    ? [10000, 50000, 100000, 500000, 2000000]
+    : [5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000, 2000000];
+  const xAxis = d3.axisBottom(xScale)
+    .tickValues(barTickValues)
+    .tickFormat(d => d >= 1000000 ? `$${d/1000000}M` : `$${d/1000}k`);
+
+  svgEl.append('g')
+    .attr('class', 'axis')
+    .attr('transform', `translate(${marginL},${marginT + chartH})`)
+    .call(xAxis)
+    .call(g => g.select('.domain').attr('stroke', 'var(--border)'))
+    .call(g => g.selectAll('.tick line').attr('stroke', 'var(--border)'))
+    .call(g => g.selectAll('.tick text').attr('fill', 'var(--text-dim)').attr('font-size', isMobile() ? 9 : 10));
+
+  // Y axis
+  const yAxis = isPct
+    ? d3.axisLeft(yScale).ticks(5).tickFormat(d => `${Math.round(d * 100)}%`)
+    : d3.axisLeft(yScale).ticks(5).tickFormat(d => `${(d/1e6).toFixed(1)}M`);
+
+  svgEl.append('g')
+    .attr('class', 'axis')
+    .attr('transform', `translate(${marginL},${marginT})`)
+    .call(yAxis)
+    .call(g => g.select('.domain').attr('stroke', 'var(--border)'))
+    .call(g => g.selectAll('.tick line').attr('stroke', 'var(--border)'))
+    .call(g => g.selectAll('.tick text').attr('fill', 'var(--text-dim)').attr('font-size', 10));
+
+  // Draw stacked bars
+  const g = svgEl.append('g').attr('transform', `translate(${marginL},${marginT})`);
+
+  bins.forEach((binMap, b) => {
+    if (binMap.size === 0) return;
+    const x = b * (chartW / NUM_BINS);
+    const total = d3.sum(binMap.values());
+    let y = chartH;
+    // Sort keys for consistent stacking order
+    const keys = [...binMap.keys()].sort((a, z) => a - z);
+    const loInc = fmt$(Math.round(binEdges[b]));
+    const hiInc = fmt$(Math.round(binEdges[b + 1]));
+    for (const key of keys) {
+      const segW = binMap.get(key);
+      const segH = isPct
+        ? (segW / total) * chartH
+        : (segW / maxTotal) * chartH;
+      y -= segH;
+      let color = '#888';
+      if (colorMode === 'state') {
+        const idx = stateColorMap.get(key);
+        color = idx != null && idx < STATE_PALETTE.length ? STATE_PALETTE[idx] : '#888';
+      } else if (palette[key] != null) {
+        color = palette[key];
+      }
+      const catLabel = colName === 'state'
+        ? (codebook?.states?.[String(key)]?.name ?? `State ${key}`)
+        : label(colName, key);
+      const pct = total > 0 ? (segW / total * 100).toFixed(1) : '0.0';
+      g.append('rect')
+        .attr('x', x)
+        .attr('y', y)
+        .attr('width', barW)
+        .attr('height', segH)
+        .attr('fill', color)
+        .attr('opacity', 0.85)
+        .style('cursor', 'pointer')
+        .on('mouseover', (event) => {
+          const tt = document.getElementById('tooltip');
+          tt.innerHTML = `
+            <div class="tt-income">${loInc} – ${hiInc}</div>
+            <div class="tt-dim">${catLabel}</div>
+            <div class="tt-dim">${(segW / 1e6).toFixed(2)}M households · ${pct}% of band</div>
+          `;
+          tt.style.display = 'block';
+          moveTooltip(event);
+        })
+        .on('mousemove', moveTooltip)
+        .on('mouseout', hideTooltip)
+        .on('touchstart', (event) => {
+          event.preventDefault();
+          const tt = document.getElementById('tooltip');
+          tt.innerHTML = `
+            <div class="tt-income">${loInc} – ${hiInc}</div>
+            <div class="tt-dim">${catLabel}</div>
+            <div class="tt-dim">${(segW / 1e6).toFixed(2)}M households · ${pct}% of band</div>
+          `;
+          tt.style.display = 'block';
+        }, {passive: false});
+    }
+  });
+
+  attachBrushLayer(svgEl, xScale, marginL, marginT, chartW, chartH);
+}
+
+// ============================================================
+// Group breakdown (by color)
+// ============================================================
+function renderGroupBreakdown() {
+  const container = document.getElementById('group-breakdown');
+  if (!container) return;
+  if (!visibleRows || visibleRows.length === 0) { container.innerHTML = ''; return; }
+
+  const cols = nationalTable;
+  const colName = colorMode === 'state' ? 'state' : colorMode;
+
+  if (colorMode === 'state') {
+    if (stateColorMap.size === 0) { container.innerHTML = '<div style="color:var(--text-dim);font-size:12px;padding:8px 0">Select states in the Geo tab to see breakdown.</div>'; return; }
+    const groups = new Map();
+    for (const i of visibleRows) {
+      const fips = cols.state[i];
+      const idx = stateColorMap.get(fips);
+      if (idx == null) continue;
+      const color = idx < STATE_PALETTE.length ? STATE_PALETTE[idx] : '#888';
+      if (!groups.has(fips)) groups.set(fips, { incs: [], weights: [], color });
+      groups.get(fips).incs.push(cols.inc[i]);
+      groups.get(fips).weights.push(cols.weight[i]);
+    }
+    const rows = [...groups.entries()].map(([fips, g]) => ({
+      lbl: codebook?.states?.[String(fips)]?.name ?? `State ${fips}`,
+      med: g.incs.length > 0 ? wPercentile(g.incs, g.weights, 0.5) : null,
+      mean: g.incs.length > 0 ? g.incs.reduce((s,v,i) => s + v * g.weights[i], 0) / g.weights.reduce((a,b)=>a+b,0) : null,
+      totalW: g.weights.reduce((a,b)=>a+b,0),
+      color: g.color,
+    }));
+    _renderBreakdownRows(container, rows, visibleRows.length);
+    return;
+  }
+
+  const palette = PALETTES[colorMode];
+  if (!palette) { container.innerHTML = ''; return; }
+
+  const lb = codebook?.labels?.[colorMode] || {};
+  const groups = new Map();
+
+  for (const i of visibleRows) {
+    const v = cols[colName]?.[i];
+    if (v == null || palette[v] == null) continue;
+    if (!groups.has(v)) groups.set(v, { incs: [], weights: [] });
+    groups.get(v).incs.push(cols.inc[i]);
+    groups.get(v).weights.push(cols.weight[i]);
+  }
+
+  const rows = [...groups.entries()]
+    .map(([v, g]) => {
+      const totalW = g.weights.reduce((a,b)=>a+b,0);
+      return {
+        v,
+        lbl: lb[String(v)] ?? String(v),
+        med: wPercentile(g.incs, g.weights, 0.5),
+        mean: g.incs.reduce((s,val,i) => s + val * g.weights[i], 0) / totalW,
+        totalW,
+        color: palette[v],
+      };
+    })
+    .sort((a,b) => a.v - b.v);
+
+  _renderBreakdownRows(container, rows, visibleRows.length);
+}
+
+function _renderBreakdownRows(container, rows, n) {
+  if (rows.length === 0) { container.innerHTML = ''; return; }
+  const cmLabel = colorMode.replace(/_/g, ' ');
+  container.innerHTML = `
+    <div style="font-size:11px;color:var(--text-dimmer);margin-bottom:6px">Grouped by ${cmLabel} · median &amp; mean household income</div>
+    <div style="display:grid;grid-template-columns:10px 1fr auto auto auto;gap:4px 6px;align-items:baseline;font-size:11px">
+      <span></span>
+      <span style="color:var(--text-dimmer)">Group</span>
+      <span style="color:var(--text-dimmer)">Median</span>
+      <span style="color:var(--text-dimmer)">Mean</span>
+      <span style="color:var(--text-dimmer)">HH (M)</span>
+      ${rows.map(r => `
+        <span class="breakdown-dot" style="background:${r.color};align-self:center"></span>
+        <span class="breakdown-label">${r.lbl}</span>
+        <span class="breakdown-med">${r.med != null ? fmt$(r.med) : '—'}</span>
+        <span class="breakdown-med" style="color:var(--text-dim)">${r.mean != null ? fmt$(r.mean) : '—'}</span>
+        <span style="color:var(--text-dimmer);text-align:right">${r.totalW != null ? (r.totalW/1e6).toFixed(1) : '—'}</span>
+      `).join('')}
+    </div>
+    <div style="font-size:10px;color:var(--text-dimmer);margin-top:6px">${n.toLocaleString()} survey records · HH (M) = millions of households</div>
+  `;
+}
+
+// ============================================================
+// Legend — rebuild structure only on colorMode change; active state via syncLegendActive
+// ============================================================
+let _legendColorMode = null;
+
+function renderLegend() {
+  if (colorMode === _legendColorMode && colorMode !== 'state') {
+    syncLegendActive();
+    return;
+  }
+  _legendColorMode = colorMode;
+
+  const container = document.getElementById('legend');
+  container.innerHTML = '';
+
+  if (colorMode === 'state') {
+    // Only show entries for states that got a distinct palette color
+    for (const [fips, idx] of stateColorMap) {
+      if (idx >= STATE_PALETTE.length) continue;
+      const color = STATE_PALETTE[idx];
+      const name = codebook?.states?.[String(fips)]?.name ?? `State ${fips}`;
+      const item = document.createElement('div');
+      item.className = 'legend-item';
+      const dot = document.createElement('div');
+      dot.className = 'legend-dot';
+      dot.style.background = color;
+      item.append(dot, document.createTextNode(name));
+      container.append(item);
+    }
+    // "Other" = unselected states OR selected states beyond palette capacity
+    const totalStates = Object.keys(codebook?.states ?? {}).length;
+    const hasOther = selectedFips.size < totalStates || selectedFips.size > STATE_PALETTE.length;
+    if (hasOther) {
+      const item = document.createElement('div');
+      item.className = 'legend-item';
+      const dot = document.createElement('div');
+      dot.className = 'legend-dot';
+      dot.style.background = '#888';
+      item.append(dot, document.createTextNode('Other'));
+      container.append(item);
+    }
+    return;
+  }
+
+  const palette = PALETTES[colorMode];
+  const lb = codebook?.labels?.[colorMode] || {};
+
+  if (palette) {
+    palette.forEach((color, i) => {
+      if (color == null) return;
+      const lbl = lb[String(i)] ?? String(i);
+      const item = document.createElement('div');
+      item.className = 'legend-item';
+      item.dataset.val = i;
+      item.addEventListener('click', () => {
+        toggleFilter(colorMode, i);
+        syncFilterButtons();
+      });
+      const dot = document.createElement('div');
+      dot.className = 'legend-dot';
+      dot.style.background = color;
+      item.append(dot, document.createTextNode(lbl));
+      container.append(item);
+    });
+  }
+
+  const tc = document.createElement('div');
+  tc.className = 'legend-item';
+  tc.innerHTML = '<span class="legend-topcode">⊕</span> Topcoded';
+  container.append(tc);
+
+  syncLegendActive();
+}
+
+function syncLegendActive() {
+  document.querySelectorAll('#legend .legend-item[data-val]').forEach(item => {
+    const val = parseInt(item.dataset.val);
+    item.classList.toggle('active', !!(filters[colorMode]?.has(val)));
+  });
+}
+
+// ============================================================
+// Tooltip
+// ============================================================
+function showTooltip(event, i) {
+  const cols = currentCols();
+  const tt = document.getElementById('tooltip');
+
+  const inc = cols.inc[i];
+  const topcode = cols.topcoded[i] === 1;
+  const yr = codebook?.year_display?.[String(cols.year[i])] ?? String(cols.year[i]);
+  const stateName = codebook?.states?.[String(cols.state[i])]?.name ?? `State ${cols.state[i]}`;
+
+  const hhSize    = cols.hh_size?.[i] ?? '?';
+  const nEarners  = cols.earner_count?.[i] ?? '?';
+  const nKids     = cols.n_children?.[i] ?? (cols.kids?.[i] ? '1+' : '0');
+  const wageInc   = cols.wage_inc[i];
+  const passiveInc= cols.passive_inc?.[i];
+  const psrcLabel = cols.passive_source != null ? label('passive_source', cols.passive_source[i]) : null;
+
+  const earnerLine = nEarners === 0
+    ? 'No earners'
+    : `${nEarners} earner${nEarners !== 1 ? 's' : ''} · ${fmt$(wageInc)} wages`;
+  const passiveLine = (passiveInc != null && passiveInc > 0)
+    ? `${fmt$(passiveInc)} passive${psrcLabel && psrcLabel !== 'Primarily wages' ? ' (' + psrcLabel + ')' : ''}`
+    : null;
+
+  tt.innerHTML = `
+    <div class="tt-income">${fmt$(inc)}${topcode ? ' <span class="tt-topcode">⊕ topcoded</span>' : ''}</div>
+    <div class="tt-dim">${hhSize} in household · ${nKids === 0 || nKids === '0' ? 'no children' : nKids + ' child' + (nKids !== 1 ? 'ren' : '')}</div>
+    <div class="tt-dim">${earnerLine}</div>
+    ${passiveLine ? `<div class="tt-dim">${passiveLine}</div>` : ''}
+    <div class="tt-dim">${label('age_bucket', cols.age_bucket[i])} · ${label('marst', cols.marst[i])} · ${label('educ', cols.educ[i])}</div>
+    <div class="tt-dim">${stateName} · ${label('metro', cols.metro[i])}</div>
+    <div class="tt-dim">${label('work_status', cols.work_status[i])} · ${label('multi_job_proxy', cols.multi_job_proxy[i])}</div>
+    <div class="tt-dim">Weight: ${Math.round(cols.weight[i]).toLocaleString()} households · ${yr}</div>
+  `;
+  tt.style.display = 'block';
+  moveTooltip(event);
+}
+
+function moveTooltip(event) {
+  if (isMobile()) return; // CSS pins tooltip to top-centre on mobile
+  const tt = document.getElementById('tooltip');
+  const x = event.clientX + 14;
+  const y = event.clientY - 10;
+  const maxX = window.innerWidth - tt.offsetWidth - 10;
+  tt.style.left = Math.min(x, maxX) + 'px';
+  tt.style.top = y + 'px';
+}
+
+function hideTooltip() {
+  document.getElementById('tooltip').style.display = 'none';
+}
+
+// ============================================================
+// Filter UI
+// ============================================================
+const FILTER_DEFS = [
+  { id: 'f-age_bucket', dim: 'age_bucket' },
+  { id: 'f-sex', dim: 'sex' },
+  { id: 'f-marst', dim: 'marst' },
+  { id: 'f-has_roommate', dim: 'has_roommate' },
+  { id: 'f-educ', dim: 'educ' },
+  { id: 'f-race_ethnicity', dim: 'race_ethnicity' },
+  { id: 'f-kids', dim: 'kids' },
+  { id: 'f-metro', dim: 'metro' },
+  { id: 'f-work_status', dim: 'work_status' },
+  { id: 'f-earner_count', dim: 'earner_count' },
+  { id: 'f-breadwinner', dim: 'breadwinner' },
+  { id: 'f-passive_pct', dim: 'passive_pct' },
+  { id: 'f-passive_source', dim: 'passive_source' },
+  { id: 'f-year', dim: 'year' },
+  { id: 'f-housing', dim: 'housing' },
+  { id: 'f-multi_job_proxy', dim: 'multi_job_proxy' },
+];
+
+function buildFilterUI() {
+  for (const { id, dim } of FILTER_DEFS) {
+    const container = document.getElementById(id);
+    if (!container) continue;
+    const lb = codebook?.labels?.[dim];
+    if (!lb) continue;
+    container.innerHTML = '';
+    for (const [val, lbl] of Object.entries(lb)) {
+      const btn = document.createElement('button');
+      btn.className = 'f-btn';
+      btn.dataset.dim = dim;
+      btn.dataset.val = val;
+      btn.textContent = lbl;
+      btn.addEventListener('click', () => toggleFilter(dim, parseInt(val)));
+      container.append(btn);
+    }
+  }
+}
+
+// Tri-state filter: no filter→exclusive, sole active→clear, active-in-multi→exclusive, inactive→add
+function toggleFilter(dim, val) {
+  const cur = filters[dim];
+  if (!cur || cur.size === 0) {
+    filters[dim] = new Set([val]);
+  } else if (cur.size === 1 && cur.has(val)) {
+    delete filters[dim];
+  } else if (cur.has(val)) {
+    filters[dim] = new Set([val]);
+  } else {
+    cur.add(val);
+  }
+  render();
+}
+
+function syncFilterButtons() {
+  document.querySelectorAll('.f-btn').forEach(btn => {
+    const dim = btn.dataset.dim;
+    const val = parseInt(btn.dataset.val);
+    btn.classList.toggle('active', !!(filters[dim] && filters[dim].has(val)));
+  });
+}
+
+// ============================================================
+// Active chips
+// ============================================================
+const DIM_LABELS = {
+  age_bucket: 'Age', sex: 'Sex', marst: 'Marital', educ: 'Educ', has_roommate: 'Roommates',
+  work_status: 'Work', race_ethnicity: 'Race',
+  kids: 'Kids', multi_job_proxy: '2nd job', metro: 'Metro',
+  housing: 'Housing', year: 'Year',
+  earner_count: 'Earners', breadwinner: 'Breadwinner',
+  passive_pct: 'Inc. mix', passive_source: 'Passive src',
+};
+
+function renderActiveChips() {
+  const container = document.getElementById('active-chips');
+  container.innerHTML = '';
+
+  // Brush range chip
+  if (brushRange) {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = `<span>Range: ${fmt$(brushRange.lo)} – ${fmt$(brushRange.hi)}</span><span class="x">✕</span>`;
+    chip.addEventListener('click', () => {
+      brushRange = null;
+      if (brushLayer) brushLayer.call(d3brush.move, null);
+      updateDotOpacity();
+      renderBrushInfo();
+      renderActiveChips();
+      switchStatsTab('summary');
+      pushUrl();
+    });
+    container.append(chip);
+  }
+
+  // State chips
+  for (const fips of selectedFips) {
+    const name = codebook?.states?.[String(fips)]?.name ?? `State ${fips}`;
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = `<span>State: ${name}</span><span class="x">✕</span>`;
+    chip.addEventListener('click', () => {
+      toggleState(fips);
+    });
+    container.append(chip);
+  }
+
+  // Filter chips
+  for (const [dim, vals] of Object.entries(filters)) {
+    if (!vals || vals.size === 0) continue;
+    for (const val of vals) {
+      const chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.innerHTML = `<span>${DIM_LABELS[dim] ?? dim}: ${label(dim, val)}</span><span class="x">✕</span>`;
+      chip.addEventListener('click', () => {
+        filters[dim].delete(val);
+        if (filters[dim].size === 0) delete filters[dim];
+        syncFilterButtons();
+        render();
+      });
+      container.append(chip);
+    }
+  }
+}
+
+// ============================================================
+// Geography tab — state checkboxes + region shortcuts
+// ============================================================
+function buildGeographyTab() {
+  const regionLabels = codebook?.labels?.region ?? {};
+  const stateEntries = Object.entries(codebook?.states ?? {})
+    .sort((a,b) => a[1].name.localeCompare(b[1].name));
+
+  // Alphabetical flat state list
+  const stateList = document.getElementById('state-list');
+  stateList.innerHTML = stateEntries.map(([fipsStr, info]) => {
+    const fips = parseInt(fipsStr);
+    return `<label class="state-check-label" data-fips="${fips}">
+      <input type="checkbox" class="state-cb" data-fips="${fips}" value="${fips}">
+      ${info.name}
+    </label>`;
+  }).join('');
+
+  // Wire state checkboxes
+  stateList.querySelectorAll('.state-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const fips = parseInt(cb.dataset.fips);
+      if (cb.checked) selectedFips.add(fips);
+      else selectedFips.delete(fips);
+      syncStateCheckboxes();
+      updateStateColorMap();
+      render();
+    });
+  });
+
+  // Search
+  document.getElementById('state-search').addEventListener('input', function() {
+    const q = this.value.toLowerCase().trim();
+    stateList.querySelectorAll('.state-check-label').forEach(lbl => {
+      lbl.style.display = !q || lbl.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+
+  document.getElementById('btn-clear-states').addEventListener('click', () => {
+    selectedFips.clear();
+    updateStateColorMap();
+    syncStateCheckboxes();
+    render();
+  });
+}
+
+
+function toggleState(fips) {
+  if (selectedFips.has(fips)) selectedFips.delete(fips);
+  else selectedFips.add(fips);
+  syncStateCheckboxes();
+  updateStateColorMap();
+  render();
+}
+
+function syncStateCheckboxes() {
+  document.querySelectorAll('.state-cb').forEach(cb => {
+    cb.checked = selectedFips.has(parseInt(cb.dataset.fips));
+  });
+  const el = document.getElementById('state-count');
+  if (el) el.textContent = selectedFips.size > 0 ? `${selectedFips.size} selected` : '';
+  const clearBtn = document.getElementById('btn-clear-states');
+  if (clearBtn) clearBtn.style.display = selectedFips.size > 0 ? '' : 'none';
+}
+
+
+// ============================================================
+// Color mode
+// ============================================================
+document.querySelectorAll('.cm-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.cm-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    colorMode = btn.dataset.mode;
+    _legendColorMode = null;  // force full legend rebuild
+    if (viewMode === 'bars' || viewMode === 'pct') renderStackedBars();
+    else updateDotColors();
+    renderLegend();
+    renderGroupBreakdown();
+    renderBrushInfo();
+    pushUrl();
+  });
+});
+
+// ============================================================
+// Tabs
+// ============================================================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+let breakdownExpanded = false;
+document.getElementById('btn-expand-breakdown').addEventListener('click', () => {
+  breakdownExpanded = !breakdownExpanded;
+  document.getElementById('stats-detail').style.maxHeight = breakdownExpanded ? 'none' : '';
+  document.getElementById('btn-expand-breakdown').textContent = breakdownExpanded ? 'By group ▴' : 'By group ▾';
+});
+
+let rangeBreakdownExpanded = false;
+document.getElementById('btn-expand-range').addEventListener('click', () => {
+  rangeBreakdownExpanded = !rangeBreakdownExpanded;
+  document.getElementById('range-breakdown').style.display = rangeBreakdownExpanded ? '' : 'none';
+  document.getElementById('btn-expand-range').textContent = rangeBreakdownExpanded ? 'By group ▴' : 'By group ▾';
+});
+
+function switchStatsTab(name) {
+  document.querySelectorAll('.stats-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.statsTab === name));
+  document.querySelectorAll('.stats-tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('stats-' + name).classList.add('active');
+}
+
+document.querySelectorAll('.stats-tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchStatsTab(btn.dataset.statsTab));
+});
+
+
+// ============================================================
+// Clear all
+// ============================================================
+document.getElementById('btn-brush').addEventListener('click', () => {
+  if (brushRange) {
+    // Clear existing selection
+    brushRange = null;
+    brushModeActive = false;
+    document.getElementById('btn-brush').classList.remove('active');
+    if (brushLayer) brushLayer.call(d3brush.move, null);
+    updateDotOpacity();
+    renderBrushInfo();
+    renderActiveChips();
+    switchStatsTab('summary');
+    pushUrl();
+  } else {
+    // Enter brush mode
+    brushModeActive = true;
+    document.getElementById('btn-brush').classList.add('active');
+    if (brushLayer) brushLayer.select('.overlay').attr('pointer-events', 'all');
+  }
+});
+
+document.getElementById('btn-clear').addEventListener('click', () => {
+  filters = {};
+  selectedFips.clear();
+  brushRange = null;
+  brushModeActive = false;
+  document.getElementById('btn-brush').classList.remove('active');
+  if (brushLayer) brushLayer.call(d3brush.move, null);
+  switchStatsTab('summary');
+  updateStateColorMap();
+  syncStateCheckboxes();
+  syncFilterButtons();
+  render();
+});
+
+// View toggle (Dots / Bars / 100%)
+document.querySelectorAll('.view-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    viewMode = btn.dataset.view;
+    document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b === btn));
+    render();
+  });
+});
+
+// Dot count (1K / 3K / 5K)
+document.querySelectorAll('.dots-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    maxDots = parseInt(btn.dataset.maxdots);
+    document.querySelectorAll('.dots-btn').forEach(b => b.classList.toggle('active', b === btn));
+    chartScope = null;  // force full re-render with new limit
+    render();
+  });
+});
+
+// Static / All sample mode toggle
+document.getElementById('btn-static').addEventListener('click', () => {
+  if (sampleMode) return;
+  sampleMode = true;
+  chartScope = null;  // re-render from full row pool
+  syncSampleButtons();
+  render();
+});
+document.getElementById('btn-showall').addEventListener('click', () => {
+  if (!sampleMode) return;
+  sampleMode = false;
+  syncSampleButtons();
+  render();
+});
+
+// ============================================================
+// Mobile sidebar drawer
+// ============================================================
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebar-backdrop').classList.add('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-backdrop').classList.remove('open');
+}
+document.getElementById('btn-filters').addEventListener('click', openSidebar);
+document.getElementById('btn-close-sidebar').addEventListener('click', closeSidebar);
+document.getElementById('sidebar-backdrop').addEventListener('click', closeSidebar);
+
+document.getElementById('btn-about').addEventListener('click', () => {
+  const panel = document.getElementById('chart-about');
+  const open = panel.style.display !== 'none' && panel.style.display !== '';
+  panel.style.display = open ? 'none' : 'block';
+});
+
+// Dismiss tooltip on tap of chart background
+document.getElementById('chart-wrap').addEventListener('touchstart', (e) => {
+  const tag = e.target.tagName.toLowerCase();
+  if (tag === 'svg' || tag === 'path' || tag === 'line' || tag === 'text' || tag === 'g') {
+    hideTooltip();
+  }
+}, { passive: true });
+
+// ============================================================
+// Resize
+// ============================================================
+const ro = new ResizeObserver(() => {
+  if (viewMode === 'bars' || viewMode === 'pct') renderStackedBars();
+  else renderChart();
+});
+ro.observe(document.getElementById('chart-wrap'));
+
+// ============================================================
+// Loading overlay
+// ============================================================
+function setLoading(msg) {
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('loading-msg').textContent = msg;
+}
+function hideLoading() {
+  document.getElementById('loading').style.display = 'none';
+}
+
+// ============================================================
+// Boot
+// ============================================================
+init().catch(err => {
+  setLoading(`Error: ${err.message}`);
+  console.error(err);
+});
+</script>
+</body>
+</html>
