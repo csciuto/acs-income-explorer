@@ -15,7 +15,7 @@ The preprocessor reads the DDI and stops with a clear message if anything below 
 
 ## ACS: IPUMS USA
 
-**Sample:** the **ACS 5-year 2020–2024** sample only (not the 1-year samples, not PRCS). It pools five years of
+**Sample:** the **ACS 5-year 2020–2024** sample only (not the 1-year samples, not PRCS, and not the earlier 5-year samples: 2017–2021 through 2019–2023 repeat the same households; if they're included anyway the preprocessor keeps only the latest). It pools five years of
 interviews (about 5% of households), all on the 2020 PUMA boundaries, which is what makes local areas such as
 "Medford & Malden" possible.
 

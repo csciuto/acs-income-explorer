@@ -443,3 +443,16 @@ def test_main_writes_both_sources(make, tmp_path, monkeypatch):
     assert json.loads((out / "acs" / "stats.json").read_text())["national"]["n"] == 400
     assert json.loads((out / "cps" / "stats.json").read_text())["national"]["n"] == 400
     assert (out / "acs" / "local" / "25.json").exists() and (out / "acs" / "local" / "25.arrow").exists()
+
+
+def test_five_year_extract_with_overlapping_samples_keeps_only_the_latest(make):
+    # IPUMS lets you pick several 5-year samples; they repeat households, so only the latest is used
+    hh = [({"YEAR": y, "MULTYEAR": y - k, "ADJUST": 1.0, "HHINCOME": 50_000 + y}, [{}]) for y in (2023, 2024) for k in range(2)]
+    dat, ddi = make("acs", hh, layout=ACS_MULTI)
+    spec = C.parse_ddi(ddi)
+    assert C.scan_values(dat, spec, "YEAR") == {2023: 2, 2024: 2}
+    p, rep = C.read_extract(dat, spec, acs.HOUSEHOLD_VARS + acs.PERSON_VARS + acs.OPTIONAL_VARS, "REPWT", 80,
+                            chunk_rows=1, keep=("YEAR", 2024))
+    d, keep, meta = acs.build(p, spec)
+    assert len(d) == 2 and rep.shape[0] == 2 and meta["years"] == [2023, 2024]
+    assert d["inc"].tolist() == [52_024, 52_024]

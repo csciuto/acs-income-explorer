@@ -131,10 +131,21 @@ def run_source(name, dat, ddi, out, args, codebook):
     step(f"{name.upper()}: reading the DDI codebook")
     spec = C.parse_ddi(ddi)
     mod.check(spec)
+    keep = None
+    if name == "acs" and "MULTYEAR" in spec:
+        # a 5-year extract may hold several overlapping 5-year samples (2017-21, ..., 2020-24); they repeat the same
+        # households, so keep only the latest
+        step("ACS: checking which 5-year samples the extract holds")
+        samples = C.scan_values(dat, spec, "YEAR")
+        latest = max(samples)
+        if len(samples) > 1:
+            print(f"  {len(samples)} samples ({', '.join(f'{y - 4}-{y}' for y in sorted(samples))}); "
+                  f"using only {latest - 4}-{latest}")
+        keep = ("YEAR", latest)
     step(f"{name.upper()}: reading {dat}")
     want = (mod.HOUSEHOLD_VARS + mod.PERSON_VARS + getattr(mod, "OPTIONAL_VARS", []) + getattr(mod, "EXTRA_INCOME", [])
             + getattr(mod, "PENSION_INCOME", []))
-    p, rep_all = C.read_extract(dat, spec, want, mod.REP_PREFIX, mod.N_REP)
+    p, rep_all = C.read_extract(dat, spec, want, mod.REP_PREFIX, mod.N_REP, keep=keep)
     step(f"{name.upper()}: building households")
     d, keep, meta = mod.build(p, spec, nominal=args.nominal)
     del p
@@ -196,7 +207,8 @@ def run_source(name, dat, ddi, out, args, codebook):
             step("ACS: local-area statistics")
             ld = sd / "local"
             ld.mkdir(exist_ok=True)
-            local_dims = {k: v for k, v in dims.items() if k not in ("region", "city", "year")}
+            # the filters people most often combine with a place; others fall back to the area's household sample
+            local_dims = {k: dims[k] for k in ("age", "work", "house", "burden", "kids", "educ", "race", "earners", "ppct")}
             local = C.compute_local_stats(d, rep, local_dims)
             for st, cells in local.items():
                 (ld / f"{st:02d}.json").write_text(json.dumps(cells, separators=(",", ":")))

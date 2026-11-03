@@ -101,36 +101,57 @@ def niu_mask(raw, width):
     return raw >= top - 1
 
 
-def read_extract(dat_path, spec, want, rep_prefix, n_rep, chunk_rows=400_000):
-    """Every record has the same length, so a chunk of bytes is a 2-D uint8 array and columns are numpy slices.
-    Returns (persons: {var: int64 array}, rep: float32 [households x n_rep], from each household's first person)."""
-    want = [v for v in dict.fromkeys(want) if v in spec]
-    reps = [spec[f"{rep_prefix}{i}"] for i in range(1, n_rep + 1)]
+def _chunks(dat_path, chunk_rows):
     opener = gzip.open if str(dat_path).endswith(".gz") else open
     with opener(dat_path, "rb") as fh:
         reclen = len(fh.readline())
-    cols = {v: [] for v in want}
-    rep_chunks, n = [], 0
     with opener(dat_path, "rb") as fh:
         while True:
             buf = fh.read(chunk_rows * reclen)
             if not buf:
-                break
+                return
             if len(buf) % reclen:
                 sys.exit(f"Record length mismatch: {len(buf)} bytes is not a multiple of {reclen}.")
             a = np.frombuffer(buf, dtype=np.uint8).reshape(-1, reclen)
             if not (a[:, -1] == 10).all():
                 sys.exit("Records are not all the same length; is this an IPUMS rectangular .dat file?")
-            for v in want:
-                s = spec[v]
-                cols[v].append(parse_int(a[:, s["start"]:s["start"] + s["width"]]))
-            ah = a[cols["PERNUM"][-1] == 1]
-            rep = np.empty((len(ah), n_rep), dtype=np.float32)
-            for i, s in enumerate(reps):
-                rep[:, i] = parse_int(ah[:, s["start"]:s["start"] + s["width"]]) / 10 ** s["dcml"]
-            rep_chunks.append(rep)
-            n += len(a)
-            print(f"  {n:,} person records", end="\r", flush=True)
+            yield a
+
+
+def scan_values(dat_path, spec, var, chunk_rows=1_000_000):
+    """{value: records} for one column, in one pass (used to find which samples an extract holds)."""
+    s, counts = spec[var], {}
+    for a in _chunks(dat_path, chunk_rows):
+        vals, n = np.unique(parse_int(a[:, s["start"]:s["start"] + s["width"]]), return_counts=True)
+        for v, k in zip(vals.tolist(), n.tolist()):
+            counts[v] = counts.get(v, 0) + k
+    return counts
+
+
+def read_extract(dat_path, spec, want, rep_prefix, n_rep, chunk_rows=400_000, keep=None):
+    """Every record has the same length, so a chunk of bytes is a 2-D uint8 array and columns are numpy slices.
+    keep=(var, value) reads only records with that value (e.g. one sample out of several).
+    Returns (persons: {var: int64 array}, rep: float32 [households x n_rep], from each household's first person)."""
+    want = [v for v in dict.fromkeys(want) if v in spec]
+    reps = [spec[f"{rep_prefix}{i}"] for i in range(1, n_rep + 1)]
+    cols = {v: [] for v in want}
+    rep_chunks, n = [], 0
+    for a in _chunks(dat_path, chunk_rows):
+        if keep:
+            ks = spec[keep[0]]
+            a = a[parse_int(a[:, ks["start"]:ks["start"] + ks["width"]]) == keep[1]]
+            if not len(a):
+                continue
+        for v in want:
+            s = spec[v]
+            cols[v].append(parse_int(a[:, s["start"]:s["start"] + s["width"]]))
+        ah = a[cols["PERNUM"][-1] == 1]
+        rep = np.empty((len(ah), n_rep), dtype=np.float32)
+        for i, s in enumerate(reps):
+            rep[:, i] = parse_int(ah[:, s["start"]:s["start"] + s["width"]]) / 10 ** s["dcml"]
+        rep_chunks.append(rep)
+        n += len(a)
+        print(f"  {n:,} person records", end="\r", flush=True)
     print()
     persons = {v: np.concatenate(c) for v, c in cols.items()}
     if not (persons["PERNUM"][0] == 1):
@@ -432,6 +453,14 @@ def compute_stats(d, rep, dims, metro_min_n=2000, log=True):
     return stats
 
 
+LOCAL_FIELDS = ("n", "n_rep", "med", "mean", "p25", "p75", "rel", "se_med")
+
+
+def trim(c):
+    """Local-area cells keep only what the page shows; there are ~200,000 of them."""
+    return {k: c[k] for k in LOCAL_FIELDS if k in c}
+
+
 def compute_local_stats(d, rep, dims, by="puma", group="state"):
     """Per-state dicts of local-area (PUMA) stats: overall and every 1-D value. {state: {key: cell}}."""
     out = {}
@@ -447,7 +476,7 @@ def compute_local_stats(d, rep, dims, by="puma", group="state"):
             c = cs.cell(am)
             if not c:
                 continue
-            stats[f"{by}={int(area)}"] = c
+            stats[f"{by}={int(area)}"] = trim(c)
             for dn, (colname, vals) in dims.items():
                 if dn in ("region", "city"):
                     continue
@@ -455,7 +484,7 @@ def compute_local_stats(d, rep, dims, by="puma", group="state"):
                 for v in vals:
                     c = cs.cell(am & (cv == v))
                     if c:
-                        stats[build_key(f"{by}={int(area)}", {dn: v})] = c
+                        stats[build_key(f"{by}={int(area)}", {dn: v})] = trim(c)
         out[int(code)] = stats
     return out
 

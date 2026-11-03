@@ -1,43 +1,43 @@
-# American Income Explorer (ACS edition)
+# American Income Explorer
 
-An interactive look at US household income, built from American Community Survey microdata (2021–2024, in 2024
-dollars). Filter 5.3 million survey households down to a slice — work status, income mix, age, education, family,
-housing cost burden, state, metro area, city or suburb — and see the weighted income distribution as dots,
-stacked bars or a 100% view, with standard errors and reliability warnings.
+An interactive look at US household income from two Census Bureau surveys, in 2024 dollars. Filter millions of
+survey households down to a slice (work status, income sources, age, education, family, housing costs, state,
+metro area, or a local area like Malden & Medford, MA) and see the weighted income distribution as dots, stacked
+bars or a 100% view, with standard errors and reliability warnings.
 
-It's the ACS successor to the [CPS-based American Income Explorer](https://github.com/csciuto/am-inc-exp). The
-ACS is about 15 times bigger per year, which is what makes states, metro areas and narrow slices reliable.
+**Live:** [corey.sciu.to/acs-income-explorer](https://corey.sciu.to/acs-income-explorer/)
 
-A static site: one `index.html` and three data files, no backend, no build step. The heavy lifting is a one-shot
-local preprocessor.
+## Two surveys, one tool
 
-## The data
+| | ACS (default) | CPS |
+|---|---|---|
+| | American Community Survey, 5-year 2020–2024 | Current Population Survey ASEC, income years 2020–2024 |
+| Households | about 6 million | about 290,000 |
+| Good at | states, metro areas, local areas, narrow slices, housing costs | income sources (pensions, interest, dividends), the official national income figures, multiple jobs |
 
-**Source:** [IPUMS USA](https://usa.ipums.org/), ACS 1-year samples 2021–2024, pooled. One row per household
-(group quarters excluded). Income is total household income over the 12 months before the interview, put into
-2024 dollars.
+Switch at the top right. When a slice exists in both, the sidebar shows the other survey's median too and flags
+gaps larger than chance. [METHODOLOGY.md](METHODOLOGY.md) has the definitions; the two differ for real reasons
+(the CPS asks about 50 income questions, the ACS 8; the ACS covers the 12 months before each interview).
+
+This replaces the CPS-only [am-inc-exp](https://github.com/csciuto/am-inc-exp), fixing its education coding, its
+missing pension income and its standard errors along the way.
 
 How to read it:
 
-- **Weighted.** Statistics use the household weights, divided by 4 so counts describe an average year
-  (about 130 million households).
-- **Standard errors** come from the ACS's 80 replicate weights, for every precomputed view: national, each state,
-  each metro area, and combinations of filters (see [METHODOLOGY.md](METHODOLOGY.md) for which).
-- **Reliability.** Fewer than 50 sample households: no statistics. Under 200 or 500: a warning.
-- **The dots are a sample.** The chart draws from 300,000 households sampled within each year and state; the
-  sidebar statistics come from all 5.3 million when the view is precomputed, and from the sample otherwise.
-- **Topcoding (⊕).** The ACS replaces income items above a state's cutoff with the state mean of those values,
-  so the top of the distribution is compressed.
+- **Weighted**, with counts for an average year.
+- **Standard errors** from each survey's replicate weights for every precomputed view; live views (several values
+  of a filter, several states) are computed from the chart's sample and have none.
+- **Reliability:** under 50 sample households, no statistics; under 200 or 500, a warning.
+- **The dots are a sample** (300,000 households per survey; up to 300 per local area).
 
-Cite IPUMS USA per its [terms](https://usa.ipums.org/usa/citation.shtml) if you publish results.
+Cite IPUMS ([USA](https://usa.ipums.org/usa/citation.shtml), [CPS](https://cps.ipums.org/cps/citation.shtml)) if
+you publish results.
 
 ## Run it
 
 ```bash
 python3 -m http.server -d docs 8000   # then open http://localhost:8000
 ```
-
-D3 and Apache Arrow load from a CDN, so the browser needs internet access.
 
 ## Tests
 
@@ -47,46 +47,28 @@ uv venv .venv && uv pip install --python .venv/bin/python -r requirements-test.t
 .venv/bin/python -m pytest --browser chromium
 ```
 
-- `tests/test_preprocess.py`: unit tests on a small fake IPUMS extract (codebook + fixed-width records) built in
-  a temp directory, so they don't need the real download. They cover parsing, every derived variable, the dollar
-  adjustments, the browser sample, and the replicate-weight standard errors against a brute-force calculation.
-- `tests/test_frontend.py`: Playwright tests of the page against the committed data.
+`tests/test_preprocess.py` builds small fake IPUMS extracts for both surveys and checks parsing, every derivation,
+dollar adjustments, sampling and the replicate-weight standard errors (against a brute-force calculation).
+`tests/test_frontend.py` drives the page with Playwright.
 
 ## Regenerating the data
 
-1. Request the extract described in [EXTRACT.md](EXTRACT.md) from IPUMS USA (fixed-width `.dat.gz` plus the DDI
-   `.xml`).
+1. Request the two extracts in [EXTRACT.md](EXTRACT.md).
 2. Run:
 
    ```bash
-   .venv/bin/python preprocess.py --input usa_00017.dat.gz --ddi usa_00017.xml --output-dir ./docs/data
+   .venv/bin/python preprocess.py --acs usa_00018.dat.gz --acs-ddi usa_00018.xml \
+                                  --cps cps_00008.dat.gz --cps-ddi cps_00008.xml --output-dir ./docs/data
    ```
 
-   It reads the 9 GB file in about a minute and spends most of its time on standard errors (about 10 minutes on
-   a 2024 laptop; it needs roughly 15 GB of memory). `--skip-stats` skips them. It checks the extract first and
-   stops with a clear message if something is missing.
-3. Commit `docs/data/` (the site can't rebuild it; the raw extract is far too big for CI).
-
-Adding a year: add its ADJUST factor to `ADJUST_BY_YEAR` in `preprocess.py` (or include ADJUST in the extract).
-The preprocessor refuses to run without one.
-
-## Layout
-
-```
-preprocess.py          IPUMS extract -> docs/data
-docs/index.html        the whole frontend
-docs/data/
-  national.arrow         300,000-household sample (~15 MB)
-  stats_precomputed.json exact statistics with standard errors (~4 MB)
-  codebook.json          labels, states, metro areas
-EXTRACT.md             what to request from IPUMS
-METHODOLOGY.md         definitions and statistical methods
-```
+   Either survey can be rebuilt alone. The preprocessor checks each extract against what it needs and stops with
+   a clear message if something is missing or IPUMS has renumbered a code.
+3. Commit `docs/data/` (the raw extracts are too large for CI) and push.
 
 ## Deploying and versioning
 
-Pushing to `main` deploys `docs/` to GitHub Pages through `.github/workflows/deploy.yml`, which writes
-`docs/version.json` with `v1.<commit count>`; the footer shows it.
+Pushing to `main` deploys `docs/` through `.github/workflows/deploy.yml`, which writes `v1.<commit count>` into
+`docs/version.json` for the footer.
 
 ## License
 
