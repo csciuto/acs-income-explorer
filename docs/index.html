@@ -169,6 +169,13 @@
   .state-check-label { display: flex; align-items: center; gap: 6px; padding: 3px 4px; font-size: 12px; color: var(--text-dim); cursor: pointer; border-radius: 3px; }
   .state-check-label:hover { background: var(--surface2); color: var(--text); }
   .state-check-label input { accent-color: var(--accent); cursor: pointer; }
+  .metro-item.geo-hidden, .metro-item.search-hidden { display: none; }
+  .state-check-label.unavailable, .f-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .state-check-label.unavailable:hover, .f-btn:disabled:hover { background: none; color: var(--text-dim); border-color: var(--border); }
+  .state-check-label.conflict, .f-btn.conflict, .metro-item.conflict { outline: 1px dashed var(--accent); }
+  .geo-note { font-size: 11px; color: var(--text-dim); line-height: 1.5; margin: 0 0 8px; }
+  .geo-note.warn { color: var(--text); border-left: 2px solid var(--accent); padding-left: 8px; }
+  .geo-note button { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 11px; padding: 0; text-decoration: underline; }
   #region-shortcuts { display: flex; flex-wrap: wrap; gap: 4px; }
   .region-btn.partial { border-color: var(--accent); color: var(--text); opacity: 0.6; }
 
@@ -416,6 +423,7 @@
 
       <!-- Geography tab -->
       <div id="tab-geo" class="tab-panel">
+        <p class="geo-note" id="geo-note" hidden></p>
         <div class="filter-group">
           <div class="stat-label">City, suburb or rural</div>
           <div class="filter-btns" id="f-city"></div>
@@ -426,6 +434,7 @@
             <button id="btn-clear-metro" style="display:none;font-size:10px;color:var(--text-dim);background:none;border:1px solid var(--border);border-radius:3px;padding:1px 6px;cursor:pointer">Clear</button>
           </div>
           <input type="text" id="metro-search" placeholder="Search metro areas…" autocomplete="off">
+          <p class="geo-note" id="metro-note" hidden></p>
           <div id="metro-list"></div>
         </div>
         <div class="filter-group" id="local-group">
@@ -681,6 +690,11 @@ async function init() {
     Object.entries(codebook.metros).map(([k, m]) => [k, m.name])
   );
   codebook.localAreas = codebook.sources.acs?.local_areas || {};
+  // Each local area lies in one state, one metro area (0 = none) and one city/suburb/rural type, so this table
+  // tells which geography choices can go together.
+  codebook.geoAreas = source === 'acs' ? Object.entries(codebook.localAreas)
+    .filter(([, a]) => a.metro !== undefined && a.city !== undefined)
+    .map(([code, a]) => ({ code: parseInt(code), state: a.state, metro: a.metro, city: a.city })) : [];
   codebook.labels.puma = Object.fromEntries(
     Object.entries(codebook.localAreas).map(([k, a]) => [k, localName(a).join(' · ')])
   );
@@ -778,8 +792,14 @@ function buildLocalPicker() {
   const draw = () => {
     const q = input.value.toLowerCase().trim();
     const sel = filters.puma && filters.puma.size ? [...filters.puma][0] : null;
-    let items = q.length >= 2 ? all.filter(a => a.text.includes(q)) : all.filter(a => a.code === sel);
-    if (!items.length) { list.innerHTML = q.length >= 2 ? '<div class="hint">No matching area.</div>' : hint; return; }
+    const ok = geoAllowed();
+    let items = q.length >= 2 ? all.filter(a => a.text.includes(q) && (!ok || ok.puma.has(a.code) || a.code === sel))
+                              : all.filter(a => a.code === sel);
+    if (!items.length) {
+      list.innerHTML = q.length >= 2
+        ? `<div class="hint">No matching area${ok && ok.narrowed ? ' within your other geography choices' : ''}.</div>` : hint;
+      return;
+    }
     list.innerHTML = items.slice(0, 60).map(a =>
       `<button class="metro-item local-item" data-code="${a.code}" title="${a.n.toLocaleString()} survey households">${a.name}${a.where ? ` <small>${a.where}</small>` : ''}</button>`).join('')
       + (items.length > 60 ? `<div class="hint">${items.length - 60} more; keep typing.</div>` : '');
@@ -797,6 +817,84 @@ function buildLocalPicker() {
   input.addEventListener('input', draw);
   list._draw = draw;
   document.getElementById('btn-clear-local').addEventListener('click', () => { delete filters.puma; render(); });
+}
+
+// Which geography values are still possible given the other geography choices (states, metro area,
+// city/suburb/rural, local area). Each dimension is checked against all the others but not itself, so you
+// can still switch within it. Returns null when the source has no local-area table (the CPS).
+function geoAllowed() {
+  const areas = codebook.geoAreas;
+  if (!areas || !areas.length) return null;
+  const S = selectedFips.size ? selectedFips : null;
+  const M = filters.metro_area && filters.metro_area.size ? filters.metro_area : null;
+  const C = filters.city && filters.city.size ? filters.city : null;
+  const P = filters.puma && filters.puma.size ? filters.puma : null;
+  const ok = { state: new Set(), metro: new Set(), city: new Set(), puma: new Set(), narrowed: !!(S || M || C || P), any: false };
+  for (const a of areas) {
+    const s = !S || S.has(a.state), m = !M || M.has(a.metro), c = !C || C.has(a.city), p = !P || P.has(a.code);
+    if (m && c && p) ok.state.add(a.state);
+    if (s && c && p) ok.metro.add(a.metro);
+    if (s && m && p) ok.city.add(a.city);
+    if (s && m && c) ok.puma.add(a.code);
+    if (s && m && c && p) ok.any = true;
+  }
+  return ok;
+}
+
+function syncGeoAvailability() {
+  const ok = geoAllowed();
+  const note = document.getElementById('geo-note');
+  const metroNote = document.getElementById('metro-note');
+  const why = 'Not possible with your other geography choices';
+  // City / suburb / rural buttons
+  document.querySelectorAll('#f-city .f-btn').forEach(btn => {
+    const v = parseInt(btn.dataset.val);
+    const on = !!(filters.city && filters.city.has(v));
+    const allowed = !ok || ok.city.has(v);
+    btn.disabled = !allowed && !on;
+    btn.classList.toggle('conflict', !allowed && on);
+    btn.title = allowed ? '' : why;
+  });
+  // States
+  document.querySelectorAll('.state-check-label').forEach(lbl => {
+    const f = parseInt(lbl.dataset.fips);
+    const on = selectedFips.has(f);
+    const allowed = !ok || ok.state.has(f);
+    lbl.classList.toggle('unavailable', !allowed && !on);
+    lbl.classList.toggle('conflict', !allowed && on);
+    lbl.querySelector('input').disabled = !allowed && !on;
+    lbl.title = allowed ? '' : why;
+  });
+  // Metro areas: list only the ones that fit
+  let shown = 0, total = 0;
+  document.querySelectorAll('.metro-item:not(.local-item)').forEach(b => {
+    const code = parseInt(b.dataset.code);
+    const on = !!(filters.metro_area && filters.metro_area.has(code));
+    const allowed = !ok || ok.metro.has(code);
+    b.classList.toggle('geo-hidden', !allowed && !on);
+    b.classList.toggle('conflict', !allowed && on);
+    total++; if (allowed || on) shown++;
+  });
+  if (metroNote) {
+    metroNote.hidden = !ok || shown === total;
+    metroNote.textContent = shown === 0
+      ? 'No metro area fits your other geography choices (for example, rural areas are outside every metro area).'
+      : `Showing the ${shown} metro area${shown === 1 ? '' : 's'} that fit your other geography choices.`;
+  }
+  if (note) {
+    note.hidden = !ok || ok.any || !ok.narrowed;
+    note.classList.add('warn');
+    if (!note.hidden) {
+      note.innerHTML = 'These geography choices don\'t overlap, so no households match. ';
+      const b = document.createElement('button');
+      b.textContent = 'Clear geography';
+      b.addEventListener('click', () => {
+        selectedFips.clear(); delete filters.metro_area; delete filters.city; delete filters.puma;
+        updateStateColorMap(); syncStateCheckboxes(); syncFilterButtons(); render();
+      });
+      note.append(b);
+    }
+  }
 }
 
 function syncLocalPicker() {
@@ -1317,6 +1415,7 @@ function render() {
   syncFilterButtons();
   syncMetroPicker();
   syncLocalPicker();
+  syncGeoAvailability();
   renderActiveChips();
   renderBrushInfo();
   renderLegend();
@@ -2059,7 +2158,7 @@ function buildMetroPicker() {
   }));
   document.getElementById('metro-search').addEventListener('input', function () {
     const q = this.value.toLowerCase().trim();
-    list.querySelectorAll('.metro-item').forEach(b => { b.style.display = !q || b.textContent.toLowerCase().includes(q) ? '' : 'none'; });
+    list.querySelectorAll('.metro-item').forEach(b => { b.classList.toggle('search-hidden', !!q && !b.textContent.toLowerCase().includes(q)); });
   });
   document.getElementById('btn-clear-metro').addEventListener('click', () => { delete filters.metro_area; render(); });
 }

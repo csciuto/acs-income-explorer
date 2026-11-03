@@ -64,7 +64,10 @@ Globals: `source`, `srcInfo`, `filters` (dim → Set), `selectedFips`, `national
 `otherPrecomputed` (other survey, for the comparison line), `localStats`/`localTables` (per state, loaded on
 demand). `currentCols()` returns the local table when a local area is selected. `getStats()` picks scope
 `state=` (one state) > `puma=` > `metro=` > `national`, builds the key via `DIM_TO_KEY`, falls back to live stats.
-UI elements for columns a source lacks are removed at load. Switching source rewrites the hash with
+UI elements for columns a source lacks are removed at load. Geography tab (ACS): each local area in
+`codebook.sources.acs.local_areas` carries its one `metro` (0 = none) and `city`; `geoAllowed()` uses that table to
+grey out states/city types and hide metros and local areas that can't go with the other geography choices, and
+`#geo-note` explains a conflicting link. A few rural local areas sit inside a metro (different definition vintages). Switching source rewrites the hash with
 `history.replaceState` and reloads (a hash assignment would fire popstate and drop `src`).
 
 Adding a dimension: preprocess `SHARED_DIMS`/`SOURCE_DIMS` + `LABELS` + loader column; frontend `PALETTES`,

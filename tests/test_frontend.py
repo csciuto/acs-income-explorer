@@ -810,6 +810,67 @@ class TestACS:
         expect(page.locator("#s-med")).to_contain_text(f"${stats['med']:,}")
 
 
+class TestGeographyChoices:
+    """Geography choices that can't go together are greyed out or hidden (ACS)."""
+
+    def _geo(self, page: Page, hash_: str = ""):
+        if hash_:
+            page.goto(page.url.split("#")[0] + hash_)
+            page.reload()
+            page.wait_for_selector("#loading", state="hidden")
+        page.locator(".tab-btn[data-tab='geo']").click()
+
+    def _state(self, page: Page, name: str):
+        return page.locator("#state-list .state-check-label", has_text=re.compile(rf"^\s*{name}\s*$"))
+
+    def test_metro_greys_out_other_states_and_rural(self, page: Page):
+        self._geo(page)
+        page.fill("#metro-search", "Boston")
+        page.locator(".metro-item", has_text="Boston-Cambridge").click()
+        expect(self._state(page, "Idaho")).to_have_class(re.compile("unavailable"))
+        expect(self._state(page, "Idaho").locator("input")).to_be_disabled()
+        for ok in ("Massachusetts", "New Hampshire"):
+            expect(self._state(page, ok)).not_to_have_class(re.compile("unavailable"))
+        expect(page.locator('#f-city .f-btn[data-val="2"]')).to_be_disabled()   # non-metro
+        expect(page.locator('#f-city .f-btn[data-val="1"]')).to_be_enabled()    # suburb
+
+    def test_state_narrows_metro_list(self, page: Page):
+        self._geo(page)
+        self._state(page, "Idaho").locator("input").check()
+        expect(page.locator(".metro-item:not(.local-item)", has_text="Boise")).to_be_visible()
+        expect(page.locator(".metro-item:not(.local-item)", has_text="Boston-Cambridge")).to_be_hidden()
+        expect(page.locator("#metro-note")).to_contain_text("fit your other geography choices")
+
+    def test_rural_hides_almost_every_metro(self, page: Page):
+        self._geo(page)
+        page.locator('#f-city .f-btn[data-val="2"]').click()
+        # A handful of rural local areas sit inside a metro area (the city/rural and metro codes use different
+        # vintages of the Census definitions), so a few metros remain; Boston isn't one of them.
+        expect(page.locator(".metro-item:not(.local-item)", has_text="Boston-Cambridge")).to_be_hidden()
+        assert page.locator(".metro-item:not(.local-item):visible").count() < 10
+        expect(page.locator("#metro-note")).to_contain_text("fit your other geography choices")
+        expect(self._state(page, "New Jersey")).to_have_class(re.compile("unavailable"))  # no rural areas
+
+    def test_local_search_stays_within_state(self, page: Page):
+        self._geo(page)
+        self._state(page, "Idaho").locator("input").check()
+        page.fill("#local-search", "Middlesex")
+        expect(page.locator("#local-list")).to_contain_text("No matching area within your other geography choices")
+
+    def test_conflicting_link_explains_and_clears(self, page: Page):
+        self._geo(page, "#metro_area=14460&states=16")
+        expect(page.locator("#geo-note")).to_contain_text("don't overlap")
+        expect(self._state(page, "Idaho")).to_have_class(re.compile("conflict"))
+        page.locator("#geo-note button").click()
+        expect(page.locator("#geo-note")).to_be_hidden()
+        expect(page.locator("#active-chips")).not_to_contain_text("Metro area")
+        expect(page.locator("#active-chips")).not_to_contain_text("State:")
+
+    def test_cps_has_no_geography_limits(self, page: Page):
+        self._geo(page, "#src=cps&city=2")
+        expect(self._state(page, "New Jersey")).not_to_have_class(re.compile("unavailable"))
+
+
 class TestSources:
     """ACS / CPS switch, source-specific filters, the comparison line, local areas."""
 

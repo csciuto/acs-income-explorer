@@ -440,6 +440,9 @@ def test_main_writes_both_sources(make, tmp_path, monkeypatch):
     assert cb["sources"]["acs"]["years"] == {"0": "2021", "1": "2024"}
     assert cb["sources"]["cps"]["years"] == {"0": "2020", "1": "2024"}
     assert cb["sources"]["acs"]["local_areas"]["2500609"]["name"] == "Middlesex County (East)--Malden & Medford"
+    for code, area in cb["sources"]["acs"]["local_areas"].items():
+        # every local area records its one metro area and city/suburb/rural type, for the Geography tab
+        assert isinstance(area["metro"], int) and area["city"] in (0, 1, 2, 3), (code, area)
     assert json.loads((out / "acs" / "stats.json").read_text())["national"]["n"] == 400
     assert json.loads((out / "cps" / "stats.json").read_text())["national"]["n"] == 400
     assert (out / "acs" / "local" / "25.json").exists() and (out / "acs" / "local" / "25.arrow").exists()

@@ -194,8 +194,13 @@ def run_source(name, dat, ddi, out, args, codebook):
         if (d["puma"] > 0).any():
             names = json.loads((Path(__file__).parent / "geo" / "puma_names_2020.json").read_text())
             pc = d.groupby("puma").size()
+            # Each local area lies in exactly one metro area (0 = none) and one city/suburb/rural type; the page
+            # uses this to grey out geography choices that can't go together.
+            geo = d.groupby("puma")[["metro_area", "city"]].agg(lambda x: int(x.mode().iloc[0]))
             entry["local_areas"] = {str(int(c)): {"name": names.get(f"{int(c):07d}", f"Area {int(c)}"),
-                                                  "state": int(c) // 100_000, "n": int(n)} for c, n in pc.items()}
+                                                  "state": int(c) // 100_000, "n": int(n),
+                                                  "metro": int(geo.at[c, "metro_area"]), "city": int(geo.at[c, "city"])}
+                                    for c, n in pc.items()}
     codebook["sources"][name] = entry
 
     if not args.skip_stats:
