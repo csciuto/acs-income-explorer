@@ -1,0 +1,1433 @@
+{
+ "source": "IPUMS USA, American Community Survey 1-year samples",
+ "dollars": "constant 2024 dollars",
+ "years": {
+  "0": "2021",
+  "1": "2022",
+  "2": "2023",
+  "3": "2024"
+ },
+ "year_display": {
+  "0": "2021",
+  "1": "2022",
+  "2": "2023",
+  "3": "2024"
+ },
+ "notes": {
+  "dollars": "Incomes are put into each survey year's dollars with the Census Bureau's ADJINC (IPUMS ADJUST), then into constant dollars of the latest year with the CPI-U (IPUMS CPI99).",
+  "years": "ACS survey years. Income is for the 12 months before each interview, spread through the year.",
+  "weights": "Weights are divided by the 4 pooled years, so counts describe an average year.",
+  "se": "Standard errors use the 80 ACS household replicate weights (successive difference replication).",
+  "topcodes": "The ACS replaces each income item above a state's cutoff with the mean of those values. Households with a member at that value are flagged as topcoded.",
+  "cohabiting": "Cohabiting: an unmarried partner of the householder is present (RELATED 1114).",
+  "burden": "12 × monthly gross rent or selected owner costs, divided by household income.",
+  "sample": "The chart shows a stratified sample of households; precomputed statistics use every household."
+ },
+ "labels": {
+  "age_bucket": {
+   "0": "Under 25",
+   "1": "25–29",
+   "2": "30–34",
+   "3": "35–39",
+   "4": "40–44",
+   "5": "45–54",
+   "6": "55–64",
+   "7": "65+"
+  },
+  "sex": {
+   "1": "Male",
+   "2": "Female"
+  },
+  "marst": {
+   "0": "Married",
+   "1": "Cohabiting",
+   "2": "Sep./Divorced",
+   "3": "Widowed",
+   "4": "Never married"
+  },
+  "educ": {
+   "0": "< HS",
+   "1": "HS diploma",
+   "2": "Some college",
+   "3": "Bachelor's",
+   "4": "Graduate"
+  },
+  "region": {
+   "1": "Northeast",
+   "2": "Midwest",
+   "3": "South",
+   "4": "West"
+  },
+  "metro": {
+   "0": "Non-metro",
+   "1": "Metro",
+   "2": "Mixed/unknown"
+  },
+  "city": {
+   "0": "Principal city",
+   "1": "Suburb",
+   "2": "Non-metro",
+   "3": "Metro, city status unknown"
+  },
+  "work_status": {
+   "0": "FT wage",
+   "1": "FT self-emp",
+   "2": "FT part-year",
+   "3": "Part-time",
+   "4": "Unemployed",
+   "5": "Retired",
+   "6": "Not working"
+  },
+  "earner_count": {
+   "0": "No earners",
+   "1": "One earner",
+   "2": "Two earners",
+   "3": "Three or more"
+  },
+  "breadwinner": {
+   "0": "Sole/dominant",
+   "1": "Primary earner",
+   "2": "Co-earner",
+   "3": "Secondary earner",
+   "4": "Non-earner"
+  },
+  "passive_pct": {
+   "0": "≥75% wages",
+   "1": "50–74% wages",
+   "2": "25–49% mixed",
+   "3": "<25% wages",
+   "4": "Entirely passive"
+  },
+  "passive_source": {
+   "0": "SS/SSI",
+   "1": "Retirement/pension",
+   "2": "Capital (int/div/rent)",
+   "3": "Public assistance",
+   "4": "Primarily wages"
+  },
+  "kids": {
+   "0": "No children",
+   "1": "Kids present"
+  },
+  "youngest_child": {
+   "0": "No children",
+   "1": "Under 5",
+   "2": "5–12",
+   "3": "13–17"
+  },
+  "hours_category": {
+   "0": "Full-time",
+   "1": "Part-time",
+   "2": "Marginal",
+   "3": "N/A"
+  },
+  "race_ethnicity": {
+   "0": "White non-Hisp",
+   "1": "Black non-Hisp",
+   "2": "Hispanic",
+   "3": "Asian/PI non-Hisp",
+   "4": "Other/Multiracial"
+  },
+  "has_roommate": {
+   "0": "No roommates",
+   "1": "Has roommate"
+  },
+  "housing": {
+   "0": "Owner w/ mortgage",
+   "1": "Owner, free & clear",
+   "2": "Renter",
+   "3": "N/A"
+  },
+  "burden": {
+   "0": "Under 30%",
+   "1": "30–49%",
+   "2": "50%+",
+   "3": "N/A"
+  }
+ },
+ "states": {
+  "1": {
+   "name": "Alabama"
+  },
+  "2": {
+   "name": "Alaska"
+  },
+  "4": {
+   "name": "Arizona"
+  },
+  "5": {
+   "name": "Arkansas"
+  },
+  "6": {
+   "name": "California"
+  },
+  "8": {
+   "name": "Colorado"
+  },
+  "9": {
+   "name": "Connecticut"
+  },
+  "10": {
+   "name": "Delaware"
+  },
+  "11": {
+   "name": "District of Columbia"
+  },
+  "12": {
+   "name": "Florida"
+  },
+  "13": {
+   "name": "Georgia"
+  },
+  "15": {
+   "name": "Hawaii"
+  },
+  "16": {
+   "name": "Idaho"
+  },
+  "17": {
+   "name": "Illinois"
+  },
+  "18": {
+   "name": "Indiana"
+  },
+  "19": {
+   "name": "Iowa"
+  },
+  "20": {
+   "name": "Kansas"
+  },
+  "21": {
+   "name": "Kentucky"
+  },
+  "22": {
+   "name": "Louisiana"
+  },
+  "23": {
+   "name": "Maine"
+  },
+  "24": {
+   "name": "Maryland"
+  },
+  "25": {
+   "name": "Massachusetts"
+  },
+  "26": {
+   "name": "Michigan"
+  },
+  "27": {
+   "name": "Minnesota"
+  },
+  "28": {
+   "name": "Mississippi"
+  },
+  "29": {
+   "name": "Missouri"
+  },
+  "30": {
+   "name": "Montana"
+  },
+  "31": {
+   "name": "Nebraska"
+  },
+  "32": {
+   "name": "Nevada"
+  },
+  "33": {
+   "name": "New Hampshire"
+  },
+  "34": {
+   "name": "New Jersey"
+  },
+  "35": {
+   "name": "New Mexico"
+  },
+  "36": {
+   "name": "New York"
+  },
+  "37": {
+   "name": "North Carolina"
+  },
+  "38": {
+   "name": "North Dakota"
+  },
+  "39": {
+   "name": "Ohio"
+  },
+  "40": {
+   "name": "Oklahoma"
+  },
+  "41": {
+   "name": "Oregon"
+  },
+  "42": {
+   "name": "Pennsylvania"
+  },
+  "44": {
+   "name": "Rhode Island"
+  },
+  "45": {
+   "name": "South Carolina"
+  },
+  "46": {
+   "name": "South Dakota"
+  },
+  "47": {
+   "name": "Tennessee"
+  },
+  "48": {
+   "name": "Texas"
+  },
+  "49": {
+   "name": "Utah"
+  },
+  "50": {
+   "name": "Vermont"
+  },
+  "51": {
+   "name": "Virginia"
+  },
+  "53": {
+   "name": "Washington"
+  },
+  "54": {
+   "name": "West Virginia"
+  },
+  "55": {
+   "name": "Wisconsin"
+  },
+  "56": {
+   "name": "Wyoming"
+  }
+ },
+ "metros": {
+  "10420": {
+   "name": "Akron, OH",
+   "n": 11014
+  },
+  "10540": {
+   "name": "Albany, OR",
+   "n": 1556
+  },
+  "10580": {
+   "name": "Albany-Schenectady-Troy, NY",
+   "n": 15538
+  },
+  "10740": {
+   "name": "Albuquerque, NM",
+   "n": 13362
+  },
+  "10900": {
+   "name": "Allentown-Bethlehem-Easton, PA-NJ",
+   "n": 11867
+  },
+  "11100": {
+   "name": "Amarillo, TX",
+   "n": 4459
+  },
+  "11260": {
+   "name": "Anchorage, AK",
+   "n": 4701
+  },
+  "11460": {
+   "name": "Ann Arbor, MI",
+   "n": 5400
+  },
+  "11500": {
+   "name": "Anniston-Oxford-Jacksonville, AL",
+   "n": 1842
+  },
+  "11700": {
+   "name": "Asheville, NC",
+   "n": 9412
+  },
+  "12060": {
+   "name": "Atlanta-Sandy Springs-Roswell, GA",
+   "n": 86794
+  },
+  "12100": {
+   "name": "Atlantic City-Hammonton, NJ",
+   "n": 4213
+  },
+  "12220": {
+   "name": "Auburn-Opelika, AL",
+   "n": 452
+  },
+  "12260": {
+   "name": "Augusta-Richmond County, GA-SC",
+   "n": 7679
+  },
+  "12420": {
+   "name": "Austin-Round Rock, TX",
+   "n": 35424
+  },
+  "12540": {
+   "name": "Bakersfield, CA",
+   "n": 11262
+  },
+  "12580": {
+   "name": "Baltimore-Columbia-Towson, MD",
+   "n": 43284
+  },
+  "12620": {
+   "name": "Bangor, ME",
+   "n": 2267
+  },
+  "12700": {
+   "name": "Barnstable Town, MA",
+   "n": 4746
+  },
+  "12940": {
+   "name": "Baton Rouge, LA",
+   "n": 10909
+  },
+  "13140": {
+   "name": "Beaumont-Port Arthur, TX",
+   "n": 5994
+  },
+  "13220": {
+   "name": "Beckley, WV",
+   "n": 1171
+  },
+  "13380": {
+   "name": "Bellingham, WA",
+   "n": 3793
+  },
+  "13460": {
+   "name": "Bend-Redmond, OR",
+   "n": 575
+  },
+  "13780": {
+   "name": "Binghamton, NY",
+   "n": 1160
+  },
+  "13820": {
+   "name": "Birmingham-Hoover, AL",
+   "n": 17389
+  },
+  "13900": {
+   "name": "Bismarck, ND",
+   "n": 1593
+  },
+  "13980": {
+   "name": "Blacksburg-Christiansburg-Radford, VA",
+   "n": 3175
+  },
+  "14010": {
+   "name": "Bloomington, IL",
+   "n": 3413
+  },
+  "14020": {
+   "name": "Bloomington, IN",
+   "n": 2018
+  },
+  "14260": {
+   "name": "Boise City, ID",
+   "n": 11456
+  },
+  "14460": {
+   "name": "Boston-Cambridge-Newton, MA-NH",
+   "n": 78156
+  },
+  "14740": {
+   "name": "Bremerton-Silverdale, WA",
+   "n": 4893
+  },
+  "14860": {
+   "name": "Bridgeport-Stamford-Norwalk, CT",
+   "n": 14766
+  },
+  "15180": {
+   "name": "Brownsville-Harlingen, TX",
+   "n": 5915
+  },
+  "15380": {
+   "name": "Buffalo-Cheektowaga-Niagara Falls, NY",
+   "n": 20020
+  },
+  "15500": {
+   "name": "Burlington, NC",
+   "n": 3381
+  },
+  "15540": {
+   "name": "Burlington-South Burlington, VT",
+   "n": 630
+  },
+  "15680": {
+   "name": "California-Lexington Park, MD",
+   "n": 1050
+  },
+  "15940": {
+   "name": "Canton-Massillon, OH",
+   "n": 6790
+  },
+  "15980": {
+   "name": "Cape Coral-Fort Myers, FL",
+   "n": 14625
+  },
+  "16580": {
+   "name": "Champaign-Urbana, IL",
+   "n": 796
+  },
+  "16620": {
+   "name": "Charleston, WV",
+   "n": 3044
+  },
+  "16700": {
+   "name": "Charleston-North Charleston, SC",
+   "n": 13095
+  },
+  "16740": {
+   "name": "Charlotte-Concord-Gastonia, NC-SC",
+   "n": 43865
+  },
+  "16860": {
+   "name": "Chattanooga, TN-GA",
+   "n": 9420
+  },
+  "16940": {
+   "name": "Cheyenne, WY",
+   "n": 1158
+  },
+  "16980": {
+   "name": "Chicago-Naperville-Elgin, IL-IN-WI",
+   "n": 124844
+  },
+  "17020": {
+   "name": "Chico, CA",
+   "n": 3670
+  },
+  "17140": {
+   "name": "Cincinnati, OH-KY-IN",
+   "n": 31961
+  },
+  "17300": {
+   "name": "Clarksville, TN-KY",
+   "n": 4636
+  },
+  "17420": {
+   "name": "Cleveland, TN",
+   "n": 1667
+  },
+  "17460": {
+   "name": "Cleveland-Elyria, OH",
+   "n": 35021
+  },
+  "17660": {
+   "name": "Coeur d'Alene, ID",
+   "n": 2278
+  },
+  "17780": {
+   "name": "College Station-Bryan, TX",
+   "n": 3818
+  },
+  "17820": {
+   "name": "Colorado Springs, CO",
+   "n": 11618
+  },
+  "17860": {
+   "name": "Columbia, MO",
+   "n": 539
+  },
+  "17900": {
+   "name": "Columbia, SC",
+   "n": 13758
+  },
+  "18140": {
+   "name": "Columbus, OH",
+   "n": 30937
+  },
+  "18580": {
+   "name": "Corpus Christi, TX",
+   "n": 7502
+  },
+  "18700": {
+   "name": "Corvallis, OR",
+   "n": 1508
+  },
+  "18880": {
+   "name": "Crestview-Fort Walton Beach-Destin, FL",
+   "n": 4808
+  },
+  "19100": {
+   "name": "Dallas-Fort Worth-Arlington, TX",
+   "n": 111955
+  },
+  "19300": {
+   "name": "Daphne-Fairhope-Foley, AL",
+   "n": 2894
+  },
+  "19380": {
+   "name": "Dayton, OH",
+   "n": 12937
+  },
+  "19460": {
+   "name": "Decatur, AL",
+   "n": 2480
+  },
+  "19500": {
+   "name": "Decatur, IL",
+   "n": 522
+  },
+  "19660": {
+   "name": "Deltona-Daytona Beach-Ormond Beach, FL",
+   "n": 11946
+  },
+  "19740": {
+   "name": "Denver-Aurora-Lakewood, CO",
+   "n": 49556
+  },
+  "19780": {
+   "name": "Des Moines-West Des Moines, IA",
+   "n": 7113
+  },
+  "19820": {
+   "name": "Detroit-Warren-Dearborn, MI",
+   "n": 56488
+  },
+  "20020": {
+   "name": "Dothan, AL",
+   "n": 4357
+  },
+  "20100": {
+   "name": "Dover, DE",
+   "n": 2548
+  },
+  "20700": {
+   "name": "East Stroudsburg, PA",
+   "n": 1840
+  },
+  "20740": {
+   "name": "Eau Claire, WI",
+   "n": 561
+  },
+  "20940": {
+   "name": "El Centro, CA",
+   "n": 1801
+  },
+  "21140": {
+   "name": "Elkhart-Goshen, IN",
+   "n": 2847
+  },
+  "21340": {
+   "name": "El Paso, TX",
+   "n": 11372
+  },
+  "21500": {
+   "name": "Erie, PA",
+   "n": 4274
+  },
+  "21660": {
+   "name": "Eugene, OR",
+   "n": 6878
+  },
+  "22180": {
+   "name": "Fayetteville, NC",
+   "n": 6661
+  },
+  "22220": {
+   "name": "Fayetteville-Springdale-Rogers, AR-MO",
+   "n": 7363
+  },
+  "22380": {
+   "name": "Flagstaff, AZ",
+   "n": 2784
+  },
+  "22500": {
+   "name": "Florence, SC",
+   "n": 880
+  },
+  "22660": {
+   "name": "Fort Collins, CO",
+   "n": 6105
+  },
+  "23060": {
+   "name": "Fort Wayne, IN",
+   "n": 6132
+  },
+  "23420": {
+   "name": "Fresno, CA",
+   "n": 12178
+  },
+  "23460": {
+   "name": "Gadsden, AL",
+   "n": 430
+  },
+  "23540": {
+   "name": "Gainesville, FL",
+   "n": 4033
+  },
+  "23580": {
+   "name": "Gainesville, GA",
+   "n": 3193
+  },
+  "24020": {
+   "name": "Glens Falls, NY",
+   "n": 3360
+  },
+  "24140": {
+   "name": "Goldsboro, NC",
+   "n": 1878
+  },
+  "24300": {
+   "name": "Grand Junction, CO",
+   "n": 2168
+  },
+  "24340": {
+   "name": "Grand Rapids-Wyoming, MI",
+   "n": 10859
+  },
+  "24540": {
+   "name": "Greeley, CO",
+   "n": 3856
+  },
+  "24660": {
+   "name": "Greensboro-High Point, NC",
+   "n": 12298
+  },
+  "24780": {
+   "name": "Greenville, NC",
+   "n": 2570
+  },
+  "24860": {
+   "name": "Greenville-Anderson-Mauldin, SC",
+   "n": 17452
+  },
+  "25060": {
+   "name": "Gulfport-Biloxi-Pascagoula, MS",
+   "n": 5904
+  },
+  "25260": {
+   "name": "Hanford-Corcoran, CA",
+   "n": 1705
+  },
+  "25420": {
+   "name": "Harrisburg-Carlisle, PA",
+   "n": 8765
+  },
+  "25500": {
+   "name": "Harrisonburg, VA",
+   "n": 2275
+  },
+  "25540": {
+   "name": "Hartford-West Hartford-East Hartford, CT",
+   "n": 19287
+  },
+  "25620": {
+   "name": "Hattiesburg, MS",
+   "n": 2029
+  },
+  "25860": {
+   "name": "Hickory-Lenoir-Morganton, NC",
+   "n": 6662
+  },
+  "25940": {
+   "name": "Hilton Head Island-Bluffton-Beaufort, SC",
+   "n": 890
+  },
+  "26140": {
+   "name": "Homosassa Springs, FL",
+   "n": 2970
+  },
+  "26380": {
+   "name": "Houma-Thibodaux, LA",
+   "n": 696
+  },
+  "26420": {
+   "name": "Houston-The Woodlands-Sugar Land, TX",
+   "n": 86616
+  },
+  "26620": {
+   "name": "Huntsville, AL",
+   "n": 6689
+  },
+  "26900": {
+   "name": "Indianapolis-Carmel-Anderson, IN",
+   "n": 28883
+  },
+  "26980": {
+   "name": "Iowa City, IA",
+   "n": 1802
+  },
+  "27060": {
+   "name": "Ithaca, NY",
+   "n": 1754
+  },
+  "27100": {
+   "name": "Jackson, MI",
+   "n": 2484
+  },
+  "27140": {
+   "name": "Jackson, MS",
+   "n": 9181
+  },
+  "27180": {
+   "name": "Jackson, TN",
+   "n": 2073
+  },
+  "27260": {
+   "name": "Jacksonville, FL",
+   "n": 22974
+  },
+  "27500": {
+   "name": "Janesville-Beloit, WI",
+   "n": 1996
+  },
+  "27620": {
+   "name": "Jefferson City, MO",
+   "n": 661
+  },
+  "27740": {
+   "name": "Johnson City, TN",
+   "n": 3153
+  },
+  "27780": {
+   "name": "Johnstown, PA",
+   "n": 3687
+  },
+  "27860": {
+   "name": "Jonesboro, AR",
+   "n": 1565
+  },
+  "27900": {
+   "name": "Joplin, MO",
+   "n": 3150
+  },
+  "28020": {
+   "name": "Kalamazoo-Portage, MI",
+   "n": 6143
+  },
+  "28100": {
+   "name": "Kankakee, IL",
+   "n": 495
+  },
+  "28140": {
+   "name": "Kansas City, MO-KS",
+   "n": 32729
+  },
+  "28940": {
+   "name": "Knoxville, TN",
+   "n": 16661
+  },
+  "29100": {
+   "name": "La Crosse-Onalaska, WI-MN",
+   "n": 1444
+  },
+  "29180": {
+   "name": "Lafayette, LA",
+   "n": 7533
+  },
+  "29200": {
+   "name": "Lafayette-West Lafayette, IN",
+   "n": 2892
+  },
+  "29420": {
+   "name": "Lake Havasu City-Kingman, AZ",
+   "n": 4175
+  },
+  "29460": {
+   "name": "Lakeland-Winter Haven, FL",
+   "n": 11865
+  },
+  "29540": {
+   "name": "Lancaster, PA",
+   "n": 6700
+  },
+  "29620": {
+   "name": "Lansing-East Lansing, MI",
+   "n": 7740
+  },
+  "29700": {
+   "name": "Laredo, TX",
+   "n": 3136
+  },
+  "29740": {
+   "name": "Las Cruces, NM",
+   "n": 2699
+  },
+  "29820": {
+   "name": "Las Vegas-Henderson-Paradise, NV",
+   "n": 34312
+  },
+  "29940": {
+   "name": "Lawrence, KS",
+   "n": 1283
+  },
+  "30020": {
+   "name": "Lawton, OK",
+   "n": 1500
+  },
+  "30140": {
+   "name": "Lebanon, PA",
+   "n": 1986
+  },
+  "30340": {
+   "name": "Lewiston-Auburn, ME",
+   "n": 1333
+  },
+  "30620": {
+   "name": "Lima, OH",
+   "n": 1922
+  },
+  "30700": {
+   "name": "Lincoln, NE",
+   "n": 3771
+  },
+  "30780": {
+   "name": "Little Rock-North Little Rock-Conway, AR",
+   "n": 10442
+  },
+  "31080": {
+   "name": "Los Angeles-Long Beach-Anaheim, CA",
+   "n": 183744
+  },
+  "31140": {
+   "name": "Louisville/Jefferson County, KY-IN",
+   "n": 23038
+  },
+  "31180": {
+   "name": "Lubbock, TX",
+   "n": 5899
+  },
+  "31340": {
+   "name": "Lynchburg, VA",
+   "n": 4535
+  },
+  "31460": {
+   "name": "Madera, CA",
+   "n": 1767
+  },
+  "31700": {
+   "name": "Manchester-Nashua, NH",
+   "n": 1329
+  },
+  "31860": {
+   "name": "Mankato-North Mankato, MN",
+   "n": 1441
+  },
+  "31900": {
+   "name": "Mansfield, OH",
+   "n": 1879
+  },
+  "32580": {
+   "name": "McAllen-Edinburg-Mission, TX",
+   "n": 10393
+  },
+  "32780": {
+   "name": "Medford, OR",
+   "n": 3411
+  },
+  "32820": {
+   "name": "Memphis, TN-MS-AR",
+   "n": 17731
+  },
+  "32900": {
+   "name": "Merced, CA",
+   "n": 3393
+  },
+  "33100": {
+   "name": "Miami-Fort Lauderdale-West Palm Beach, FL",
+   "n": 90071
+  },
+  "33140": {
+   "name": "Michigan City-La Porte, IN",
+   "n": 1978
+  },
+  "33260": {
+   "name": "Midland, TX",
+   "n": 1930
+  },
+  "33340": {
+   "name": "Milwaukee-Waukesha-West Allis, WI",
+   "n": 16347
+  },
+  "33460": {
+   "name": "Minneapolis-St. Paul-Bloomington, MN-WI",
+   "n": 38805
+  },
+  "33660": {
+   "name": "Mobile, AL",
+   "n": 6182
+  },
+  "33700": {
+   "name": "Modesto, CA",
+   "n": 6948
+  },
+  "33740": {
+   "name": "Monroe, LA",
+   "n": 2299
+  },
+  "33780": {
+   "name": "Monroe, MI",
+   "n": 2210
+  },
+  "33860": {
+   "name": "Montgomery, AL",
+   "n": 5879
+  },
+  "34060": {
+   "name": "Morgantown, WV",
+   "n": 547
+  },
+  "34580": {
+   "name": "Mount Vernon-Anacortes, WA",
+   "n": 3035
+  },
+  "34620": {
+   "name": "Muncie, IN",
+   "n": 2053
+  },
+  "34740": {
+   "name": "Muskegon, MI",
+   "n": 2652
+  },
+  "34820": {
+   "name": "Myrtle Beach-Conway-North Myrtle Beach, SC-NC",
+   "n": 8934
+  },
+  "34900": {
+   "name": "Napa, CA",
+   "n": 2563
+  },
+  "34940": {
+   "name": "Naples-Immokalee-Marco Island, FL",
+   "n": 7532
+  },
+  "34980": {
+   "name": "Nashville-Davidson--Murfreesboro--Franklin, TN",
+   "n": 31306
+  },
+  "35300": {
+   "name": "New Haven-Milford, CT",
+   "n": 12404
+  },
+  "35380": {
+   "name": "New Orleans-Metairie, LA",
+   "n": 20667
+  },
+  "35620": {
+   "name": "New York-Newark-Jersey City, NY-NJ-PA",
+   "n": 277702
+  },
+  "35660": {
+   "name": "Niles-Benton Harbor, MI",
+   "n": 2987
+  },
+  "35840": {
+   "name": "North Port-Sarasota-Bradenton, FL",
+   "n": 16978
+  },
+  "35980": {
+   "name": "Norwich-New London, CT",
+   "n": 5141
+  },
+  "36100": {
+   "name": "Ocala, FL",
+   "n": 5998
+  },
+  "36140": {
+   "name": "Ocean City, NJ",
+   "n": 2723
+  },
+  "36220": {
+   "name": "Odessa, TX",
+   "n": 1662
+  },
+  "36260": {
+   "name": "Ogden-Clearfield, UT",
+   "n": 7970
+  },
+  "36420": {
+   "name": "Oklahoma City, OK",
+   "n": 14936
+  },
+  "36500": {
+   "name": "Olympia-Tumwater, WA",
+   "n": 4390
+  },
+  "36540": {
+   "name": "Omaha-Council Bluffs, NE-IA",
+   "n": 14692
+  },
+  "36740": {
+   "name": "Orlando-Kissimmee-Sanford, FL",
+   "n": 34791
+  },
+  "36780": {
+   "name": "Oshkosh-Neenah, WI",
+   "n": 2269
+  },
+  "36980": {
+   "name": "Owensboro, KY",
+   "n": 447
+  },
+  "37100": {
+   "name": "Oxnard-Thousand Oaks-Ventura, CA",
+   "n": 12396
+  },
+  "37340": {
+   "name": "Palm Bay-Melbourne-Titusville, FL",
+   "n": 11128
+  },
+  "37460": {
+   "name": "Panama City, FL",
+   "n": 2510
+  },
+  "37620": {
+   "name": "Parkersburg-Vienna, WV",
+   "n": 466
+  },
+  "37860": {
+   "name": "Pensacola-Ferry Pass-Brent, FL",
+   "n": 8309
+  },
+  "37980": {
+   "name": "Philadelphia-Camden-Wilmington, PA-NJ-DE-MD",
+   "n": 81250
+  },
+  "38060": {
+   "name": "Phoenix-Mesa-Scottsdale, AZ",
+   "n": 73309
+  },
+  "38300": {
+   "name": "Pittsburgh, PA",
+   "n": 40821
+  },
+  "38340": {
+   "name": "Pittsfield, MA",
+   "n": 3182
+  },
+  "38860": {
+   "name": "Portland-South Portland, ME",
+   "n": 7036
+  },
+  "38900": {
+   "name": "Portland-Vancouver-Hillsboro, OR-WA",
+   "n": 38969
+  },
+  "38940": {
+   "name": "Port St. Lucie, FL",
+   "n": 7783
+  },
+  "39140": {
+   "name": "Prescott, AZ",
+   "n": 4951
+  },
+  "39300": {
+   "name": "Providence-Warwick, RI-MA",
+   "n": 26127
+  },
+  "39340": {
+   "name": "Provo-Orem, UT",
+   "n": 9302
+  },
+  "39380": {
+   "name": "Pueblo, CO",
+   "n": 2919
+  },
+  "39460": {
+   "name": "Punta Gorda, FL",
+   "n": 3735
+  },
+  "39540": {
+   "name": "Racine, WI",
+   "n": 1954
+  },
+  "39580": {
+   "name": "Raleigh, NC",
+   "n": 20597
+  },
+  "39740": {
+   "name": "Reading, PA",
+   "n": 6287
+  },
+  "39820": {
+   "name": "Redding, CA",
+   "n": 3341
+  },
+  "39900": {
+   "name": "Reno, NV",
+   "n": 8911
+  },
+  "40060": {
+   "name": "Richmond, VA",
+   "n": 20463
+  },
+  "40140": {
+   "name": "Riverside-San Bernardino-Ontario, CA",
+   "n": 57274
+  },
+  "40220": {
+   "name": "Roanoke, VA",
+   "n": 5756
+  },
+  "40380": {
+   "name": "Rochester, NY",
+   "n": 22404
+  },
+  "40420": {
+   "name": "Rockford, IL",
+   "n": 5284
+  },
+  "40580": {
+   "name": "Rocky Mount, NC",
+   "n": 2482
+  },
+  "40900": {
+   "name": "Sacramento--Roseville--Arden-Arcade, CA",
+   "n": 36300
+  },
+  "40980": {
+   "name": "Saginaw, MI",
+   "n": 3252
+  },
+  "41060": {
+   "name": "St. Cloud, MN",
+   "n": 2682
+  },
+  "41100": {
+   "name": "St. George, UT",
+   "n": 2358
+  },
+  "41140": {
+   "name": "St. Joseph, MO-KS",
+   "n": 2356
+  },
+  "41180": {
+   "name": "St. Louis, MO-IL",
+   "n": 44097
+  },
+  "41420": {
+   "name": "Salem, OR",
+   "n": 5534
+  },
+  "41500": {
+   "name": "Salinas, CA",
+   "n": 6706
+  },
+  "41540": {
+   "name": "Salisbury, MD-DE",
+   "n": 9291
+  },
+  "41620": {
+   "name": "Salt Lake City, UT",
+   "n": 17475
+  },
+  "41660": {
+   "name": "San Angelo, TX",
+   "n": 1875
+  },
+  "41700": {
+   "name": "San Antonio-New Braunfels, TX",
+   "n": 33249
+  },
+  "41740": {
+   "name": "San Diego-Carlsbad, CA",
+   "n": 46982
+  },
+  "41860": {
+   "name": "San Francisco-Oakland-Hayward, CA",
+   "n": 72104
+  },
+  "41940": {
+   "name": "San Jose-Sunnyvale-Santa Clara, CA",
+   "n": 28835
+  },
+  "42020": {
+   "name": "San Luis Obispo-Paso Robles-Arroyo Grande, CA",
+   "n": 4540
+  },
+  "42100": {
+   "name": "Santa Cruz-Watsonville, CA",
+   "n": 4390
+  },
+  "42140": {
+   "name": "Santa Fe, NM",
+   "n": 3632
+  },
+  "42200": {
+   "name": "Santa Maria-Santa Barbara, CA",
+   "n": 6523
+  },
+  "42220": {
+   "name": "Santa Rosa, CA",
+   "n": 8413
+  },
+  "42540": {
+   "name": "Scranton--Wilkes-Barre--Hazleton, PA",
+   "n": 9057
+  },
+  "42660": {
+   "name": "Seattle-Tacoma-Bellevue, WA",
+   "n": 61214
+  },
+  "42680": {
+   "name": "Sebastian-Vero Beach, FL",
+   "n": 3050
+  },
+  "43100": {
+   "name": "Sheboygan, WI",
+   "n": 1827
+  },
+  "43340": {
+   "name": "Shreveport-Bossier City, LA",
+   "n": 6499
+  },
+  "43900": {
+   "name": "Spartanburg, SC",
+   "n": 5795
+  },
+  "44060": {
+   "name": "Spokane-Spokane Valley, WA",
+   "n": 11773
+  },
+  "44100": {
+   "name": "Springfield, IL",
+   "n": 3967
+  },
+  "44140": {
+   "name": "Springfield, MA",
+   "n": 9052
+  },
+  "44180": {
+   "name": "Springfield, MO",
+   "n": 6130
+  },
+  "44220": {
+   "name": "Springfield, OH",
+   "n": 2682
+  },
+  "44300": {
+   "name": "State College, PA",
+   "n": 2631
+  },
+  "44700": {
+   "name": "Stockton-Lodi, CA",
+   "n": 9407
+  },
+  "44940": {
+   "name": "Sumter, SC",
+   "n": 1480
+  },
+  "45060": {
+   "name": "Syracuse, NY",
+   "n": 15849
+  },
+  "45300": {
+   "name": "Tampa-St. Petersburg-Clearwater, FL",
+   "n": 56902
+  },
+  "45540": {
+   "name": "The Villages, FL",
+   "n": 1862
+  },
+  "45780": {
+   "name": "Toledo, OH",
+   "n": 10370
+  },
+  "45820": {
+   "name": "Topeka, KS",
+   "n": 4801
+  },
+  "45940": {
+   "name": "Trenton, NJ",
+   "n": 5031
+  },
+  "46060": {
+   "name": "Tucson, AZ",
+   "n": 18783
+  },
+  "46140": {
+   "name": "Tulsa, OK",
+   "n": 12781
+  },
+  "46220": {
+   "name": "Tuscaloosa, AL",
+   "n": 3078
+  },
+  "46340": {
+   "name": "Tyler, TX",
+   "n": 3748
+  },
+  "46520": {
+   "name": "Urban Honolulu, HI",
+   "n": 14423
+  },
+  "46540": {
+   "name": "Utica-Rome, NY",
+   "n": 6328
+  },
+  "46700": {
+   "name": "Vallejo-Fairfield, CA",
+   "n": 6176
+  },
+  "47260": {
+   "name": "Virginia Beach-Norfolk-Newport News, VA-NC",
+   "n": 26217
+  },
+  "47300": {
+   "name": "Visalia-Porterville, CA",
+   "n": 5978
+  },
+  "47380": {
+   "name": "Waco, TX",
+   "n": 4314
+  },
+  "47580": {
+   "name": "Warner Robins, GA",
+   "n": 1883
+  },
+  "47900": {
+   "name": "Washington-Arlington-Alexandria, DC-VA-MD-WV",
+   "n": 98970
+  },
+  "48140": {
+   "name": "Wausau, WI",
+   "n": 2794
+  },
+  "48300": {
+   "name": "Wenatchee, WA",
+   "n": 2151
+  },
+  "48620": {
+   "name": "Wichita, KS",
+   "n": 8258
+  },
+  "48660": {
+   "name": "Wichita Falls, TX",
+   "n": 2748
+  },
+  "48900": {
+   "name": "Wilmington, NC",
+   "n": 4747
+  },
+  "49180": {
+   "name": "Winston-Salem, NC",
+   "n": 10518
+  },
+  "49340": {
+   "name": "Worcester, MA-CT",
+   "n": 16236
+  },
+  "49420": {
+   "name": "Yakima, WA",
+   "n": 3501
+  },
+  "49620": {
+   "name": "York-Hanover, PA",
+   "n": 6633
+  },
+  "49660": {
+   "name": "Youngstown-Warren-Boardman, OH-PA",
+   "n": 10697
+  },
+  "49700": {
+   "name": "Yuba City, CA",
+   "n": 2405
+  },
+  "49740": {
+   "name": "Yuma, AZ",
+   "n": 3520
+  }
+ }
+}

@@ -1,174 +1,93 @@
-# American Income Explorer
+# ACS Income Explorer
 
-Static site hosted on GitHub Pages (`/docs`). No build step, no bundler, no server. Everything runs in the browser or as a one-shot local preprocessor.
+Static site served from `docs/` by GitHub Pages (deployed by `.github/workflows/deploy.yml`). No build step, no
+bundler, no server. Everything runs in the browser or in the one-shot local preprocessor.
 
-> **Deploy gotcha:** the frontend fetches `docs/data/{codebook.json,stats_precomputed.json,national.arrow}` at runtime. The raw IPUMS extract is too large for CI, so these generated files cannot be rebuilt on GitHub. They must be committed for the deployed Pages site to work. Keep `docs/data/national.arrow`, `stats_precomputed.json`, and `codebook.json` tracked; `docs/data/states/` may stay ignored since the frontend never loads it.
+> **Deploy gotcha:** the frontend fetches `docs/data/{codebook.json,stats_precomputed.json,national.arrow}`. The
+> raw IPUMS extract (1.25 GB gzipped, 9 GB raw) can't be processed in CI, so these files must be committed.
 
 ## What this is
 
-Visualizes US household income distribution using IPUMS CPS ASEC microdata (survey years 2021–2025, income years 2020–2024). Users filter the data to specific population slices (work status, income source, geography, demographics) and view the resulting weighted distribution with sample-reliability indicators.
+US household income from IPUMS USA ACS 1-year samples 2021–2024, pooled, in constant 2024 dollars. Users filter
+to a slice and see the weighted distribution, with replicate-weight standard errors where precomputed. Successor to
+the CPS ASEC version (csciuto/am-inc-exp); same frontend, new data pipeline.
 
-## File structure
+Docs: [EXTRACT.md](EXTRACT.md) (what to request from IPUMS), [METHODOLOGY.md](METHODOLOGY.md) (definitions and
+statistics). Keep METHODOLOGY.md in sync when a derivation changes.
+
+## Files
 
 ```
-preprocess.py          One-shot preprocessor — run locally when new CPS data drops
-docs/
-  index.html           Entire frontend (self-contained, no framework)
-  data/
-    codebook.json      ~7KB, always loaded, labels + state metadata
-    stats_precomputed.json  ~1.7MB, BRR-computed stats for ~9,256 cells
-    national.arrow     ~12.8MB, always loaded — holds ALL states
-    states/XX.arrow    Per-state files emitted by the preprocessor but NOT used by the
-                       frontend (it filters national.arrow in-browser by the `state` column)
-tests/
-  conftest.py          Static HTTP server fixture (serves docs/)
-  test_preprocess.py   81 unit tests for preprocess.py (pure functions)
-  test_frontend.py     106 Playwright browser tests
-  version.json         Commit hash + date, auto-updated by pre-commit hook
+preprocess.py            IPUMS extract -> docs/data (see below)
+docs/index.html          the entire frontend
+docs/data/               national.arrow, stats_precomputed.json, codebook.json (committed)
+docs/version.json        {"version":"dev"} locally; the deploy workflow overwrites it with v1.<commit count>
+tests/test_preprocess.py unit tests on a fake extract built in tmp (no real data needed)
+tests/test_frontend.py   Playwright tests against docs/ and its committed data
 ```
 
-## Running tests
+## Environment and tests
+
+Python deps live in `.venv` (uv): `uv venv .venv && uv pip install --python .venv/bin/python -r requirements-test.txt`,
+then `.venv/bin/python -m playwright install chromium`.
 
 ```bash
-# Install once
-pip install -r requirements-test.txt
-playwright install chromium
-
-# Run
-python3 -m pytest --browser chromium
+.venv/bin/python -m pytest tests/test_preprocess.py -p no:playwright   # fast
+.venv/bin/python -m pytest --browser chromium                          # everything (~2 min)
 ```
 
-Frontend tests require internet access (D3 and Apache Arrow loaded from CDN).
+Frontend tests need internet (D3 and Arrow from CDN). Don't run them while the preprocessor is writing docs/data.
 
 ## Preprocessor
 
-Takes an IPUMS CPS ASEC fixed-width `.dat.gz` + `.xml` DDI codebook:
-
 ```bash
-python preprocess.py --input cps_00006.dat.gz --ddi cps_00006.xml --output-dir ./docs/data
+.venv/bin/python preprocess.py --input usa_00017.dat.gz --ddi usa_00017.xml --output-dir ./docs/data
 ```
 
-Outputs: `national.arrow`, `docs/data/states/XX.arrow` (50 files), `stats_precomputed.json`, `codebook.json`. BRR standard errors take ~8 min. Replicate weights (`REPWTP1–160`) are consumed by the preprocessor and never written to Arrow files.
+The extract lives outside the repo (currently `~/Downloads/usa_00017.*`). ~10 min, ~15 GB peak memory.
 
-The preprocessor is the only computation. The browser does live weighted stats only when the precomputed lookup misses.
+Pipeline:
+1. `parse_ddi` / `check_extract`: column positions from the DDI; stop if a variable or the 80 REPWTs are missing,
+   or if the RELATED labels for 1114/1115/1241 changed.
+2. `read_extract`: every record is the same length, so chunks of bytes become uint8 arrays and columns are parsed
+   with numpy (`parse_int`), not pandas.read_fwf. Replicate weights are kept only for each household's first person.
+3. `build_households`: sums over members via `np.bincount` on a household index (PERNUM==1 starts a household).
+   NIU codes (all 9s / 9…8 for the column width) count as 0. Topcode flag: member at the (year, state) max of an
+   income item. Dollar factor = ADJUST (Census ADJINC; IPUMS doesn't apply it) × CPI99(year)/CPI99(latest).
+4. `derive`: the Arrow columns. Drops GQ 3/4 and vacant units. Weights ÷ number of years.
+5. `validate`: stop on impossible values or implausible medians.
+6. `stratified_sample` -> `national.arrow` (300k rows, year × state strata, weights scaled N_h/n_h).
+7. `compute_stats` -> `stats_precomputed.json` from ALL households (`CellStats` sorts by income once; medians are
+   interpolated within $2,500 bins like the Census Bureau's, for the full sample and each replicate).
 
-## IPUMS extract requirements
+## Data schema (national.arrow)
 
-When pulling a new CPS ASEC extract at https://cps.ipums.org/, request all of the following variables. The preprocessor will silently skip any that are absent from the DDI, but missing income vars corrupt `passive_source` classification (see note below).
+`id` u32, `inc` u32, `wage_inc` u32, `passive_inc` u32, `weight` f32, `state` u8 (FIPS), `year` u8 (0=2021 … 3=2024),
+`metro_area` u32 (MET2013 CBSA, 0 = not identifiable), then u8 codes: `age_bucket` (0 <25 … 7 65+), `sex` (1/2),
+`marst`, `educ`, `region` (1–4), `metro` (0 non-metro, 1 metro, 2 unknown), `city` (0 principal city, 1 suburb,
+2 non-metro, 3 metro/unknown), `kids`, `youngest_child`, `n_children`, `work_status`, `hours_category`,
+`weeks_worked`, `topcoded`, `race_ethnicity`, `housing`, `burden` (0 <30%, 1 30–49%, 2 50%+, 3 N/A),
+`has_roommate`, `earner_count`, `breadwinner`, `passive_pct`, `passive_source`, `hh_size`.
+Labels for all of them are in `codebook.json` `labels`; metro names in `codebook.metros`.
 
-**Always required:**
+## Precomputed stats
 
-| Variable | Description |
-|---|---|
-| YEAR | Survey year |
-| SERIAL | Household serial number |
-| PERNUM | Person number within household |
-| ASECWTH | Household weight |
-| REPWTP1–160 | BRR replicate weights (160 vars) |
-| REGION | Census region |
-| STATEFIP | State FIPS code |
-| METFIPS | Metro area FIPS |
-| HHINCOME | Total household income |
-| RELATE | Relationship to householder (cohabiting/roommate detection) |
-| AGE | Age |
-| SEX | Sex |
-| RACE | Race |
-| HISPAN | Hispanic origin |
-| MARST | Marital status |
-| NCHILD | Number of children |
-| YNGCH | Age of youngest child |
-| EDUC | Educational attainment |
-| EMPSTAT | Employment status |
-| CLASSWKR | Class of worker |
-| WKSWORK2 | Weeks worked last year (bracketed) |
-| UHRSWORKLY | Usual hours worked per week last year |
-| UHRSWORKT | Hours worked all jobs, composite |
-| UHRSWORK1 | Hours worked at main job |
-| INCTOT | Total personal income |
-| INCWAGE | Wage and salary income |
-| INCBUS | Business/self-employment income |
-| INCSS | Social Security and disability income |
-| INCWELFR | Welfare/cash assistance income |
-| INCDIVID | Dividend income |
-| INCRENT | Rental income |
-| INCRETIR | Retirement/pension income (**critical** — see note) |
-| INCINT | Interest income (**important** — see note) |
-| SPMMORT | Mortgage payment (used for housing cost variable) |
+Key: `scope|dim=val|…`, dims sorted. Scopes: `national` (1-D and 2-D), `state=FIPS` (1-D), `metro=CBSA` (overall for
+every metro, 1-D for metros with 2,000+ households). Dim names: `age sex marst educ region city work kids race house
+burden earners bread ppct psrc year`. Cell: `{n, n_rep, med, mean, p25, p75, iqr, sd, wage_pct, rel, se_med,
+se_mean, ci_lo, ci_hi}`; `rel` 3 n≥500, 2 n≥200, 1 n≥50; cells under 50 are absent.
 
-**Note on INCRETIR and INCINT:** Without INCRETIR, all households with large passive incomes (pension/retirement) are misclassified as "SS/disability" in the `passive_source` dimension, because SS wins `idxmax` among the tracked sources even with a small SS amount. INCINT (interest income) belongs in the capital income bucket alongside dividends and rent. Both were absent from extract `cps_00005` — **the current data files are affected**. Pull a new extract (`cps_00006`) with both variables before next release.
+Frontend (`getStats`): scope is `state=X` for one state, else `metro=X` for one metro area with no state, else
+`national`; single-value filters become key parts via `DIM_TO_KEY`; anything multi-valued or missing falls back to
+live stats from the sample (no SE).
 
-## Data schema
+## Frontend notes
 
-Arrow columns: `id` (uint32), `inc` (uint32, HHINCOME), `wage_inc` (uint32), `weight` (float32, ASECWTH), `state` (uint8, STATEFIP), `year` (uint8, 0=survey year 2021/income year 2020, 1=2022/2021, 2=2023/2022, 3=2024/2023, 4=2025/2024), then uint8 derived vars: `age_bucket`, `sex`, `marst`, `educ`, `region`, `metro`, `kids`, `youngest_child`, `work_status`, `hours_category`, `weeks_worked`, `multi_job_proxy`, `earner_count`, `breadwinner`, `passive_pct`, `passive_source`, `topcoded`, `race_ethnicity`, `has_roommate`, `hh_size`, `n_children`. Plus `passive_inc` (uint32).
+Single `index.html`. Global state: `filters` (dim → Set), `selectedFips`, `colorMode`, `nationalTable`,
+`precomputed`, `codebook`. Metro areas are a filter (`filters.metro_area`, single choice from the searchable list in
+the Geo tab), so URL hashes like `#metro_area=14460&work_status=0` deep-link. In Static dot mode a chosen metro
+narrows the dot pool to that metro.
 
-Key derivations:
-- `work_status`: hierarchy — FT wage (0) > FT self-emp (1) > FT part-year (2) > part-time (3) > unemployed (4) > retired (5) > not working (6)
-- `multi_job_proxy`: derived from `UHRSWORKT − UHRSWORK1` (hours differential), NOT from `MULTJOB`/`NUMJOBS` — those are unreliable. NIU codes (≥997) excluded.
-- `earner_count`: count of household members with INCWAGE+INCBUS > 0, clipped to 3 (meaning "3+")
-- `breadwinner`: householder's share of household wage income — 0=sole (≥90%), 1=primary (60–89%), 2=co-earner (40–59%), 3=secondary (<40%), 4=no earner
-- `passive_pct`: household wage share of total income — 0=≥75% wages, 1=50–74%, 2=25–49%, 3=<25% wages, 4=entirely passive/no wage income
-- `passive_source`: dominant non-wage income source (winner-take-all by dollar, only set when wage_share < 0.75 and tracked passive income > 0) — 0=SS/disability (INCSS), 1=retirement/pension (INCRETIR), 2=capital (INCDIVID+INCRENT+INCINT), 3=welfare (INCWELFR), 4=N/A (wage dominant or no tracked passive)
-- `passive_inc`: total passive income = max(0, HHINCOME − wage_inc), stored as uint32
-- `marst`: cohabiting (1) detected via RELATE=1114/1116/1117 in household roster, overrides married (0)
-- `has_roommate`: 1 if any household member has RELATE=1113 (roomer/boarder) or 1115 (housemate/roommate)
-- `wage_inc`: sum of INCWAGE+INCBUS across all household members, after zeroing NIU sentinel (99,999,999)
-
-## Precomputed stats keys
-
-Format: `"scope|dim=val|dim=val"` (dims alphabetically sorted)
-- `"national"` — no filters
-- `"national|age=2|marst=0"` — national + two filters
-- `"state=25|work=0"` — MA, full-time wage workers
-- `"region=1|age=2"` — Northeast, age 30–34
-
-Stats object: `{n, n_rep, med, mean, p25, p75, iqr, sd, se_med?, ci_lo?, ci_hi?, multi_job_pct, wage_pct, rel}`. `rel` tiers: 3=high (n≥500), 2=moderate (200–499), 1=low (50–199), 0=insufficient (<50, suppressed).
-
-Dim short names used in keys: `work` (work_status), `ppct` (passive_pct), `psrc` (passive_source), `earners` (earner_count), `bread` (breadwinner), `age`, `sex`, `marst`, `educ`, `region`, `metro`, `kids`, `race`.
-
-## Frontend architecture
-
-Single `index.html`. Global state: `filters` (dim → Set of active values), `colorMode`, `nationalTable` (columnar typed arrays), `visibleRows`, `precomputed`, `codebook`.
-
-No default filters on load — all households shown. Users filter via the sidebar tabs.
-
-Stats lookup: builds key from active scope + single-value filters → hits `precomputed`, falls back to live weighted computation. Live path has no BRR SE (replicate weights not in browser).
-
-Dot chart: log-scale x-axis, beeswarm y-jitter. Dot radius proportional to `weight` (median weight = 4px, floor 2px, ceiling 8px). Topcoded dots rendered as hollow circles with ⊕ overlay.
-
-Dot sampling controls (toolbar, next to Dots/Bars/100%):
-- **1K / 3K / 5K** — sets `maxDots` (default 3000), the upper limit of dots drawn. On mobile, capped further to `min(maxDots, 800)`.
-- **Static** (default) — samples randomly from *all* rows, dims non-matching households via opacity. The same dot set persists as you change filters and color mode within a scope; new state/national selection re-samples.
-- **All** — samples only from `visibleRows` (households matching current filters), re-samples on every filter change. Useful when filtered to a state or narrow slice where you want to see the actual population without dimmed background dots.
-
-A "N of M households" counter appears in the toolbar when fewer than M are shown.
-
-By group breakdown: computed from full `visibleRows` (not the dot subsample), weighted stats per group. Shows actual survey record count, not dot count.
-
-Color modes: `passive_pct` (default), `work_status`, `age_bucket`, `sex`, `educ`, `marst`, `race_ethnicity`, `housing`, `kids`, `metro`, `multi_job_proxy`, `state`, `year`, `earner_count`, `breadwinner`, `passive_source`. Palettes in `PALETTES` object. Note: `sex` palette is sparse (index 0 = null, values 1=Male/2=Female) because CPS sex codes are 1/2; `renderLegend` skips null entries.
-
-Sidebar tabs: Group (color mode picker), Demo (age/sex/marital/has_roommate/educ/race/kids), Geo (metro/states), Work (work_status/earner_count/breadwinner/passive_pct/passive_source/housing/multi_job_proxy), Survey (survey year filter).
-
-## Cross-year methodology notes
-
-The CPS ASEC was redesigned beginning with the 2023 survey (income year 2022). The main implications for this project:
-
-- **RELATE codes**: Pre-2023, cohabiting partners used RELATE=1114 ("unmarried partner"). From 2023 onward, 1116 (opposite-sex) and 1117 (same-sex) replaced it. RELATE=1113 (roomer/boarder) was replaced by 1115 (housemate/roommate). The preprocessor handles all codes, so `marst` and `has_roommate` are correctly derived across all years.
-- **Income variable availability**: INCRETIR and INCINT were present in all years including 2021–2022, so the new extract should fully populate `passive_source` across the entire 2020–2024 range.
-- **COVID-era income anomalies**: Income years 2020–2021 (ASEC 2021–2022) include stimulus payments, enhanced unemployment benefits, and other pandemic-era transfers. These flow primarily into HHINCOME but are not separately tracked — they inflate `passive_inc` for some households in those years without a matching `passive_source` classification.
-- **Topcode consistency**: HHINCOME topcode is $2,099,997 for all five years.
-
-## Topcode values
-
-```python
-TOPCODES = {2023: 2099997, 2024: 2099997, 2025: 2099997}
-```
-
-Verify at https://cps.ipums.org/cps/topcodes_tables.shtml when adding new years.
-
-## Adding a new color mode
-
-1. Add palette to `PALETTES` in `index.html` (use `null` at unused indices for non-zero-based codes)
-2. Add `<button class="cm-btn" data-mode="...">` in the color-mode div (`#tab-color`)
-3. Add filter buttons container `<div class="filter-btns" id="f-...">` in the appropriate sidebar tab
-4. Add an entry to `FILTER_DEFS` array and `DIM_LABELS` object
-5. Add legend count test in `tests/test_frontend.py`
+Adding a filter/color dimension: palette in `PALETTES` (legend skips palette entries without a label), a
+`.cm-btn`, a `.filter-btns` container in the right tab, entries in `FILTER_DEFS`, `DIM_LABELS`, `DIM_TO_KEY`
+(if precomputed), the preprocessor's `DIMS`, `LABELS` and Arrow schema, and tests.

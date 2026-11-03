@@ -1,211 +1,93 @@
-# American Income Explorer
+# ACS Income Explorer
 
-**Live:** [corey.sciu.to/am-inc-exp/docs](https://corey.sciu.to/am-inc-exp/docs/)
+An interactive look at US household income, built from American Community Survey microdata (2021–2024, in 2024
+dollars). Filter 5.3 million survey households down to a slice — work status, income mix, age, education, family,
+housing cost burden, state, metro area, city or suburb — and see the weighted income distribution as dots,
+stacked bars or a 100% view, with standard errors and reliability warnings.
 
-An interactive visualization of the US household income distribution, built from
-IPUMS CPS ASEC microdata (survey years 2023–2025 / income years 2022–2024).
+It's the ACS successor to the [CPS-based American Income Explorer](https://github.com/csciuto/am-inc-exp). The
+ACS is about 15 times bigger per year, which is what makes states, metro areas and narrow slices reliable.
 
-It lets you filter the survey down to specific slices — by work status, income
-type, state, age band, education, marital status, roommate status, and more —
-and see the resulting weighted income distribution as dots, stacked bars, or a
-100% normalized view, with reliability indicators on small samples.
-
-It is a static, framework-free site: a single `index.html` plus a handful of
-precomputed data files served from GitHub Pages. There is no backend and no build
-step — the only generated-at-commit file is `docs/version.json` (see
-[Versioning](#versioning)), and the only heavy computation is a one-shot local
-preprocessor.
+A static site: one `index.html` and three data files, no backend, no build step. The heavy lifting is a one-shot
+local preprocessor.
 
 ## The data
 
-**Source:** [IPUMS CPS](https://cps.ipums.org/) — the Current Population Survey
-Annual Social and Economic Supplement (CPS ASEC), the US Census Bureau / Bureau of
-Labor Statistics survey that is the official source for national income and poverty
-statistics. This build pools survey years **2023–2025** (income years 2022–2024).
-The unit of analysis is the **household** (one record per household, taken from the
-householder's person record); incomes are total household income (`HHINCOME`).
+**Source:** [IPUMS USA](https://usa.ipums.org/), ACS 1-year samples 2021–2024, pooled. One row per household
+(group quarters excluded). Income is total household income over the 12 months before the interview, put into
+2024 dollars.
 
-**Quality and how to read it.** CPS ASEC is a high-quality probability sample, but
-it is a *sample*, so every number here is an estimate, not a census count:
+How to read it:
 
-- **Weighted.** All statistics use the household sampling weight (`ASECWTH`), so
-  they represent the US household population, not the raw respondents. The "~N M
-  households" figure is the sum of weights.
-- **Sample reliability.** Each slice carries a reliability tier based on how many
-  survey records back it (high ≥500, moderate 200–499, low 50–199, suppressed <50).
-  Small slices show a warning or hide point estimates rather than implying false
-  precision. Where available, medians show a BRR (balanced repeated replication)
-  standard error.
-- **Topcoding.** Very high incomes are censored by the Census Bureau at a yearly
-  maximum; those households are flagged (⊕) and sit at the censored value, so the
-  extreme right tail is compressed.
-- **Derived-field caveats.** "Secondary work" is a *proxy* inferred from a
-  reported hours differential, not a direct job count, and undercounts some
-  multiple-job holders. Cohabiting-partner classification is underidentified in
-  older data. See `codebook.json` `notes` for the full text.
+- **Weighted.** Statistics use the household weights, divided by 4 so counts describe an average year
+  (about 130 million households).
+- **Standard errors** come from the ACS's 80 replicate weights, for every precomputed view: national, each state,
+  each metro area, and combinations of filters (see [METHODOLOGY.md](METHODOLOGY.md) for which).
+- **Reliability.** Fewer than 50 sample households: no statistics. Under 200 or 500: a warning.
+- **The dots are a sample.** The chart draws from 300,000 households sampled within each year and state; the
+  sidebar statistics come from all 5.3 million when the view is precomputed, and from the sample otherwise.
+- **Topcoding (⊕).** The ACS replaces income items above a state's cutoff with the state mean of those values,
+  so the top of the distribution is compressed.
 
-CPS ASEC is free to use; cite IPUMS per their
-[terms](https://cps.ipums.org/cps/citation.shtml) if you publish results.
+Cite IPUMS USA per its [terms](https://usa.ipums.org/usa/citation.shtml) if you publish results.
 
-## Quick start
-
-### View the app
+## Run it
 
 ```bash
-# Serve the docs/ directory over HTTP (the app fetches data files, so file:// won't work)
-python3 -m http.server -d docs 8000
-# open http://localhost:8000
+python3 -m http.server -d docs 8000   # then open http://localhost:8000
 ```
 
-The page loads `codebook.json`, `stats_precomputed.json`, and `national.arrow`
-(D3 and Apache Arrow come from a CDN, so the browser needs internet access).
+D3 and Apache Arrow load from a CDN, so the browser needs internet access.
 
-### Using the explorer
-
-- **Filter** with the left sidebar tabs — *Demo* (age, sex, marital status,
-  roommates, education, race/ethnicity, kids), *Geo* (metro, individual states),
-  *Work* (work status, income type, householder income share, housing tenure,
-  secondary hours), and *Survey* (year). Clicking a value filters to it; clicking
-  again clears it; clicking other values in the same group adds them. Active
-  filters appear as removable chips above the chart; **Clear all** resets.
-- **Color** by any dimension from the *Group* tab (income type by default). The
-  legend reflects the current coloring; clicking a legend swatch also filters by
-  that value.
-- **Switch views** with the Dots / Bars / 100% toggle. Dots places up to 3,000
-  weighted-subsampled households on a log income axis; Bars shows a weighted
-  stacked histogram; 100% normalizes each bin to its own total. Hover any bar
-  segment for the income range, category, household count, and share of that band.
-- **Select a range** by clicking **Range** in the toolbar, then dragging across the
-  chart. A panel shows median, mean, and share of households within that income
-  band, with a by-group breakdown available.
-- **Read the stats** in the sidebar: median, mean, and P25/P75 for the current
-  slice, with a reliability badge. The **By group** section breaks median/mean
-  income down by the active color dimension.
-- **Hover** any dot for the household's full detail (income, age, work status,
-  location, weight, year).
-- **Deep-link** any view: filters, state selections, color mode, view mode, and
-  range selections are all reflected in the URL hash so you can bookmark or share.
-
-### Run the tests
+## Tests
 
 ```bash
-pip install -r requirements-test.txt
-playwright install chromium
-python3 -m pytest --browser chromium
+uv venv .venv && uv pip install --python .venv/bin/python -r requirements-test.txt
+.venv/bin/python -m playwright install chromium
+.venv/bin/python -m pytest --browser chromium
 ```
 
-- `tests/test_preprocess.py` — 79 pure-function unit tests (no I/O, no network)
-- `tests/test_frontend.py` — 88 Playwright browser tests (need internet for the CDN scripts)
-
-## How it works
-
-```
-preprocess.py            One-shot preprocessor (run locally when new CPS data drops)
-docs/
-  index.html             The entire frontend — self-contained, no framework
-  data/
-    codebook.json        Labels + state metadata (always loaded)
-    stats_precomputed.json   BRR-computed stats for ~5,500 filter cells (always loaded)
-    national.arrow       All households, columnar (always loaded; ~6MB)
-    states/XX.arrow      Per-state extracts — emitted but NOT used by the frontend*
-tests/                   Unit + browser tests
-```
-
-\* The frontend loads only `national.arrow` and filters it in the browser by the
-`state` column. The per-state Arrow files are a leftover of an earlier
-lazy-loading design; they are still produced but never fetched.
-
-**Stats path:** for any single-value filter combination the app builds a lookup
-key and reads a precomputed cell (which carries BRR standard errors). For
-multi-value or unprecomputed slices it falls back to live weighted computation in
-the browser (no SE on that path, since replicate weights are not shipped). Small
-samples are flagged or suppressed via a reliability tier rather than shown as
-confident numbers.
-
-For the statistical methods, weighted estimators, BRR variance estimation, and
-derived-variable definitions, see [`METHODOLOGY.md`](METHODOLOGY.md). For
-architecture details and code conventions see [`CLAUDE.md`](CLAUDE.md). For the
-original design intent, see [`PRD.md`](PRD.md).
+- `tests/test_preprocess.py`: unit tests on a small fake IPUMS extract (codebook + fixed-width records) built in
+  a temp directory, so they don't need the real download. They cover parsing, every derived variable, the dollar
+  adjustments, the browser sample, and the replicate-weight standard errors against a brute-force calculation.
+- `tests/test_frontend.py`: Playwright tests of the page against the committed data.
 
 ## Regenerating the data
 
-You need your own IPUMS CPS ASEC extract — a fixed-width `.dat.gz` plus its `.xml`
-DDI codebook. Build it at [cps.ipums.org](https://cps.ipums.org/): choose the ASEC
-samples for the years you want (this build uses **ASEC 2023, 2024, 2025**), add the
-variables below, and select **fixed-width** output. The extract is person-level;
-the preprocessor reads the household roster (for cohabiting and roommate detection)
-and then collapses to one record per household.
+1. Request the extract described in [EXTRACT.md](EXTRACT.md) from IPUMS USA (fixed-width `.dat.gz` plus the DDI
+   `.xml`).
+2. Run:
 
-**IPUMS variables to request** (the `WANTED` set in `preprocess.py`):
+   ```bash
+   .venv/bin/python preprocess.py --input usa_00017.dat.gz --ddi usa_00017.xml --output-dir ./docs/data
+   ```
 
-| Group | Variables |
-|---|---|
-| Identifiers / record | `YEAR`, `SERIAL`, `PERNUM`, `RELATE` |
-| Weights | `ASECWTH` (household weight), `REPWTP1`–`REPWTP160` (replicate weights) |
-| Geography | `REGION`, `STATEFIP`, `METFIPS` |
-| Demographics | `AGE`, `SEX`, `RACE`, `HISPAN`, `MARST`, `EDUC`, `NCHILD`, `YNGCH` |
-| Labor force | `EMPSTAT`, `CLASSWKR`, `WKSWORK2`, `UHRSWORKLY`, `UHRSWORKT`, `UHRSWORK1` |
-| Income | `HHINCOME`, `INCTOT`, `INCWAGE`, `INCBUS`, `INCSS`, `INCWELFR`, `INCDIVID`, `INCRENT` |
-| Housing | `SPMMORT` |
+   It reads the 9 GB file in about a minute and spends most of its time on standard errors (about 10 minutes on
+   a 2024 laptop; it needs roughly 15 GB of memory). `--skip-stats` skips them. It checks the extract first and
+   stops with a clear message if something is missing.
+3. Commit `docs/data/` (the site can't rebuild it; the raw extract is far too big for CI).
 
-Notes:
-- A few of these (`YEAR`, `SERIAL`, `PERNUM`, `ASECWTH`, `RELATE`) are usually
-  preselected by IPUMS — that's fine, the loader just reads whatever the DDI
-  declares and ignores anything else.
-- `REPWTP1`–`REPWTP160` are added in one step by selecting the **replicate
-  weights** in the extract options. They power the BRR standard errors and are
-  dropped before any browser file is written — they never ship to the frontend.
-- Any of the above can be missing and the preprocessor will degrade gracefully
-  (the derived field falls back to a default), but the income, weight, geography,
-  and labor-force fields are needed for the tool to be meaningful.
+Adding a year: add its ADJUST factor to `ADJUST_BY_YEAR` in `preprocess.py` (or include ADJUST in the extract).
+The preprocessor refuses to run without one.
 
-```bash
-python preprocess.py \
-  --input cps_00005.dat.gz \
-  --ddi   cps_00005.xml \
-  --output-dir ./docs/data
+## Layout
+
+```
+preprocess.py          IPUMS extract -> docs/data
+docs/index.html        the whole frontend
+docs/data/
+  national.arrow         300,000-household sample (~15 MB)
+  stats_precomputed.json exact statistics with standard errors (~4 MB)
+  codebook.json          labels, states, metro areas
+EXTRACT.md             what to request from IPUMS
+METHODOLOGY.md         definitions and statistical methods
 ```
 
-This writes `national.arrow`, the per-state files, `stats_precomputed.json`, and
-`codebook.json`. Computing BRR standard errors takes roughly 25 minutes.
-Pass `--skip-stats` to regenerate only the Arrow and codebook files (fast, ~2 min),
-which is useful when iterating on derived variables.
+## Deploying and versioning
 
-Preprocessor dependencies: `numpy`, `pandas`, `pyarrow`.
-
-When adding a new survey year, verify that year's topcode value against the
-[IPUMS topcode tables](https://cps.ipums.org/cps/topcodes_tables.shtml) and add it
-to `TOPCODES` in `preprocess.py`.
-
-## Deployment
-
-GitHub Pages serves the `docs/` directory directly. Because the raw IPUMS extract
-is far too large to regenerate the data in CI, the generated data files the
-frontend depends on — `docs/data/national.arrow`, `stats_precomputed.json`, and
-`codebook.json` — **must be committed** for the live site to load. The
-`docs/data/states/` directory can remain untracked, since the frontend never
-fetches it.
-
-## Versioning
-
-The footer shows a build stamp (commit + date) so you can tell which version is
-deployed. It comes from `docs/version.json`, which is the one file generated at
-commit time — written by **`scripts/stamp-version.sh`**. To have it update
-automatically, enable the tracked pre-commit hook once per clone:
-
-```bash
-git config core.hooksPath scripts/hooks
-```
-
-You can also run `scripts/stamp-version.sh` by hand before committing. The hash it
-records is the **parent** commit (the hook runs before the new commit exists), so
-the stamp identifies the commit a build is based on — expect a one-step lag, which
-is normal for commit-time stamping without a CI build.
-
-## Known bugs
-
-None currently known. See [GitHub Issues](https://github.com/csciuto/am-inc-exp/issues) for anything reported after this writing.
+Pushing to `main` deploys `docs/` to GitHub Pages through `.github/workflows/deploy.yml`, which writes
+`docs/version.json` with `v1.<commit count>`; the footer shows it.
 
 ## License
 
-MIT — see [`LICENCE`](LICENCE).
+MIT, see [LICENCE](LICENCE).

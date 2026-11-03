@@ -1,257 +1,100 @@
 # Methodology
 
-This document covers the statistical methods and derivation rules behind
-`preprocess.py`. For architecture and code conventions see [`CLAUDE.md`](CLAUDE.md);
-for how to run the preprocessor see [`README.md`](README.md).
+How `preprocess.py` turns an IPUMS USA extract of the American Community Survey into the explorer's data.
+The extract itself is specified in [EXTRACT.md](EXTRACT.md).
 
-## Survey design and weighting
+## Source and universe
 
-The source data is IPUMS CPS ASEC — the Annual Social and Economic Supplement
-to the Current Population Survey, conducted by the Census Bureau and BLS. CPS
-ASEC is a stratified, multi-stage probability sample. It is the official source
-for US income and poverty statistics.
+- **Samples:** ACS 1-year samples for 2021, 2022, 2023 and 2024 from IPUMS USA. 2020 is left out because its
+  1-year file uses experimental weights.
+- **Universe:** households. Group quarters (GQ 3 and 4: institutions, dorms, barracks) and vacant units are dropped.
+  That leaves 5,296,401 households across the four years.
+- **Pooling:** the four years are pooled. Household weights (HHWT) and the 80 replicate weights are divided by 4,
+  so weighted counts describe an average year (about 130 million households).
 
-The unit of analysis here is the **household**. CPS ASEC is a person-level
-file; the preprocessor collapses it to one record per household (using the
-householder's person record as the anchor) after reading the full roster for
-household-composition derivations.
+## Dollars
 
-**Sampling weight (`ASECWTH`)** is the household's probability-of-selection
-weight. It is the number of US households that survey record represents.
-All statistics — medians, means, percentiles, shares — are computed using
-this weight. Summing weights gives an estimate of the total US household
-count (~130M).
+ACS incomes cover the 12 months before each interview, and interviews run all year, so the raw amounts are in a
+mix of dollars. Two adjustments:
 
-## Weighted statistics
+1. **Survey-year dollars.** Each amount is multiplied by the Census Bureau's ADJINC for its sample (IPUMS calls it
+   ADJUST and leaves it unapplied in single-year files): 2021 1.029928, 2022 1.042311, 2023 1.019518,
+   2024 1.015250 ([IPUMS note](https://usa.ipums.org/usa/acsincadj.shtml)). The preprocessor uses ADJUST from the
+   extract if it's there and these values otherwise, and stops for a year it has no factor for.
+2. **Constant dollars.** Then × CPI99(year) / CPI99(2024), putting every year in 2024 dollars. `--nominal` skips this.
 
-### Median and percentiles
+Check: after step 1, the weighted medians by year come out at $69,829 (2021), $74,775 (2022), $77,687 (2023) and
+$81,644 (2024); the Census Bureau publishes $69,717, $74,755 and $77,719 for 2021–2023. Rounding and the Bureau's
+interpolation account for the differences.
 
-The weighted percentile at quantile *q* is computed via the empirical CDF:
+## Households
 
-1. Sort records by income.
-2. Compute cumulative weight.
-3. Find the first index where cumulative weight ≥ *q* × total weight.
-4. Return that record's income value.
+Person records arrive grouped by household, householder first (PERNUM 1). Household variables come from that
+record; sums run over every member. Income items coded "not in universe" (all 9s, or 9…8, in the column's width)
+count as zero.
 
-This is the "lower" or "type 1" definition — no interpolation between adjacent
-values. It matches what most official statistics use for survey microdata.
-
-```python
-def w_percentile(values, weights, q):
-    order = np.argsort(values)
-    v, w = values[order], weights[order]
-    cum = np.cumsum(w)
-    idx = np.searchsorted(cum, q * cum[-1])
-    return v[min(idx, len(v) - 1)]
-```
-
-The median is `w_percentile(values, weights, 0.5)`.
-
-### Mean and standard deviation
-
-Weighted mean: `Σ(wᵢ × xᵢ) / Σwᵢ` — standard frequency-weight formula.
-
-Weighted standard deviation: `sqrt(Σ(wᵢ × (xᵢ − μ)²) / Σwᵢ)` where μ is the
-weighted mean. Note this is the population SD, not the sample SD — the
-denominator is total weight, not total weight minus one.
-
-### Weighted share
-
-`Σwᵢ [where condition] / Σwᵢ` — the weighted fraction of households meeting
-some condition. Used for `wage_pct` and `multi_job_pct` in the stats cells.
-
-## BRR standard errors
-
-Balanced Repeated Replication (BRR) is the Census Bureau's recommended method
-for variance estimation in CPS ASEC. It accounts for the complex survey design
-(stratification, clustering) in a way that simple formulas cannot.
-
-CPS ASEC provides **160 replicate weights** (`REPWTP1`–`REPWTP160`). Each
-replicate weight set is a perturbation of the full-sample weight: roughly half
-the primary sampling units in each stratum are up-weighted and the other half
-down-weighted. Applying the estimator to each replicate gives 160 perturbed
-estimates, whose spread quantifies sampling variance.
-
-This implementation uses **Fay's modified BRR** with perturbation factor k = 0.5:
-
-```
-Var(θ̂) = Σᵣ (θ̂ᵣ − θ̂)² / [R × (1 − k)²]
-```
-
-where θ̂ is the full-sample estimate, θ̂ᵣ is the estimate using the r-th
-replicate weight, R = 160, and k = 0.5. The denominator simplifies to
-160 × 0.25 = 40.
-
-```python
-def brr_se_median(values, weights, rep_weights):
-    k = 0.5
-    theta = w_median(values, weights)
-    sq = [(w_median(values, rw) - theta) ** 2 for rw in rep_weights]
-    variance = sum(sq) / (len(sq) * (1 - k) ** 2)
-    return np.sqrt(variance)
-```
-
-BRR SEs are computed only for precomputed cells (where the 160 replicate weight
-columns are available). The live browser path has no BRR — replicate weights are
-not shipped to the frontend. The 95% CI on the mean is ±1.96 × SE(mean).
-
-BRR takes ~25 minutes because it runs the weighted estimator 160× for each of
-~5,500 precomputed cells. Pass `--skip-stats` to the preprocessor to skip this
-and regenerate only the Arrow and codebook files (~2 min).
-
-## Derived variables
-
-### work_status
-
-A strict hierarchy: each household is assigned the highest-ranked status that
-applies, in order:
-
-| Value | Label | Conditions |
-|---|---|---|
-| 0 | Full-time wage | EMPSTAT in {10–12}, WKSWORK2 ≥ 5 (50–52 wks), UHRSWORKLY ≥ 35, CLASSWKR in wage/salary codes |
-| 1 | Full-time self-emp | Same, but CLASSWKR in self-employed codes {13, 14} |
-| 2 | FT part-year | At work, UHRSWORKLY ≥ 35, WKSWORK2 < 5 |
-| 3 | Part-time | At work, UHRSWORKLY < 35 |
-| 4 | Unemployed | EMPSTAT in {20–22} |
-| 5 | Retired | Not in labor force, INCSS > 0, AGE ≥ 55 |
-| 6 | Not working | Everything else |
-
-This is the householder's status. It does not reflect other household members.
-
-### income_type
-
-Classifies the household by its primary income source. `wage_share` is the
-sum of INCWAGE + INCBUS **across all household members** divided by HHINCOME:
-
-| Value | Label | Condition |
-|---|---|---|
-| 0 | Primarily wages | wage_share ≥ 0.75 |
-| 1 | Mixed | 0.25 ≤ wage_share < 0.75 |
-| 2 | Primarily passive/transfer | 0 < wage_share < 0.25 |
-| 3 | Zero or negative income | HHINCOME ≤ 0 |
-
-The sum over all members matters: a household where the householder earns
-nothing but a spouse earns wages should be classified as wages, not passive.
-Earlier versions summed only the householder's income — that misclassified a
-large share of multi-earner households.
-
-### multi_job_proxy
-
-CPS fields `MULTJOB` and `NUMJOBS` ask about the survey reference week only
-and are unreliable. Instead, this is derived from hours:
-
-```
-secondary_hours = UHRSWORKT − UHRSWORK1
-```
-
-where UHRSWORKT is total hours across all jobs and UHRSWORK1 is hours on the
-primary job. NIU codes (≥ 997 in either field) are excluded.
-
-| Value | Label | Hours differential |
-|---|---|---|
-| 0 | No secondary work | ≤ 0 |
-| 1 | Light (1–14 hrs) | 1–14 |
-| 2 | Moderate (15–29 hrs) | 15–29 |
-| 3 | Heavy (30+ hrs) | ≥ 30 |
-
-This undercounts true multiple-job holding — it captures only people whose
-hours differential is non-zero during the reference week. Annual multiple
-job holding is higher.
-
-### marst (marital/cohabiting status)
-
-IPUMS `MARST` gives official marital status. Cohabiting partners are detected
-from the household roster before collapse:
-
-- Look for any household member with `RELATE` in {1114, 1116, 1117}
-  (unmarried partner, same-sex partner variants)
-- If found, override the householder's marital status to 1 (Cohabiting)
-
-| Value | Label |
+| Variable | Definition |
 |---|---|
-| 0 | Married, spouse present |
-| 1 | Cohabiting (partner on roster) |
-| 2 | Separated or divorced |
-| 3 | Widowed |
-| 4 | Never married, not cohabiting |
+| `inc` | HHINCOME, adjusted, floored at 0 |
+| `wage_inc` | Sum over members of max(0, INCWAGE + INCBUS00) |
+| `passive_inc` | max(0, `inc` − `wage_inc`) |
+| `earner_count` | Members with INCWAGE + INCBUS00 > 0, capped at 3 |
+| `breadwinner` | Householder's share of `wage_inc`: ≥90% sole, 60–89% primary, 40–59% co-earner, under 40% secondary, 0 non-earner |
+| `passive_pct` | `wage_inc` / `inc`: ≥75%, 50–74%, 25–49%, under 25%, or no wages |
+| `passive_source` | Largest of: SS + SSI (INCSS + INCSUPP), retirement (INCRETIR), capital (INCINVST: interest, dividends and rent, which the ACS asks as one item), public assistance (INCWELFR). Only when wages are under 75% of income |
+| `marst` | Householder's MARST; "cohabiting" when an unmarried partner of the householder is present (RELATED 1114) and the householder isn't married with spouse present |
+| `has_roommate` | A housemate/roommate (RELATED 1115) or roomer/boarder (1241) is present |
+| `educ` | Householder's EDUCD: under 62 less than high school; 62–64 diploma or GED; 65–100 some college or associate's; 101 bachelor's; 110+ graduate or professional |
+| `race_ethnicity` | Hispanic (HISPAN 1–4) of any race; otherwise White (RACE 1), Black (2), Asian/Pacific Islander (4–6), other or multiracial |
+| `work_status` | Householder, first match wins: full-time (35+ usual hours) full-year (48+ weeks) wage worker; same, self-employed; full-time part-year; part-time; unemployed; retired (not in labor force, 55+, with Social Security); not working |
+| `housing` | OWNERSHP and MORTGAGE: owner with a mortgage or contract to purchase, owner free and clear, renter |
+| `burden` | 12 × monthly gross rent (renters) or selected owner costs (owners) ÷ household income in the same year's dollars: under 30%, 30–49%, 50%+, or N/A when there are no cash housing costs or no income |
+| `city` | METRO: principal city (5), suburb (3), non-metro (1), metro but city status unknown (2, 4) |
+| `metro_area` | MET2013 (2013 CBSA delineation). 0 where the area isn't identifiable in public data |
+| `region` | Census region from STATEFIP |
+| `topcoded` | A member has an income item (wages, business, retirement, investment) equal to the largest value of that item in their state and year. The ACS replaces values above each state's cutoff with the mean of those values, so the cap is the state maximum. About 3.6% of households |
 
-Cohabiting detection requires `RELATE` codes introduced in the mid-2000s and
-may undercount some arrangements in older surveys.
+The ACS has no question about second jobs, so the CPS version's multiple-job dimension is gone.
 
-### has_roommate
+## Statistics
 
-Detected from the household roster: any non-householder with `RELATE=1115`
-(housemate/roommate). The older roomer/boarder code (1113) is included in the
-detection logic but does not appear in ASEC 2023+ data — 1115 is the only
-active code for this relationship type.
+Precomputed cells use every household, not the browser sample.
 
-Note that `RELATE=1116` is **not** "other non-relative" in ASEC 2023+ — it is
-the opposite-sex unmarried partner code, already used for cohabiting detection.
-There is no catch-all non-relative bucket in this data vintage. The ~2.3%
-roommate rate reflects genuine CPS coding rather than a detection gap.
+- **Median:** found by linear interpolation within the $2,500 interval that holds it, as the Census Bureau does.
+  Without that, respondents' round numbers (many households report exactly $80,000) pin the median and all of its
+  replicates to one value, and the standard error comes out near zero.
+- **Mean, percentiles, SD:** weighted; P25 and P75 are the first value at which cumulative weight reaches the quantile.
+- **Standard errors:** successive difference replication with the 80 household replicate weights,
+  SE = √(4/80 × Σ(θᵣ − θ)²), for the median and the mean. The confidence interval shown is around the mean.
+  Pooled years share replicate numbers, the usual approximation when combining ACS years.
+- **Suppression and reliability:** fewer than 50 sample households: no statistics. 50–199 low, 200–499 moderate,
+  500+ high.
 
-### hh_share (householder income share)
+### Cells
 
-`HHINCOME` is household income — it pools all members' income. `hh_share`
-measures how economically concentrated that income is:
+Keys are `scope|dim=value|…` with dimensions sorted alphabetically. Dimension names: `age`, `sex`, `marst`, `educ`,
+`region`, `city`, `work`, `kids`, `race`, `house`, `burden`, `earners`, `bread`, `ppct`, `psrc`, `year`.
 
-```
-share = INCTOT_householder / HHINCOME   (clamped to [0, 1])
-```
-
-| Value | Label | Range |
+| Scope | Cells | Standard errors |
 |---|---|---|
-| 0 | ≥90% sole earner | share ≥ 0.90 |
-| 1 | 50–90% primary | 0.50 ≤ share < 0.90 |
-| 2 | 25–50% equal/secondary | 0.25 ≤ share < 0.50 |
-| 3 | <25% minor contributor | share < 0.25 (HHINCOME > 0) |
+| `national` | overall, every dimension value, every pair of dimension values | yes |
+| `state=FIPS` | overall and every dimension value (except region) | yes |
+| `metro=CBSA` | overall for every identifiable metro; every dimension value for metros with 2,000+ sample households | yes |
 
-Households with zero or negative HHINCOME get value 3 as a fallback.
+About 20,000 cells, 4 MB of JSON (under 1 MB compressed). When a view isn't precomputed (several values of one filter, several states,
+or a combination not listed), the browser computes median, mean and percentiles from the sample, without
+standard errors.
 
-This dimension exists because the same HHINCOME of $120k means something
-different for a sole earner versus two partners each earning $60k. It is
-most useful when combined with the income distribution chart — filtering to
-`hh_share=0` shows households where one person's income effectively IS the
-household income.
+## The browser sample
 
-### race_ethnicity
+`national.arrow` holds 300,000 households drawn within each year × state stratum in proportion to its size, with
+weights scaled by (households in stratum ÷ households drawn) so each stratum keeps its weighted total. It drives
+the dots, the group breakdowns, and the statistics for views that aren't precomputed.
 
-Hispanic origin takes precedence over race (matching standard Census practice):
+## Validation
 
-| Value | Label | Rule |
-|---|---|---|
-| 0 | White non-Hispanic | RACE=100, HISPAN=0 |
-| 1 | Black non-Hispanic | RACE=200, HISPAN=0 |
-| 2 | Hispanic (any race) | HISPAN > 0 |
-| 3 | Asian non-Hispanic | RACE in {651, 652}, HISPAN=0 |
-| 4 | Other/multiracial | Everything else |
-
-### housing (tenure)
-
-From `SPMMORT` (Supplemental Poverty Measure mortgage indicator):
-
-| Value | Label | SPMMORT |
-|---|---|---|
-| 0 | Owns with mortgage | 1 |
-| 1 | Owns free and clear | 2 |
-| 2 | Rents | 3 |
-
-`SPMMORT=0` (NIU) maps to a suppressed value and is excluded from this filter.
-
-## Precomputed stats structure
-
-The precomputed table (`stats_precomputed.json`) caches weighted stats and BRR
-standard errors for ~5,500 commonly-filtered cells, covering:
-
-- **National × 1D**: each of the 11 dimensions in `DIMS`, all values
-- **National × 2D**: all pairs of dimensions (suppressed if n < 50)
-- **State × 1D**: each state × each dimension in `DIMS`
-- **Region × 2D**: each of the 4 regions × all dimension pairs
-
-Key format: `"scope|dim=val|dim=val"` with dims alphabetically sorted.
-Examples: `"national"`, `"national|age=2|marst=0"`, `"state=25|work=0"`.
-
-The frontend builds a lookup key from active filters. On a hit it uses the
-precomputed stats (with BRR SE if available). On a miss it falls back to live
-weighted computation in the browser — same formulas, no SE, and no
-replicate-weight correction for complex survey design.
+The preprocessor stops before writing anything if a categorical column has an unexpected value, a year's median
+falls outside $60k–$95k, the share of wage-dominated households is outside 35–75%, or any household's wage
+income tops $20M (a sign of "not in universe" codes leaking into a sum). It also stops if the extract lacks a
+required variable or the replicate weights, or if the DDI's labels for the relationship codes it relies on have
+changed.

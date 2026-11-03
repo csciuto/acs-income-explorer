@@ -4,19 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>American Income Explorer</title>
-<meta name="description" content="Visualize US household income distributions across work status, income source, geography, and demographics using CPS ASEC microdata (2020–2024).">
+<meta name="description" content="Visualize US household income distributions across work status, income source, housing costs, states and metro areas, using American Community Survey microdata (2021–2024).">
 <!-- Open Graph -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://corey.sciu.to/am-inc-exp/docs/">
 <meta property="og:title" content="American Income Explorer">
-<meta property="og:description" content="Visualize US household income distributions across work status, income source, geography, and demographics using CPS ASEC microdata (2020–2024).">
+<meta property="og:description" content="Visualize US household income distributions across work status, income source, housing costs, states and metro areas, using American Community Survey microdata (2021–2024).">
 <meta property="og:image" content="https://corey.sciu.to/am-inc-exp/docs/preview.png">
 <meta property="og:image:width" content="1471">
 <meta property="og:image:height" content="777">
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="American Income Explorer">
-<meta name="twitter:description" content="Visualize US household income distributions across work status, income source, geography, and demographics using CPS ASEC microdata (2020–2024).">
+<meta name="twitter:description" content="Visualize US household income distributions across work status, income source, housing costs, states and metro areas, using American Community Survey microdata (2021–2024).">
 <meta name="twitter:image" content="https://corey.sciu.to/am-inc-exp/docs/preview.png">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -143,6 +143,12 @@
   #state-search { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 4px; font-size: 12px; outline: none; margin-top: 4px; }
   #state-search:focus { border-color: var(--accent); }
   #state-list { max-height: 200px; overflow-y: auto; margin-top: 4px; }
+  #metro-search { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 4px; font-size: 12px; outline: none; margin-top: 4px; }
+  #metro-search:focus { border-color: var(--accent); }
+  #metro-list { max-height: 200px; overflow-y: auto; margin-top: 4px; display: flex; flex-direction: column; }
+  .metro-item { text-align: left; font-size: 12px; padding: 3px 4px; color: var(--text-dim); background: none; border: none; border-radius: 3px; cursor: pointer; }
+  .metro-item:hover { background: var(--surface2); color: var(--text); }
+  .metro-item.active { background: var(--accent); color: #fff; }
   #state-list::-webkit-scrollbar { width: 4px; }
   #state-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
   .state-region-header { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dimmer); margin: 8px 0 3px; padding: 0 2px; }
@@ -286,7 +292,7 @@
 
 <div id="header">
   <h1>American Income Explorer</h1>
-  <span class="sub">CPS ASEC 2021–2025 · Household income · Weighted</span>
+  <span class="sub">American Community Survey 2021–2024 · Household income in 2024 dollars · Weighted</span>
 </div>
 
 <div id="main">
@@ -348,9 +354,9 @@
           <button class="cm-btn" data-mode="has_roommate">Roommates</button>
           <button class="cm-btn" data-mode="race_ethnicity">Race/ethnicity</button>
           <button class="cm-btn" data-mode="housing">Housing</button>
+          <button class="cm-btn" data-mode="burden">Housing cost burden</button>
           <button class="cm-btn" data-mode="kids">Kids</button>
-          <button class="cm-btn" data-mode="metro">Metro</button>
-          <button class="cm-btn" data-mode="multi_job_proxy">Secondary hours</button>
+          <button class="cm-btn" data-mode="city">City / suburb</button>
           <button class="cm-btn" data-mode="state">State</button>
           <button class="cm-btn" data-mode="year">Survey year</button>
         </div>
@@ -391,8 +397,16 @@
       <!-- Geography tab -->
       <div id="tab-geo" class="tab-panel">
         <div class="filter-group">
-          <div class="stat-label">Metro area</div>
-          <div class="filter-btns" id="f-metro"></div>
+          <div class="stat-label">City, suburb or rural</div>
+          <div class="filter-btns" id="f-city"></div>
+        </div>
+        <div class="filter-group">
+          <div class="stat-label" style="display:flex;justify-content:space-between;align-items:baseline">
+            <span>Metro area</span>
+            <button id="btn-clear-metro" style="display:none;font-size:10px;color:var(--text-dim);background:none;border:1px solid var(--border);border-radius:3px;padding:1px 6px;cursor:pointer">Clear</button>
+          </div>
+          <input type="text" id="metro-search" placeholder="Search metro areas…" autocomplete="off">
+          <div id="metro-list"></div>
         </div>
         <div class="filter-group">
           <div class="stat-label" style="display:flex;justify-content:space-between;align-items:baseline">
@@ -434,8 +448,8 @@
           <div class="filter-btns" id="f-housing"></div>
         </div>
         <div class="filter-group">
-          <div class="stat-label">Secondary work</div>
-          <div class="filter-btns" id="f-multi_job_proxy"></div>
+          <div class="stat-label">Housing cost burden</div>
+          <div class="filter-btns" id="f-burden"></div>
         </div>
       </div>
 
@@ -482,9 +496,9 @@
           <dt>X axis</dt><dd>Household income on a log scale. Drag to select a range.</dd>
           <dt>Y axis</dt><dd>Frequency — taller clusters mean more households near that income. Dots are also spread apart vertically to reduce overlap, so the exact y position of each dot isn't meaningful.</dd>
           <dt>Dot size</dt><dd>Proportional to the household's sampling weight. A larger dot represents more US households.</dd>
-          <dt>Colors</dt><dd>Set by the <em>Group</em> tab. Click a legend swatch to filter by that category. Topcoded incomes (⊕) are censored at the survey year's reported maximum.</dd>
+          <dt>Colors</dt><dd>Set by the <em>Group</em> tab. Click a legend swatch to filter by that category. Topcoded incomes (⊕): a household member's income item was above the state's cutoff, so the ACS replaced it with the state mean of such values.</dd>
           <dt>Dot count / Static / All</dt><dd><strong>1K / 3K / 5K</strong> sets the maximum dots drawn. <strong>Static</strong> draws randomly from all households and dims non-matching ones as you adjust filters — the same dots persist as you click around within a state or national view. <strong>All</strong> draws only from households that match your current filters, up to the dot limit; useful when zoomed into a state or narrow filter where you want to see the actual population.</dd>
-          <dt>Data</dt><dd>IPUMS CPS ASEC survey years 2021–2025 (income years 2020–2024), pooled. All statistics are weighted. Small samples are flagged — see the reliability indicator.</dd>
+          <dt>Data</dt><dd>IPUMS USA, American Community Survey 1-year samples 2021–2024, pooled and shown in 2024 dollars. Income is for the 12 months before each interview. The chart draws from a stratified sample of about 300,000 households; the statistics in the sidebar come from all 6.2 million, with standard errors from the ACS replicate weights. Small samples are flagged — see the reliability indicator.</dd>
         </dl>
       </div>
     </div>
@@ -499,8 +513,8 @@
 <div id="tooltip"></div>
 
 <div id="footer">
-  <a href="https://cps.ipums.org" target="_blank">IPUMS CPS</a>
-  <a href="https://github.com/csciuto/am-inc-exp" target="_blank">GitHub</a>
+  <a href="https://usa.ipums.org" target="_blank">IPUMS USA</a>
+  <a href="https://github.com/csciuto/acs-income-explorer" target="_blank">GitHub</a>
   <span id="version-stamp" style="color:var(--text-dimmer);font-size:10px"></span>
 </div>
 
@@ -553,11 +567,12 @@ const PALETTES = {
   marst:           ['#4a7cbc', '#c9a227', '#e07070', '#888', '#4a9c5e'],
   has_roommate:    ['#8892b0', '#c9a227'],
   race_ethnicity:  ['#4a7cbc', '#4a9c5e', '#c9a227', '#bc6e4a', '#888'],
-  multi_job_proxy: ['#666', '#c9a227', '#e07070', '#c94040'],
+  city:            ['#4a7cbc', '#4a9c9a', '#8892b0', '#555'],
+  burden:          ['#4a9c5e', '#c9a227', '#c94040', '#888'],
   age_bucket:      ['#8fbcdb', '#4a7cbc', '#4a9c9a', '#4a9c5e', '#c9a227', '#e07070', '#c94040', '#7a2020'],
   sex:             [null, '#4a7cbc', '#e07070'],
   kids:            ['#8892b0', '#4a9c5e'],
-  metro:           ['#8892b0', '#4a7cbc'],
+  metro:           ['#8892b0', '#4a7cbc', '#555'],
   housing:         ['#4a7cbc', '#4a9c5e', '#c9a227', '#888'],
   year:            ['#8892b0', '#4a7cbc', '#4a9c9a', '#c9a227', '#c94040'],
 };
@@ -611,7 +626,7 @@ async function init() {
   ]);
   if (ver) {
     const el = document.getElementById('version-stamp');
-    if (el) el.textContent = `${ver.date} · ${ver.commit}`;
+    if (el) el.textContent = ver.version + (ver.date ? ` · ${ver.date}` : '');
   }
 
   codebook = cb;
@@ -621,6 +636,10 @@ async function init() {
   // Add year labels dynamically
   codebook.labels.year = Object.fromEntries(
     Object.entries(codebook.year_display || {})
+  );
+
+  codebook.labels.metro_area = Object.fromEntries(
+    Object.entries(codebook.metros || {}).map(([k, m]) => [k, m.name])
   );
 
   setLoading('Parsing data…');
@@ -640,7 +659,9 @@ async function init() {
 
   buildFilterUI();
   buildGeographyTab();
+  buildMetroPicker();
   applyUrl();
+  syncMetroPicker();
   hideLoading();
   renderLegend();
   render();
@@ -706,7 +727,9 @@ function computeVisibleRows() {
 
 
 function computeScope() {
-  return selectedFips.size === 0 ? 'national' : [...selectedFips].sort().join(',');
+  const base = selectedFips.size === 0 ? 'national' : [...selectedFips].sort().join(',');
+  const m = filters.metro_area && filters.metro_area.size ? [...filters.metro_area].sort().join(',') : '';
+  return m ? `${base}|metro=${m}` : base;
 }
 
 function matchesFilters(i, cols) {
@@ -906,8 +929,8 @@ function buildKey(scopeStr, filterObj) {
 const DIM_TO_KEY = {
   age_bucket: 'age', sex: 'sex', marst: 'marst', educ: 'educ',
   work_status: 'work', passive_pct: 'ppct', passive_source: 'psrc', earner_count: 'earners', breadwinner: 'bread',
-  kids: 'kids', race_ethnicity: 'race', multi_job_proxy: 'mjob',
-  housing: 'house', metro: 'metro', year: 'yr',
+  kids: 'kids', race_ethnicity: 'race', city: 'city', burden: 'burden',
+  housing: 'house', metro: 'metro', year: 'year',
 };
 
 function getStats() {
@@ -917,12 +940,16 @@ function getStats() {
 
   let scope = 'national';
   if (selectedFips.size === 1) scope = `state=${[...selectedFips][0]}`;
+  const metroSel = filters.metro_area;
+  if (metroSel && metroSel.size === 1 && selectedFips.size === 0) scope = `metro=${[...metroSel][0]}`;
 
   const dimFilter = {};
   let hasMultiValue = selectedFips.size > 1;
 
   for (const [dim, vals] of Object.entries(filters)) {
     if (!vals || vals.size === 0) continue;
+    if (dim === 'metro_area' && scope.startsWith('metro=')) continue;
+    if (dim === 'metro_area') { hasMultiValue = true; continue; }
     if (vals.size === 1) {
       dimFilter[DIM_TO_KEY[dim] ?? dim] = [...vals][0];
     } else {
@@ -1108,6 +1135,7 @@ function render() {
     updateDotOpacity();
   }
   syncFilterButtons();
+  syncMetroPicker();
   renderActiveChips();
   renderBrushInfo();
   renderLegend();
@@ -1130,8 +1158,11 @@ function renderChart() {
   const cols = currentCols();
   const mobileMax = Math.min(maxDots, 800);
   const limit = isMobile() ? mobileMax : maxDots;
+  // Static mode samples every household, dimming non-matches; a chosen metro area narrows the pool to it
+  const metroSel = filters.metro_area && filters.metro_area.size ? filters.metro_area : null;
   const rowPool = sampleMode
-    ? Array.from({length: cols.inc.length}, (_, i) => i)
+    ? (metroSel ? Array.from({length: cols.inc.length}, (_, i) => i).filter(i => metroSel.has(cols.metro_area[i]))
+                : Array.from({length: cols.inc.length}, (_, i) => i))
     : visibleRows;
   const dotRows = subsample(rowPool, limit);
   const hasFilters = selectedFips.size > 0 || Object.values(filters).some(s => s && s.size > 0);
@@ -1565,8 +1596,10 @@ function renderLegend() {
   const lb = codebook?.labels?.[colorMode] || {};
 
   if (palette) {
+    const labelled = Object.keys(lb).length > 0;
     palette.forEach((color, i) => {
       if (color == null) return;
+      if (labelled && lb[String(i)] == null) return;  // palette longer than the codes in this data
       const lbl = lb[String(i)] ?? String(i);
       const item = document.createElement('div');
       item.className = 'legend-item';
@@ -1630,8 +1663,8 @@ function showTooltip(event, i) {
     <div class="tt-dim">${earnerLine}</div>
     ${passiveLine ? `<div class="tt-dim">${passiveLine}</div>` : ''}
     <div class="tt-dim">${label('age_bucket', cols.age_bucket[i])} · ${label('marst', cols.marst[i])} · ${label('educ', cols.educ[i])}</div>
-    <div class="tt-dim">${stateName} · ${label('metro', cols.metro[i])}</div>
-    <div class="tt-dim">${label('work_status', cols.work_status[i])} · ${label('multi_job_proxy', cols.multi_job_proxy[i])}</div>
+    <div class="tt-dim">${cols.metro_area?.[i] ? label('metro_area', cols.metro_area[i]) : stateName} · ${label('city', cols.city[i])}</div>
+    <div class="tt-dim">${label('work_status', cols.work_status[i])} · ${label('housing', cols.housing[i])}${cols.burden[i] < 3 ? ', ' + label('burden', cols.burden[i]) + ' of income' : ''}</div>
     <div class="tt-dim">Weight: ${Math.round(cols.weight[i]).toLocaleString()} households · ${yr}</div>
   `;
   tt.style.display = 'block';
@@ -1663,7 +1696,7 @@ const FILTER_DEFS = [
   { id: 'f-educ', dim: 'educ' },
   { id: 'f-race_ethnicity', dim: 'race_ethnicity' },
   { id: 'f-kids', dim: 'kids' },
-  { id: 'f-metro', dim: 'metro' },
+  { id: 'f-city', dim: 'city' },
   { id: 'f-work_status', dim: 'work_status' },
   { id: 'f-earner_count', dim: 'earner_count' },
   { id: 'f-breadwinner', dim: 'breadwinner' },
@@ -1671,7 +1704,7 @@ const FILTER_DEFS = [
   { id: 'f-passive_source', dim: 'passive_source' },
   { id: 'f-year', dim: 'year' },
   { id: 'f-housing', dim: 'housing' },
-  { id: 'f-multi_job_proxy', dim: 'multi_job_proxy' },
+  { id: 'f-burden', dim: 'burden' },
 ];
 
 function buildFilterUI() {
@@ -1722,7 +1755,7 @@ function syncFilterButtons() {
 const DIM_LABELS = {
   age_bucket: 'Age', sex: 'Sex', marst: 'Marital', educ: 'Educ', has_roommate: 'Roommates',
   work_status: 'Work', race_ethnicity: 'Race',
-  kids: 'Kids', multi_job_proxy: '2nd job', metro: 'Metro',
+  kids: 'Kids', city: 'Area', metro: 'Metro', metro_area: 'Metro area', burden: 'Cost burden',
   housing: 'Housing', year: 'Year',
   earner_count: 'Earners', breadwinner: 'Breadwinner',
   passive_pct: 'Inc. mix', passive_source: 'Passive src',
@@ -1825,6 +1858,39 @@ function buildGeographyTab() {
   });
 }
 
+
+// Metro areas: a searchable single-choice list. Choosing one filters to it and, with no states selected,
+// uses its precomputed stats (scope "metro=CODE").
+function buildMetroPicker() {
+  const list = document.getElementById('metro-list');
+  const entries = Object.entries(codebook?.metros ?? {}).sort((a, b) => a[1].name.localeCompare(b[1].name));
+  list.innerHTML = entries.map(([code, m]) =>
+    `<button class="metro-item" data-code="${code}" title="${m.n.toLocaleString()} survey households">${m.name}</button>`).join('');
+  list.querySelectorAll('.metro-item').forEach(b => b.addEventListener('click', () => {
+    const code = parseInt(b.dataset.code);
+    const cur = filters.metro_area;
+    if (cur && cur.size === 1 && cur.has(code)) delete filters.metro_area;
+    else filters.metro_area = new Set([code]);
+    render();
+  }));
+  document.getElementById('metro-search').addEventListener('input', function () {
+    const q = this.value.toLowerCase().trim();
+    list.querySelectorAll('.metro-item').forEach(b => { b.style.display = !q || b.textContent.toLowerCase().includes(q) ? '' : 'none'; });
+  });
+  document.getElementById('btn-clear-metro').addEventListener('click', () => { delete filters.metro_area; render(); });
+}
+
+function syncMetroPicker() {
+  const sel = filters.metro_area;
+  document.querySelectorAll('.metro-item').forEach(b => b.classList.toggle('active', !!(sel && sel.has(parseInt(b.dataset.code)))));
+  const act = document.querySelector('.metro-item.active');
+  const list = document.getElementById('metro-list');
+  if (act && list && (act.offsetTop < list.scrollTop || act.offsetTop > list.scrollTop + list.clientHeight - act.offsetHeight)) {
+    list.scrollTop = act.offsetTop - list.offsetTop - list.clientHeight / 2;
+  }
+  const clr = document.getElementById('btn-clear-metro');
+  if (clr) clr.style.display = sel && sel.size ? '' : 'none';
+}
 
 function toggleState(fips) {
   if (selectedFips.has(fips)) selectedFips.delete(fips);
@@ -2004,6 +2070,7 @@ document.getElementById('chart-wrap').addEventListener('touchstart', (e) => {
 // Resize
 // ============================================================
 const ro = new ResizeObserver(() => {
+  if (!nationalTable) return;  // it fires once on load, before the data has arrived
   if (viewMode === 'bars' || viewMode === 'pct') renderStackedBars();
   else renderChart();
 });

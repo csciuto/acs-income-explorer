@@ -26,11 +26,11 @@ class TestPageLoad:
         expect(page).to_have_title("American Income Explorer")
 
     def test_header_year_range(self, page: Page):
-        expect(page.locator(".sub")).to_contain_text("CPS ASEC 2021–2025")
+        expect(page.locator(".sub")).to_contain_text("American Community Survey 2021–2024")
 
     def test_about_panel_year_range(self, page: Page):
         page.click("#btn-about")
-        expect(page.locator("#chart-about")).to_contain_text("2021–2025")
+        expect(page.locator("#chart-about")).to_contain_text("2021–2024")
 
     def test_dots_rendered(self, page: Page):
         assert page.locator("#chart-svg circle").count() > 100
@@ -110,7 +110,7 @@ class TestFilters:
 
     def test_nonmetro_filter_shows_dots(self, page: Page):
         page.locator(".tab-btn[data-tab='geo']").click()
-        page.locator('#f-metro .f-btn[data-val="0"]').click()
+        page.locator('#f-city .f-btn[data-val="2"]').click()
         assert page.locator("#chart-svg circle").count() > 0
 
     def test_state_filter_dims_non_state_dots(self, page: Page):
@@ -355,11 +355,14 @@ class TestStateSelector:
 
     def test_year_filter_buttons_exist(self, page: Page):
         page.locator(".tab-btn[data-tab='survey']").click()
-        assert page.locator("#f-year .f-btn").count() == 5
+        assert page.locator("#f-year .f-btn").count() == 4
 
-    def test_color_by_year_shows_five_entries(self, page: Page):
+    def test_color_by_year_shows_one_entry_per_year(self, page: Page):
         page.locator(".cm-btn[data-mode='year']").click()
-        assert page.locator("#legend .legend-item").count() == 6
+        labels = page.locator("#legend .legend-item").all_text_contents()
+        for y in ["2021", "2022", "2023", "2024"]:
+            assert any(y in l for l in labels), labels
+        assert not any(l.strip() == "4" for l in labels), labels
 
     def test_dot_count_buttons_exist(self, page: Page):
         assert page.locator(".dots-btn").count() == 3
@@ -747,3 +750,59 @@ class TestMobile:
 
     def test_footer_hidden_on_mobile(self, mobile_page: Page):
         expect(mobile_page.locator("#footer")).to_be_hidden()
+
+
+
+class TestNoErrors:
+    def test_load_and_reload_without_page_errors(self, page: Page, static_server: str):
+        errors = []
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        page.goto(static_server + "/#metro_area=14460&cm=burden")
+        page.reload()
+        page.wait_for_selector("#loading", state="hidden")
+        page.wait_for_timeout(500)
+        assert errors == []
+
+
+class TestACS:
+    """Features the ACS version adds: metro areas, city/suburb, housing cost burden; multi-job removed."""
+
+    def test_no_multi_job_ui(self, page: Page):
+        assert page.locator("[data-mode='multi_job_proxy'], #f-multi_job_proxy").count() == 0
+
+    def test_metro_picker_uses_precomputed_metro_stats(self, page: Page):
+        page.locator(".tab-btn[data-tab='geo']").click()
+        page.fill("#metro-search", "Boston")
+        page.locator(".metro-item", has_text="Boston-Cambridge").click()
+        expect(page.locator("#active-chips")).to_contain_text("Metro area: Boston")
+        stats = page.evaluate("precomputed['metro=14460']")
+        expect(page.locator("#n-info")).to_contain_text(f"{stats['n']:,} survey records")
+        expect(page.locator("#s-med")).to_contain_text(f"${stats['med']:,}")
+        assert page.locator("#chart-svg circle").count() > 100
+        page.locator("#btn-clear-metro").click()
+        expect(page.locator("#active-chips")).not_to_contain_text("Metro area")
+
+    def test_metro_plus_filter_uses_metro_scope_key(self, page: Page):
+        page.goto(page.url.split("#")[0] + "#metro_area=14460&work_status=0")
+        page.wait_for_function("document.getElementById('s-med').textContent.includes('$')")
+        stats = page.evaluate("precomputed['metro=14460|work=0']")
+        expect(page.locator("#s-med")).to_contain_text(f"${stats['med']:,}")
+
+    def test_city_and_burden_filters_use_precomputed_stats(self, page: Page):
+        page.locator(".tab-btn[data-tab='work']").click()
+        page.locator('#f-burden .f-btn[data-val="2"]').click()
+        stats = page.evaluate("precomputed['national|burden=2']")
+        expect(page.locator("#s-med")).to_contain_text(f"${stats['med']:,}")
+        page.locator(".tab-btn[data-tab='geo']").click()
+        page.locator('#f-city .f-btn[data-val="0"]').click()
+        stats = page.evaluate("precomputed['national|burden=2|city=0']")
+        expect(page.locator("#s-med")).to_contain_text(f"${stats['med']:,}")
+
+    def test_median_shows_standard_error(self, page: Page):
+        expect(page.locator("#s-med .stat-se")).to_contain_text("SE")
+
+    def test_year_filter_uses_precomputed_year_key(self, page: Page):
+        page.locator(".tab-btn[data-tab='survey']").click()
+        page.locator('#f-year .f-btn[data-val="3"]').click()
+        stats = page.evaluate("precomputed['national|year=3']")
+        expect(page.locator("#s-med")).to_contain_text(f"${stats['med']:,}")
