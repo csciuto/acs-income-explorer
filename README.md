@@ -1,4 +1,4 @@
-# ACS Income Explorer
+# American Income Explorer (ACS edition)
 
 An interactive look at US household income, built from American Community Survey microdata (2021–2024, in 2024
 dollars). Filter 5.3 million survey households down to a slice — work status, income mix, age, education, family,

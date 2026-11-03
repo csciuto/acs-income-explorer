@@ -1,4 +1,4 @@
-# ACS Income Explorer
+# American Income Explorer (ACS edition)
 
 Static site served from `docs/` by GitHub Pages (deployed by `.github/workflows/deploy.yml`). No build step, no
 bundler, no server. Everything runs in the browser or in the one-shot local preprocessor.
