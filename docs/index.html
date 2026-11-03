@@ -1023,7 +1023,8 @@ function renderStats(stats) {
   document.getElementById('rel-badge').innerHTML = relMsg
     ? `<span class="reliability rel-${rel}">${relMsg}</span>` : '';
 
-  const nRep = stats.n_rep ? ` · ~${(stats.n_rep / 1e6).toFixed(1)}M households` : '';
+  const nRep = !stats.n_rep ? '' : stats.n_rep >= 1e6 ? ` · ~${(stats.n_rep / 1e6).toFixed(1)}M households`
+    : ` · ~${Math.round(stats.n_rep / 1e3).toLocaleString()}K households a year`;
   document.getElementById('n-info').textContent = `${n.toLocaleString()} survey records${nRep}`;
 }
 
