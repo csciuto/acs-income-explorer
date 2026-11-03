@@ -7,7 +7,7 @@ Two data sources in one app: the ACS (default) and the CPS ASEC, switchable in t
 > gzipped) can't be processed in CI, so the generated data is committed.
 
 Docs: [EXTRACT.md](EXTRACT.md) (what to request), [METHODOLOGY.md](METHODOLOGY.md) (definitions, statistics; keep
-in sync with `pipeline/`). Successor to csciuto/am-inc-exp (CPS only, with bugs fixed here).
+in sync with `pipeline/`). Successor to an earlier CPS-only app (deleted; corey.sciu.to/am-inc-exp/ redirects here from the csciuto.github.io repo).
 
 ## Files
 

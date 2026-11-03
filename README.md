@@ -19,8 +19,8 @@ Switch at the top right. When a slice exists in both, the sidebar shows the othe
 gaps larger than chance. [METHODOLOGY.md](METHODOLOGY.md) has the definitions; the two differ for real reasons
 (the CPS asks about 50 income questions, the ACS 8; the ACS covers the 12 months before each interview).
 
-This replaces the CPS-only [am-inc-exp](https://github.com/csciuto/am-inc-exp), fixing its education coding, its
-missing pension income and its standard errors along the way.
+This replaces an earlier CPS-only version, fixing its education coding, its missing pension income and its
+standard errors along the way.
 
 How to read it:
 
