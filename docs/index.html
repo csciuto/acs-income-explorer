@@ -182,7 +182,7 @@
   /* ---- tooltip ---- */
   #tooltip { position: fixed; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-size: 12px; pointer-events: none; display: none; max-width: 220px; z-index: 1000; line-height: 1.6; }
   #tooltip .tt-income { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-  #tooltip .tt-topcode { color: var(--warn); font-size: 11px; }
+  #tooltip .tt-topcode { color: var(--text-dim); font-size: 11px; }
   #tooltip .tt-dim { color: var(--text-dim); }
 
   /* ---- loading overlay ---- */
@@ -210,7 +210,7 @@
   .legend-item:hover { background: var(--surface2); }
   .legend-item.active { background: var(--chip-active); outline: 1px solid var(--accent); }
   .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .legend-topcode { font-size: 13px; color: var(--warn); line-height: 10px; }
+  .legend-topcode { width: 9px; height: 9px; border-radius: 50%; border: 1.2px solid #d8dce3; background: var(--text-dimmer); display: inline-block; box-sizing: border-box; }
 
   /* ================================================================
      Mobile layout  (≤ 767px)
@@ -537,7 +537,7 @@
           <dt>X axis</dt><dd>Household income on a log scale. Drag to select a range.</dd>
           <dt>Y axis</dt><dd>Frequency — taller clusters mean more households near that income. Dots are also spread apart vertically to reduce overlap, so the exact y position of each dot isn't meaningful.</dd>
           <dt>Dot size</dt><dd>Proportional to the household's sampling weight. A larger dot represents more US households.</dd>
-          <dt>Colors</dt><dd>Set by the <em>Group</em> tab. Click a legend swatch to filter by that category. Topcoded incomes (⊕): a household member's income was above the survey's cap; see Data below.</dd>
+          <dt>Colors</dt><dd>Set by the <em>Group</em> tab. Click a legend swatch to filter by that category. Topcoded incomes (dots with a thin light outline): a household member's income was above the survey's cap; see Data below.</dd>
           <dt>Dot count / Static / All</dt><dd><strong>1K / 3K / 5K</strong> sets the maximum dots drawn. <strong>Static</strong> draws randomly from all households and dims non-matching ones as you adjust filters — the same dots persist as you click around within a state or national view. <strong>All</strong> draws only from households that match your current filters, up to the dot limit; useful when zoomed into a state or narrow filter where you want to see the actual population.</dd>
           <dt>Data</dt><dd id="about-data">—</dd>
           <dt>ACS or CPS</dt><dd>Two Census Bureau surveys, switchable at the top right. The <strong>ACS</strong> is about 20 times larger, so it can show states, metro areas, local areas and narrow slices reliably, and it has housing costs. The <strong>CPS</strong> asks about income in far more detail, so income sources such as pensions and investments are measured better; it is the official source for national income. When a slice exists in both, the sidebar shows the other survey's figure too.</dd>
@@ -1125,12 +1125,16 @@ function dotColor(i, cols, palette) {
   return palette[v] ?? '#888';
 }
 
+// Topcoded households keep their group color and get a thin light-grey outline, so the mark doesn't compete
+// with the palette (several palettes use yellow).
+const TOPCODE_RING = '#d8dce3';
+
 function updateDotColors() {
   const cols = currentCols();
   const palette = PALETTES[colorMode] || PALETTES.passive_pct;
   d3.select('#chart-svg').selectAll('circle')
-    .attr('fill', d => d.topcode ? 'none' : dotColor(d.i, cols, palette))
-    .attr('stroke', d => d.topcode ? '#c9a227' : dotColor(d.i, cols, palette));
+    .attr('fill', d => dotColor(d.i, cols, palette))
+    .attr('stroke', d => d.topcode ? TOPCODE_RING : dotColor(d.i, cols, palette));
 }
 
 // ============================================================
@@ -1523,29 +1527,15 @@ function renderChart() {
       .attr('cx', d => d.x)
       .attr('cy', d => d.y)
       .attr('r', d => d.r)
-      .attr('fill', d => d.topcode ? 'none' : dotColor(d.i, cols, palette))
-      .attr('stroke', d => d.topcode ? '#c9a227' : dotColor(d.i, cols, palette))
-      .attr('stroke-width', d => d.topcode ? 1.5 : 0.5)
+      .attr('fill', d => dotColor(d.i, cols, palette))
+      .attr('stroke', d => d.topcode ? TOPCODE_RING : dotColor(d.i, cols, palette))
+      .attr('stroke-width', d => d.topcode ? 1.2 : 0.5)
       .attr('opacity', d => isDimmed(d.i, cols, hasFilters) ? 0.12 : 0.75)
       .attr('pointer-events', d => isDimmed(d.i, cols, hasFilters) ? 'none' : 'all')
       .on('mouseover', (event, d) => showTooltip(event, d.i))
       .on('mousemove', moveTooltip)
       .on('mouseout', hideTooltip)
       .on('touchstart', (event, d) => { event.preventDefault(); showTooltip(event, d.i); }, {passive: false});
-
-  // Topcode ⊕
-  svgEl.append('g')
-    .selectAll('text.tc')
-    .data(dotData.filter(d => d.topcode))
-    .join('text')
-      .attr('class', 'tc')
-      .attr('x', d => d.x)
-      .attr('y', d => d.y + 4)
-      .attr('text-anchor', 'middle')
-      .attr('font-size', d => d.r * 1.8)
-      .attr('fill', '#c9a227')
-      .attr('pointer-events', 'none')
-      .text('⊕');
 
   attachBrushLayer(svgEl, xScale, marginL, marginT, chartW, chartH);
   updateDotCountDisplay();
@@ -1900,7 +1890,7 @@ function renderLegend() {
 
   const tc = document.createElement('div');
   tc.className = 'legend-item';
-  tc.innerHTML = '<span class="legend-topcode">⊕</span> Topcoded';
+  tc.innerHTML = '<span class="legend-topcode" aria-hidden="true"></span> Topcoded';
   container.append(tc);
 
   syncLegendActive();
@@ -1940,7 +1930,7 @@ function showTooltip(event, i) {
     : null;
 
   tt.innerHTML = `
-    <div class="tt-income">${fmt$(inc)}${topcode ? ' <span class="tt-topcode">⊕ topcoded</span>' : ''}</div>
+    <div class="tt-income">${fmt$(inc)}${topcode ? ' <span class="tt-topcode">(topcoded)</span>' : ''}</div>
     <div class="tt-dim">${hhSize} in household · ${nKids === 0 || nKids === '0' ? 'no children' : nKids + ' child' + (nKids !== 1 ? 'ren' : '')}</div>
     <div class="tt-dim">${earnerLine}</div>
     ${passiveLine ? `<div class="tt-dim">${passiveLine}</div>` : ''}

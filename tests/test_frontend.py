@@ -800,6 +800,18 @@ class TestACS:
         stats = page.evaluate("precomputed['national|burden=2|city=0']")
         expect(page.locator("#s-med")).to_contain_text(f"${stats['med']:,}")
 
+    def test_topcoded_dots_keep_their_color(self, page: Page):
+        page.wait_for_function("document.querySelectorAll('#chart-svg circle').length > 100")
+        info = page.evaluate("""() => {
+          const tc = [...document.querySelectorAll('#chart-svg circle')].filter(c => c.__data__ && c.__data__.topcode);
+          return { n: tc.length, fills: tc.map(c => c.getAttribute('fill')), strokes: [...new Set(tc.map(c => c.getAttribute('stroke')))],
+                   glyphs: document.querySelectorAll('#chart-svg text.tc').length };
+        }""")
+        assert info["n"] > 0
+        assert "none" not in info["fills"] and "#c9a227" not in info["fills"]
+        assert info["strokes"] == ["#d8dce3"]
+        assert info["glyphs"] == 0
+
     def test_median_shows_standard_error(self, page: Page):
         expect(page.locator("#s-med .stat-se")).to_contain_text("SE")
 
