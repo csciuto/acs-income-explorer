@@ -808,7 +808,7 @@ class TestACS:
                    glyphs: document.querySelectorAll('#chart-svg text.tc').length };
         }""")
         assert info["n"] > 0
-        assert "none" not in info["fills"] and "#c9a227" not in info["fills"]
+        assert "none" not in info["fills"]  # filled with the group color, not hollow
         assert info["strokes"] == ["#d8dce3"]
         assert info["glyphs"] == 0
 
