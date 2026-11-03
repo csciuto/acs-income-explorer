@@ -42,6 +42,18 @@
   #header { padding: 14px 20px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 16px; }
   #header h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
   #header .sub { color: var(--text-dim); font-size: 12px; }
+  #source-switch { margin-left: auto; display: flex; gap: 0; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; align-self: center; }
+  #source-switch button { background: none; border: none; color: var(--text-dim); font-size: 12px; padding: 4px 10px; cursor: pointer; }
+  #source-switch button + button { border-left: 1px solid var(--border); }
+  #source-switch button.active { background: var(--accent); color: #fff; }
+  #source-switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  #other-src { font-size: 11px; color: var(--text-dim); margin-top: 6px; line-height: 1.5; }
+  #other-src .gap { color: var(--text); }
+  #other-src button { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 11px; padding: 0; text-decoration: underline; }
+  #local-search { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 4px; font-size: 12px; outline: none; margin-top: 4px; }
+  #local-search:focus { border-color: var(--accent); }
+  #local-list { max-height: 220px; overflow-y: auto; margin-top: 4px; display: flex; flex-direction: column; }
+  #local-list .hint { font-size: 11px; color: var(--text-dim); padding: 3px 4px; }
 
   /* ---- main layout ---- */
   #main { display: flex; flex: 1; overflow: hidden; }
@@ -149,6 +161,8 @@
   .metro-item { text-align: left; font-size: 12px; padding: 3px 4px; color: var(--text-dim); background: none; border: none; border-radius: 3px; cursor: pointer; }
   .metro-item:hover { background: var(--surface2); color: var(--text); }
   .metro-item.active { background: var(--accent); color: #fff; }
+  .metro-item small { color: var(--text-dimmer); }
+  .metro-item.active small { color: #e8eefc; }
   #state-list::-webkit-scrollbar { width: 4px; }
   #state-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
   .state-region-header { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dimmer); margin: 8px 0 3px; padding: 0 2px; }
@@ -292,7 +306,11 @@
 
 <div id="header">
   <h1>American Income Explorer</h1>
-  <span class="sub">American Community Survey 2021–2024 · Household income in 2024 dollars · Weighted</span>
+  <span class="sub" id="header-sub">Household income · Weighted</span>
+  <div id="source-switch" role="group" aria-label="Data source">
+    <button data-src="acs" title="American Community Survey: states, metro and local areas, housing costs">ACS</button>
+    <button data-src="cps" title="Current Population Survey: detailed income sources, the official national income figures">CPS</button>
+  </div>
 </div>
 
 <div id="main">
@@ -316,6 +334,7 @@
           <div class="stat-row"><span class="stat-label">P25 / P75</span><span class="stat-val" id="s-p2575">—</span></div>
           <div id="rel-badge"></div>
           <div id="n-info"></div>
+          <div id="other-src"></div>
         </div>
       </div>
       <div id="stats-detail" class="stats-tab-panel">
@@ -357,6 +376,7 @@
           <button class="cm-btn" data-mode="burden">Housing cost burden</button>
           <button class="cm-btn" data-mode="kids">Kids</button>
           <button class="cm-btn" data-mode="city">City / suburb</button>
+          <button class="cm-btn" data-mode="multi_job_proxy">Secondary hours</button>
           <button class="cm-btn" data-mode="state">State</button>
           <button class="cm-btn" data-mode="year">Survey year</button>
         </div>
@@ -408,6 +428,14 @@
           <input type="text" id="metro-search" placeholder="Search metro areas…" autocomplete="off">
           <div id="metro-list"></div>
         </div>
+        <div class="filter-group" id="local-group">
+          <div class="stat-label" style="display:flex;justify-content:space-between;align-items:baseline">
+            <span>Local area</span>
+            <button id="btn-clear-local" style="display:none;font-size:10px;color:var(--text-dim);background:none;border:1px solid var(--border);border-radius:3px;padding:1px 6px;cursor:pointer">Clear</button>
+          </div>
+          <input type="text" id="local-search" placeholder="Town, county or neighborhood…" autocomplete="off">
+          <div id="local-list"><div class="hint">Areas of about 100,000+ people, the smallest the Census Bureau publishes household records for.</div></div>
+        </div>
         <div class="filter-group">
           <div class="stat-label" style="display:flex;justify-content:space-between;align-items:baseline">
             <span>States</span>
@@ -450,6 +478,10 @@
         <div class="filter-group">
           <div class="stat-label">Housing cost burden</div>
           <div class="filter-btns" id="f-burden"></div>
+        </div>
+        <div class="filter-group">
+          <div class="stat-label">Secondary work</div>
+          <div class="filter-btns" id="f-multi_job_proxy"></div>
         </div>
       </div>
 
@@ -496,9 +528,10 @@
           <dt>X axis</dt><dd>Household income on a log scale. Drag to select a range.</dd>
           <dt>Y axis</dt><dd>Frequency — taller clusters mean more households near that income. Dots are also spread apart vertically to reduce overlap, so the exact y position of each dot isn't meaningful.</dd>
           <dt>Dot size</dt><dd>Proportional to the household's sampling weight. A larger dot represents more US households.</dd>
-          <dt>Colors</dt><dd>Set by the <em>Group</em> tab. Click a legend swatch to filter by that category. Topcoded incomes (⊕): a household member's income item was above the state's cutoff, so the ACS replaced it with the state mean of such values.</dd>
+          <dt>Colors</dt><dd>Set by the <em>Group</em> tab. Click a legend swatch to filter by that category. Topcoded incomes (⊕): a household member's income was above the survey's cap; see Data below.</dd>
           <dt>Dot count / Static / All</dt><dd><strong>1K / 3K / 5K</strong> sets the maximum dots drawn. <strong>Static</strong> draws randomly from all households and dims non-matching ones as you adjust filters — the same dots persist as you click around within a state or national view. <strong>All</strong> draws only from households that match your current filters, up to the dot limit; useful when zoomed into a state or narrow filter where you want to see the actual population.</dd>
-          <dt>Data</dt><dd>IPUMS USA, American Community Survey 1-year samples 2021–2024, pooled and shown in 2024 dollars. Income is for the 12 months before each interview. The chart draws from a stratified sample of about 300,000 households; the statistics in the sidebar come from all 6.2 million, with standard errors from the ACS replicate weights. Small samples are flagged — see the reliability indicator.</dd>
+          <dt>Data</dt><dd id="about-data">—</dd>
+          <dt>ACS or CPS</dt><dd>Two Census Bureau surveys, switchable at the top right. The <strong>ACS</strong> is about 20 times larger, so it can show states, metro areas, local areas and narrow slices reliably, and it has housing costs. The <strong>CPS</strong> asks about income in far more detail, so income sources such as pensions and investments are measured better; it is the official source for national income. When a slice exists in both, the sidebar shows the other survey's figure too.</dd>
         </dl>
       </div>
     </div>
@@ -513,7 +546,7 @@
 <div id="tooltip"></div>
 
 <div id="footer">
-  <a href="https://usa.ipums.org" target="_blank">IPUMS USA</a>
+  <a id="ipums-link" href="https://usa.ipums.org" target="_blank">IPUMS USA</a>
   <a href="https://github.com/csciuto/acs-income-explorer" target="_blank">GitHub</a>
   <span id="version-stamp" style="color:var(--text-dimmer);font-size:10px"></span>
 </div>
@@ -530,6 +563,12 @@
 let codebook = null;
 let precomputed = null;
 let nationalTable = null;
+let source = new URLSearchParams(location.hash.slice(1)).get('src') === 'cps' ? 'cps' : 'acs';
+let srcInfo = null;            // codebook.sources[source]
+let otherPrecomputed = null;   // the other survey's precomputed stats, for the comparison line
+const localStats = {};         // state FIPS -> local-area stats (ACS)
+const localTables = {};        // state FIPS -> local-area households (ACS)
+const localLoading = {};
 
 let selectedFips = new Set();        // multi-state selection
 let fipsToRegion = new Map();        // fips → regionCode
@@ -569,6 +608,7 @@ const PALETTES = {
   race_ethnicity:  ['#4a7cbc', '#4a9c5e', '#c9a227', '#bc6e4a', '#888'],
   city:            ['#4a7cbc', '#4a9c9a', '#8892b0', '#555'],
   burden:          ['#4a9c5e', '#c9a227', '#c94040', '#888'],
+  multi_job_proxy: ['#666', '#c9a227', '#e07070', '#c94040'],
   age_bucket:      ['#8fbcdb', '#4a7cbc', '#4a9c9a', '#4a9c5e', '#c9a227', '#e07070', '#c94040', '#7a2020'],
   sex:             [null, '#4a7cbc', '#e07070'],
   kids:            ['#8892b0', '#4a9c5e'],
@@ -620,8 +660,8 @@ async function init() {
   setLoading('Loading codebook and stats…');
   const [cb, stats, natArrow, ver] = await Promise.all([
     fetch('data/codebook.json').then(r => r.json()),
-    fetch('data/stats_precomputed.json').then(r => r.json()),
-    loadArrow('data/national.arrow'),
+    fetch(`data/${source}/stats.json`).then(r => r.json()),
+    loadArrow(`data/${source}/national.arrow`),
     fetch('version.json').then(r => r.json()).catch(() => null),
   ]);
   if (ver) {
@@ -633,38 +673,141 @@ async function init() {
   precomputed = stats;
   nationalTable = extractColumns(natArrow);
 
-  // Add year labels dynamically
-  codebook.labels.year = Object.fromEntries(
-    Object.entries(codebook.year_display || {})
-  );
-
+  srcInfo = codebook.sources[source];
+  codebook.year_display = srcInfo.years;
+  codebook.labels.year = { ...srcInfo.years };
+  codebook.metros = codebook.sources.acs?.metros || {};
   codebook.labels.metro_area = Object.fromEntries(
-    Object.entries(codebook.metros || {}).map(([k, m]) => [k, m.name])
+    Object.entries(codebook.metros).map(([k, m]) => [k, m.name])
   );
+  codebook.localAreas = codebook.sources.acs?.local_areas || {};
+  codebook.labels.puma = Object.fromEntries(
+    Object.entries(codebook.localAreas).map(([k, a]) => [k, localName(a).join(' · ')])
+  );
+  applySourceUI();
+  // the other survey's stats, for the comparison line (not needed to draw the page)
+  const other = source === 'acs' ? 'cps' : 'acs';
+  if (codebook.sources[other]) {
+    fetch(`data/${other}/stats.json`).then(r => r.json()).then(j => { otherPrecomputed = j; renderStats(getStats()); }).catch(() => {});
+  }
 
   setLoading('Parsing data…');
   buildFipsToRegion();
 
-  // Hide UI elements for columns not present in the Arrow file
-  if (!nationalTable.has_roommate) {
-    document.querySelector('.cm-btn[data-mode="has_roommate"]')?.remove();
-    document.getElementById('f-has_roommate')?.closest('.filter-group')?.remove();
+  // Hide groupings and filters this survey doesn't have
+  document.querySelectorAll('.cm-btn[data-mode]').forEach(b => {
+    const m = b.dataset.mode;
+    if (m !== 'state' && !nationalTable[m]) b.remove();
+  });
+  for (const { id, dim } of FILTER_DEFS) {
+    if (!nationalTable[dim]) document.getElementById(id)?.closest('.filter-group')?.remove();
   }
-  for (const mode of ['earner_count', 'breadwinner', 'passive_pct', 'passive_source']) {
-    if (!nationalTable[mode]) {
-      document.querySelector(`.cm-btn[data-mode="${mode}"]`)?.remove();
-      document.getElementById(`f-${mode}`)?.closest('.filter-group')?.remove();
-    }
-  }
+  if (!nationalTable.metro_area) document.getElementById('metro-list')?.closest('.filter-group')?.remove();
+  if (!nationalTable.puma || !Object.keys(codebook.localAreas).length) document.getElementById('local-group')?.remove();
 
   buildFilterUI();
   buildGeographyTab();
-  buildMetroPicker();
+  if (nationalTable.metro_area) buildMetroPicker();
+  if (document.getElementById('local-group')) buildLocalPicker();
   applyUrl();
+  for (const k of Object.keys(filters)) if (!nationalTable[k]) delete filters[k];  // a filter the other survey had
+  if (filters.puma) await ensureLocal([...filters.puma][0]);
   syncMetroPicker();
+  syncLocalPicker();
   hideLoading();
   renderLegend();
   render();
+}
+
+// ============================================================
+// Data source (ACS / CPS)
+// ============================================================
+function applySourceUI() {
+  const yrs = Object.values(srcInfo.years);
+  document.getElementById('header-sub').textContent =
+    `${srcInfo.name} · income ${yrs[0]}–${yrs[yrs.length - 1]} in ${srcInfo.dollars} · Weighted`;
+  document.getElementById('about-data').textContent =
+    `${srcInfo.about} The chart draws from a sample of households; the statistics in the sidebar come from all ` +
+    `${srcInfo.n_households.toLocaleString()} survey households when the view is precomputed. ${srcInfo.se} ${srcInfo.topcodes}`;
+  const link = document.getElementById('ipums-link');
+  link.href = source === 'cps' ? 'https://cps.ipums.org' : 'https://usa.ipums.org';
+  link.textContent = source === 'cps' ? 'IPUMS CPS' : 'IPUMS USA';
+  document.querySelectorAll('#source-switch button').forEach(b => {
+    b.classList.toggle('active', b.dataset.src === source);
+    b.setAttribute('aria-pressed', b.dataset.src === source);
+    b.onclick = () => setSource(b.dataset.src);
+  });
+}
+
+function setSource(s) {
+  if (s === source) return;
+  const params = new URLSearchParams(location.hash.slice(1));
+  if (s === 'acs') params.delete('src'); else params.set('src', s);
+  // replaceState, not location.hash: a hash change fires popstate, whose handler would rewrite the URL first
+  history.replaceState(null, '', '#' + params.toString());
+  location.reload();
+}
+
+// Local areas (ACS PUMAs): "Middlesex County (East)--Malden & Medford" -> ["Malden & Medford, MA", "Middlesex County (East)"]
+function localName(a) {
+  const abbr = codebook.states?.[String(a.state)]?.abbr ?? '';
+  const [where, what] = a.name.includes('--') ? a.name.split('--') : [null, a.name];
+  return [`${what}, ${abbr}`].concat(where ? [where] : []);
+}
+
+async function ensureLocal(code) {
+  const st = Math.floor(code / 100000), ss = String(st).padStart(2, '0');
+  if (localTables[st]) return;
+  if (!localLoading[st]) {
+    localLoading[st] = Promise.all([
+      fetch(`data/acs/local/${ss}.json`).then(r => r.json()),
+      loadArrow(`data/acs/local/${ss}.arrow`),
+    ]).then(([j, t]) => { localStats[st] = j; localTables[st] = extractColumns(t); });
+  }
+  await localLoading[st];
+}
+
+function buildLocalPicker() {
+  const list = document.getElementById('local-list');
+  const input = document.getElementById('local-search');
+  const all = Object.entries(codebook.localAreas).map(([code, a]) => {
+    const [name, where] = localName(a);
+    return { code: parseInt(code), name, where: where || '', text: (a.name + ' ' + name).toLowerCase(), n: a.n };
+  }).sort((a, b) => a.name.localeCompare(b.name));
+  const hint = list.innerHTML;
+  const draw = () => {
+    const q = input.value.toLowerCase().trim();
+    const sel = filters.puma && filters.puma.size ? [...filters.puma][0] : null;
+    let items = q.length >= 2 ? all.filter(a => a.text.includes(q)) : all.filter(a => a.code === sel);
+    if (!items.length) { list.innerHTML = q.length >= 2 ? '<div class="hint">No matching area.</div>' : hint; return; }
+    list.innerHTML = items.slice(0, 60).map(a =>
+      `<button class="metro-item local-item" data-code="${a.code}" title="${a.n.toLocaleString()} survey households">${a.name}${a.where ? ` <small>${a.where}</small>` : ''}</button>`).join('')
+      + (items.length > 60 ? `<div class="hint">${items.length - 60} more; keep typing.</div>` : '');
+    list.querySelectorAll('.local-item').forEach(b => b.addEventListener('click', async () => {
+      const code = parseInt(b.dataset.code);
+      if (filters.puma && filters.puma.has(code)) { delete filters.puma; render(); return; }
+      b.textContent = 'Loading…';
+      await ensureLocal(code);
+      filters.puma = new Set([code]);
+      input.value = '';
+      render();
+    }));
+    syncLocalPicker();
+  };
+  input.addEventListener('input', draw);
+  list._draw = draw;
+  document.getElementById('btn-clear-local').addEventListener('click', () => { delete filters.puma; render(); });
+}
+
+function syncLocalPicker() {
+  const list = document.getElementById('local-list');
+  if (!list) return;
+  const sel = filters.puma;
+  if (!document.getElementById('local-search').value && list._draw && !list.dataset.syncing) {
+    list.dataset.syncing = '1'; list._draw(); delete list.dataset.syncing;
+  }
+  list.querySelectorAll('.local-item').forEach(b => b.classList.toggle('active', !!(sel && sel.has(parseInt(b.dataset.code)))));
+  document.getElementById('btn-clear-local').style.display = sel && sel.size ? '' : 'none';
 }
 
 // ============================================================
@@ -702,6 +845,9 @@ function updateStateColorMap() {
 // Current table (always national)
 // ============================================================
 function currentCols() {
+  // a chosen local area draws on that state's local file, which holds far more of its households
+  const pu = filters.puma && filters.puma.size === 1 ? [...filters.puma][0] : null;
+  if (pu != null && localTables[Math.floor(pu / 100000)]) return localTables[Math.floor(pu / 100000)];
   return nationalTable;
 }
 
@@ -709,7 +855,7 @@ function currentCols() {
 // Row filtering
 // ============================================================
 function computeVisibleRows() {
-  const cols = nationalTable;
+  const cols = currentCols();
   const n = cols.inc.length;
   const result = [];
   for (let i = 0; i < n; i++) {
@@ -729,7 +875,8 @@ function computeVisibleRows() {
 function computeScope() {
   const base = selectedFips.size === 0 ? 'national' : [...selectedFips].sort().join(',');
   const m = filters.metro_area && filters.metro_area.size ? [...filters.metro_area].sort().join(',') : '';
-  return m ? `${base}|metro=${m}` : base;
+  const pu = filters.puma && filters.puma.size ? [...filters.puma].sort().join(',') : '';
+  return base + (m ? `|metro=${m}` : '') + (pu ? `|puma=${pu}` : '');
 }
 
 function matchesFilters(i, cols) {
@@ -929,12 +1076,12 @@ function buildKey(scopeStr, filterObj) {
 const DIM_TO_KEY = {
   age_bucket: 'age', sex: 'sex', marst: 'marst', educ: 'educ',
   work_status: 'work', passive_pct: 'ppct', passive_source: 'psrc', earner_count: 'earners', breadwinner: 'bread',
-  kids: 'kids', race_ethnicity: 'race', city: 'city', burden: 'burden',
+  kids: 'kids', race_ethnicity: 'race', city: 'city', burden: 'burden', multi_job_proxy: 'mjob',
   housing: 'house', metro: 'metro', year: 'year',
 };
 
 function getStats() {
-  const cols = nationalTable;
+  const cols = currentCols();
   const rows = visibleRows;
   const n = rows.length;
 
@@ -942,6 +1089,13 @@ function getStats() {
   if (selectedFips.size === 1) scope = `state=${[...selectedFips][0]}`;
   const metroSel = filters.metro_area;
   if (metroSel && metroSel.size === 1 && selectedFips.size === 0) scope = `metro=${[...metroSel][0]}`;
+  const localSel = filters.puma;
+  let table = precomputed;
+  if (localSel && localSel.size === 1 && selectedFips.size === 0) {
+    const pu = [...localSel][0];
+    scope = `puma=${pu}`;
+    table = localStats[Math.floor(pu / 100000)] || {};
+  }
 
   const dimFilter = {};
   let hasMultiValue = selectedFips.size > 1;
@@ -949,7 +1103,8 @@ function getStats() {
   for (const [dim, vals] of Object.entries(filters)) {
     if (!vals || vals.size === 0) continue;
     if (dim === 'metro_area' && scope.startsWith('metro=')) continue;
-    if (dim === 'metro_area') { hasMultiValue = true; continue; }
+    if (dim === 'puma' && scope.startsWith('puma=')) continue;
+    if (dim === 'metro_area' || dim === 'puma') { hasMultiValue = true; continue; }
     if (vals.size === 1) {
       dimFilter[DIM_TO_KEY[dim] ?? dim] = [...vals][0];
     } else {
@@ -957,14 +1112,16 @@ function getStats() {
     }
   }
 
+  let otherCell = null;
   if (!hasMultiValue) {
     const key = buildKey(scope, dimFilter);
-    if (precomputed[key]) {
-      return { ...precomputed[key], source: 'precomputed' };
+    otherCell = otherPrecomputed?.[key] ?? null;
+    if (table[key]) {
+      return { ...table[key], source: 'precomputed', other: otherCell };
     }
   }
 
-  if (n < 50) return { n, rel: 0, source: 'live' };
+  if (n < 50) return { n, rel: 0, source: 'live', other: otherCell };
 
   const inc = rows.map(i => cols.inc[i]);
   const w = rows.map(i => cols.weight[i]);
@@ -982,6 +1139,7 @@ function getStats() {
     iqr: Math.round(p75 - p25),
     rel: n >= 500 ? 3 : n >= 200 ? 2 : 1,
     source: 'live',
+    other: otherCell,
   };
 }
 
@@ -1011,6 +1169,7 @@ function renderStats(stats) {
     document.getElementById('s-p2575').textContent = '—';
     document.getElementById('rel-badge').innerHTML = `<span class="reliability rel-0">⚠ Too few records (n=${n}) for statistics</span>`;
     document.getElementById('n-info').textContent = '';
+    renderOther(stats);
     return;
   }
 
@@ -1026,6 +1185,25 @@ function renderStats(stats) {
   const nRep = !stats.n_rep ? '' : stats.n_rep >= 1e6 ? ` · ~${(stats.n_rep / 1e6).toFixed(1)}M households`
     : ` · ~${Math.round(stats.n_rep / 1e3).toLocaleString()}K households a year`;
   document.getElementById('n-info').textContent = `${n.toLocaleString()} survey records${nRep}`;
+  renderOther(stats);
+}
+
+// The other survey's figure for the same slice, when it has one
+function renderOther(stats) {
+  const el = document.getElementById('other-src');
+  if (!el) return;
+  const o = stats && stats.other;
+  const otherSrc = source === 'acs' ? 'cps' : 'acs';
+  if (!o || !codebook.sources[otherSrc]) { el.innerHTML = ''; return; }
+  const name = codebook.sources[otherSrc].short;
+  const se = o.se_med ? ` ±${fmt$(o.se_med)}` : '';
+  let gap = '';
+  if (stats.med && o.med && stats.se_med != null && o.se_med != null) {
+    const z = (stats.med - o.med) / Math.hypot(stats.se_med || 0, o.se_med || 0);
+    if (Math.abs(z) > 2) gap = ` <span class="gap">· the surveys differ by ${fmt$(Math.abs(stats.med - o.med))}</span>`;
+  }
+  el.innerHTML = `${name} median: ${fmt$(o.med)}${se} (n=${o.n.toLocaleString()})${gap} <button type="button">Switch to ${name}</button>`;
+  el.querySelector('button').onclick = () => setSource(otherSrc);
 }
 
 function clearStats() {
@@ -1041,6 +1219,7 @@ function clearStats() {
 // ============================================================
 function pushUrl() {
   const params = new URLSearchParams();
+  if (source !== 'acs') params.set('src', source);
   if (colorMode !== 'passive_pct') params.set('cm', colorMode);
   for (const [dim, vals] of Object.entries(filters)) {
     if (vals && vals.size > 0) params.set(dim, [...vals].sort().join(','));
@@ -1097,7 +1276,7 @@ function applyUrl() {
 
   filters = {};
   for (const [key, val] of params.entries()) {
-    if (['cm', 'states', 'brush_lo', 'brush_hi', 'v', 'md', 'sm'].includes(key)) continue;
+    if (['src', 'cm', 'states', 'brush_lo', 'brush_hi', 'v', 'md', 'sm'].includes(key)) continue;
     const nums = val.split(',').map(Number).filter(v => !isNaN(v));
     if (nums.length) filters[key] = new Set(nums);
   }
@@ -1137,6 +1316,7 @@ function render() {
   }
   syncFilterButtons();
   syncMetroPicker();
+  syncLocalPicker();
   renderActiveChips();
   renderBrushInfo();
   renderLegend();
@@ -1161,9 +1341,11 @@ function renderChart() {
   const limit = isMobile() ? mobileMax : maxDots;
   // Static mode samples every household, dimming non-matches; a chosen metro area narrows the pool to it
   const metroSel = filters.metro_area && filters.metro_area.size ? filters.metro_area : null;
+  const localSel = filters.puma && filters.puma.size ? filters.puma : null;
+  const all = Array.from({length: cols.inc.length}, (_, i) => i);
   const rowPool = sampleMode
-    ? (metroSel ? Array.from({length: cols.inc.length}, (_, i) => i).filter(i => metroSel.has(cols.metro_area[i]))
-                : Array.from({length: cols.inc.length}, (_, i) => i))
+    ? (localSel ? all.filter(i => localSel.has(cols.puma[i]))
+       : metroSel ? all.filter(i => metroSel.has(cols.metro_area[i])) : all)
     : visibleRows;
   const dotRows = subsample(rowPool, limit);
   const hasFilters = selectedFips.size > 0 || Object.values(filters).some(s => s && s.size > 0);
@@ -1469,7 +1651,7 @@ function renderGroupBreakdown() {
   if (!container) return;
   if (!visibleRows || visibleRows.length === 0) { container.innerHTML = ''; return; }
 
-  const cols = nationalTable;
+  const cols = currentCols();
   const colName = colorMode === 'state' ? 'state' : colorMode;
 
   if (colorMode === 'state') {
@@ -1665,7 +1847,7 @@ function showTooltip(event, i) {
     ${passiveLine ? `<div class="tt-dim">${passiveLine}</div>` : ''}
     <div class="tt-dim">${label('age_bucket', cols.age_bucket[i])} · ${label('marst', cols.marst[i])} · ${label('educ', cols.educ[i])}</div>
     <div class="tt-dim">${cols.metro_area?.[i] ? label('metro_area', cols.metro_area[i]) : stateName} · ${label('city', cols.city[i])}</div>
-    <div class="tt-dim">${label('work_status', cols.work_status[i])} · ${label('housing', cols.housing[i])}${cols.burden[i] < 3 ? ', ' + label('burden', cols.burden[i]) + ' of income' : ''}</div>
+    <div class="tt-dim">${label('work_status', cols.work_status[i])} · ${label('housing', cols.housing[i])}${cols.burden?.[i] < 3 ? ', ' + label('burden', cols.burden[i]) + ' of income' : ''}</div>
     <div class="tt-dim">Weight: ${Math.round(cols.weight[i]).toLocaleString()} households · ${yr}</div>
   `;
   tt.style.display = 'block';
@@ -1706,6 +1888,7 @@ const FILTER_DEFS = [
   { id: 'f-year', dim: 'year' },
   { id: 'f-housing', dim: 'housing' },
   { id: 'f-burden', dim: 'burden' },
+  { id: 'f-multi_job_proxy', dim: 'multi_job_proxy' },
 ];
 
 function buildFilterUI() {
@@ -1756,7 +1939,7 @@ function syncFilterButtons() {
 const DIM_LABELS = {
   age_bucket: 'Age', sex: 'Sex', marst: 'Marital', educ: 'Educ', has_roommate: 'Roommates',
   work_status: 'Work', race_ethnicity: 'Race',
-  kids: 'Kids', city: 'Area', metro: 'Metro', metro_area: 'Metro area', burden: 'Cost burden',
+  kids: 'Kids', city: 'Area', metro: 'Metro', metro_area: 'Metro area', puma: 'Local area', burden: 'Cost burden', multi_job_proxy: '2nd job',
   housing: 'Housing', year: 'Year',
   earner_count: 'Earners', breadwinner: 'Breadwinner',
   passive_pct: 'Inc. mix', passive_source: 'Passive src',

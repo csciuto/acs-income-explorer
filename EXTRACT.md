@@ -1,91 +1,82 @@
-# IPUMS USA extract for the ACS Income Explorer
+# IPUMS extracts for the American Income Explorer
 
-What to request at https://usa.ipums.org/usa-action/variables/group so `preprocess.py`
-can build the site. The preprocessor reads the DDI codebook and stops with a clear error
-if a required variable is missing, so a wrong extract fails fast rather than silently.
+The explorer has two sources. Request both at the same time; each comes as a fixed-width `.dat.gz` plus a DDI
+codebook `.xml`, and the preprocessor needs both files of each.
 
-## Samples
+| | ACS (geography, narrow slices, housing costs) | CPS ASEC (income detail, income sources) |
+|---|---|---|
+| Site | [usa.ipums.org](https://usa.ipums.org) | [cps.ipums.org](https://cps.ipums.org) |
+| Sample | ACS **5-year 2020–2024** | ASEC **2021, 2022, 2023, 2024, 2025** (income years 2020–2024) |
+| Format | fixed-width `.dat`, rectangular person records | same |
+| Replicate weights | household REPWT, 80 | household REPWT, 160 |
+| Case selection, attached characteristics, data quality flags, monetary adjustment, custom sample size | none | none |
 
-Select **ACS 1-year** samples for **2021, 2022, 2023 and 2024** (the "default" ACS samples,
-not the 3-/5-year or PRCS ones).
+The preprocessor reads the DDI and stops with a clear message if anything below is missing.
 
-- 2020 is left out on purpose: the 2020 ACS 1-year file has experimental weights because of
-  COVID-era collection problems, and the Census Bureau advises against comparing it with other years.
-- Each year has roughly 1.3 million households and 3.3 million people, so with replicate weights
-  the compressed extract will be a few GB. That's expected.
+## ACS: IPUMS USA
 
-## Format
+**Sample:** the **ACS 5-year 2020–2024** sample only (not the 1-year samples, not PRCS). It pools five years of
+interviews (about 5% of households), all on the 2020 PUMA boundaries, which is what makes local areas such as
+"Medford & Malden" possible.
 
-- **Data format:** fixed-width text (`.dat`), the IPUMS default, gzipped.
-- **Structure:** rectangular, person records (the default).
-- Download the **DDI codebook (`.xml`)** along with the data. The preprocessor needs both.
-- **Sample members:** default (no case selection). Group quarters are dropped by the preprocessor.
+**Variables.** Preselected ones (YEAR, MULTYEAR, SAMPLE, SERIAL, CBSERIAL, HHWT, CLUSTER, STRATA, GQ, PERNUM, PERWT)
+come automatically; keep them. Add:
 
-## Variables
-
-Preselected technical variables (YEAR, SAMPLE, SERIAL, HHWT, CLUSTER, STRATA, GQ, PERNUM, PERWT)
-come automatically; keep them all.
-
-### Household
-
-| Variable | Why |
+| Household | Why |
 |---|---|
-| **REPWT** (household replicate weights, `REPWT1`–`REPWT80`) | Standard errors. Turn on via "Replicate weights" when selecting HHWT; pick household weights, not person. |
-| STATEFIP | State |
-| MET2013 | Metro area (2013 CBSA delineation). Enables per-metro views, which the CPS version can't do. |
-| METRO | Principal city / suburb / non-metro |
-| PUMA | Kept for later small-area work; not used yet |
-| HHINCOME | Total household income (the headline number) |
-| CPI99 | Converts every year to the same dollars |
-| OWNERSHP | Owner vs renter |
-| MORTGAGE | Owner with mortgage vs free and clear |
-| RENTGRS | Gross rent (housing cost burden) |
-| OWNCOST | Owner costs (housing cost burden) |
+| REPWT (household replicate weights, 80) | standard errors; pick *household*, not person |
+| ADJUST | puts income into 2024 dollars (IPUMS doesn't apply it) |
+| CPI99 | constant dollars |
+| STATEFIP, PUMA, MET2013, METRO | state, local area, metro, principal city vs suburb |
+| HHINCOME | household income |
+| OWNERSHP, MORTGAGE, RENTGRS, OWNCOST | tenure and housing cost burden |
 
-### Person
-
-| Variable | Why |
+| Person | Why |
 |---|---|
-| RELATE | Householder, partner and roommate detection (the detailed RELATED codes come with it) |
-| AGE, SEX, MARST | Demographics |
-| RACE, HISPAN | Race/ethnicity |
-| NCHILD, YNGCH | Kids and youngest child's age |
-| EDUC | Education (the detailed EDUCD comes with it) |
-| EMPSTAT | Employment status (EMPSTATD comes with it) |
-| CLASSWKR | Wage worker vs self-employed (CLASSWKRD comes with it) |
-| WKSWORK2 | Weeks worked last year (bracketed) |
-| UHRSWORK | Usual hours per week last year |
-| INCTOT | Total personal income |
-| INCWAGE | Wages and salary |
-| INCBUS00 | Business and farm income |
-| INCSS | Social Security |
-| INCSUPP | Supplemental Security Income (SSI) |
-| INCWELFR | Public assistance |
-| INCRETIR | Retirement and pension income |
-| INCINVST | Interest, dividends and rental income (the ACS reports these as one item) |
-| INCOTHER | Other income (alimony, child support, VA, unemployment) |
+| RELATE (RELATED comes with it) | householder, partner, roommates |
+| AGE, SEX, MARST, RACE, HISPAN, EDUC | demographics |
+| NCHILD, YNGCH | children |
+| EMPSTAT, CLASSWKR, WKSWORK2, UHRSWORK | work |
+| INCTOT, INCWAGE, INCBUS00, INCSS, INCSUPP, INCWELFR, INCRETIR, INCINVST, INCOTHER | income |
 
-## How this differs from the CPS extract
+MULTYEAR (preselected) gives each household's survey year, which drives the year filter.
 
-- **Much bigger sample** (about 15x the households per year), so states, metro areas and
-  narrow slices get reliable estimates.
-- **Capital income is one item.** The ACS reports interest, dividends and rent together as
-  INCINVST, so there's no separate INCDIVID/INCRENT/INCINT.
-- **No multiple-job detail.** The ACS doesn't ask about second jobs, so the CPS version's
-  multi-job dimension is dropped.
-- **SSI is its own item** (INCSUPP), so it can be counted with disability/SS income.
-- **Income period is the previous 12 months** before the interview, not the previous calendar year.
-  IPUMS already scales ACS income to the survey year's dollars; CPI99 then puts all years into
-  2024 dollars.
-- **80 household replicate weights** (successive difference replication) instead of 160 BRR person weights.
-  The variance formula is the same, 4/R × Σ(θᵣ − θ)², so the SE code carries over unchanged.
-- **Topcoding is per state.** Each income item above the state's 99.5th percentile is replaced by
-  the mean of those values, so there's no single national topcode.
+## CPS: IPUMS CPS
+
+**Samples:** in the sample picker, clear the default basic monthly samples and choose **ASEC 2021–2025** only.
+
+**Variables.** Preselected ones (YEAR, SERIAL, MONTH, CPSID, ASECFLAG, ASECWTH, PERNUM, CPSIDP, ASECWT, …) come
+automatically; keep them. Add:
+
+| Household | Why |
+|---|---|
+| REPWT (household replicate weights, 160) | standard errors; pick *household* with ASECWTH |
+| CPI99 | constant dollars |
+| REGION, STATEFIP, METRO | geography and principal city vs suburb |
+| HHINCOME | household income |
+| OWNERSHP | owner vs renter |
+| SPMMORT | owner with or without a mortgage |
+
+| Person | Why |
+|---|---|
+| RELATE | householder, partner, roommates |
+| AGE, SEX, MARST, RACE, HISPAN, EDUC | demographics |
+| NCHILD, YNGCH | children |
+| EMPSTAT, CLASSWKR, WKSWORK2, UHRSWORKLY | work last year |
+| UHRSWORKT, UHRSWORK1 | multiple jobs (hours at all jobs vs main job) |
+| INCTOT, INCWAGE, INCBUS, INCFARM | earnings |
+| INCSS, INCSSI, INCDISAB, INCRETIR, INCSURV | Social Security, SSI, disability, retirement accounts, survivor benefits |
+| **INCPEN1, INCPEN2, INCRANN** | pensions and annuities. Since the 2019 redesign these are no longer in INCRETIR, which covers only retirement accounts for people 58+ ([IPUMS](https://cps.ipums.org/cps/asec_2019_changes.shtml)). The preprocessor refuses to run without them |
+| INCINT, INCDIVID, INCRENT | interest, dividends, rent, asked separately |
+| INCWELFR, INCUNEMP, INCWKCOM, INCVET, INCEDUC, INCCHILD, INCALIM, INCASIST, INCOTHER | other sources |
+
+The previous CPS extract lacked the pension items, so pension income was mostly missing from the old CPS version.
 
 ## After downloading
 
-Put the `.dat.gz` and `.xml` anywhere (they're gitignored) and run:
+Put the four files anywhere outside the repo and run:
 
 ```bash
-python3 preprocess.py --input usa_000NN.dat.gz --ddi usa_000NN.xml --output-dir ./docs/data
+.venv/bin/python preprocess.py --acs usa_000NN.dat.gz --acs-ddi usa_000NN.xml \
+                               --cps cps_000NN.dat.gz --cps-ddi cps_000NN.xml --output-dir ./docs/data
 ```

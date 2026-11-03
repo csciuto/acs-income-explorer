@@ -26,11 +26,13 @@ class TestPageLoad:
         expect(page).to_have_title("American Income Explorer")
 
     def test_header_year_range(self, page: Page):
-        expect(page.locator(".sub")).to_contain_text("American Community Survey 2021–2024")
+        years = list(page.evaluate("srcInfo.years").values())
+        expect(page.locator(".sub")).to_contain_text("American Community Survey")
+        expect(page.locator(".sub")).to_contain_text(f"{years[0]}–{years[-1]}")
 
     def test_about_panel_year_range(self, page: Page):
         page.click("#btn-about")
-        expect(page.locator("#chart-about")).to_contain_text("2021–2024")
+        expect(page.locator("#chart-about")).to_contain_text(page.evaluate("srcInfo.about"))
 
     def test_dots_rendered(self, page: Page):
         assert page.locator("#chart-svg circle").count() > 100
@@ -355,12 +357,12 @@ class TestStateSelector:
 
     def test_year_filter_buttons_exist(self, page: Page):
         page.locator(".tab-btn[data-tab='survey']").click()
-        assert page.locator("#f-year .f-btn").count() == 4
+        assert page.locator("#f-year .f-btn").count() == len(page.evaluate("srcInfo.years"))
 
     def test_color_by_year_shows_one_entry_per_year(self, page: Page):
         page.locator(".cm-btn[data-mode='year']").click()
         labels = page.locator("#legend .legend-item").all_text_contents()
-        for y in ["2021", "2022", "2023", "2024"]:
+        for y in page.evaluate("Object.values(srcInfo.years)"):
             assert any(y in l for l in labels), labels
         assert not any(l.strip() == "4" for l in labels), labels
 
@@ -805,4 +807,73 @@ class TestACS:
         page.locator(".tab-btn[data-tab='survey']").click()
         page.locator('#f-year .f-btn[data-val="3"]').click()
         stats = page.evaluate("precomputed['national|year=3']")
+        expect(page.locator("#s-med")).to_contain_text(f"${stats['med']:,}")
+
+
+class TestSources:
+    """ACS / CPS switch, source-specific filters, the comparison line, local areas."""
+
+    def test_acs_is_default_and_shows_acs_only_filters(self, page: Page):
+        expect(page.locator("#source-switch button[data-src='acs']")).to_have_class(re.compile("active"))
+        expect(page.locator(".sub")).to_contain_text("American Community Survey")
+        assert page.locator("#f-burden").count() == 1 and page.locator("#metro-list").count() == 1
+        assert page.locator("#local-group").count() == 1
+        assert page.locator("#f-multi_job_proxy, .cm-btn[data-mode='multi_job_proxy']").count() == 0
+
+    def test_switch_to_cps_changes_data_and_filters(self, page: Page):
+        page.locator("#source-switch button[data-src='cps']").click()
+        page.wait_for_selector("#loading", state="hidden")
+        expect(page.locator(".sub")).to_contain_text("Current Population Survey")
+        assert "src=cps" in page.url
+        assert page.locator("#f-burden, #metro-list, #local-group").count() == 0
+        assert page.locator("#f-multi_job_proxy").count() == 1
+        stats = page.evaluate("precomputed['national']")
+        expect(page.locator("#n-info")).to_contain_text(f"{stats['n']:,} survey records")
+        expect(page.locator("#ipums-link")).to_have_text("IPUMS CPS")
+
+    def test_comparison_line_shows_the_other_survey(self, page: Page):
+        page.wait_for_function("otherPrecomputed !== null")
+        other = page.evaluate("otherPrecomputed['national']")
+        expect(page.locator("#other-src")).to_contain_text(f"CPS median: ${other['med']:,}")
+        page.locator(".tab-btn[data-tab='geo']").click()
+        page.fill("#metro-search", "Boston")
+        page.locator(".metro-item", has_text="Boston-Cambridge").click()
+        expect(page.locator("#other-src")).to_have_text("")   # the CPS has no metro statistics
+
+    def test_comparison_switch_button(self, page: Page):
+        page.wait_for_function("otherPrecomputed !== null")
+        page.locator("#other-src button").click()
+        page.wait_for_selector("#loading", state="hidden")
+        expect(page.locator("#source-switch button[data-src='cps']")).to_have_class(re.compile("active"))
+        page.wait_for_function("otherPrecomputed !== null")
+        expect(page.locator("#other-src")).to_contain_text("ACS median")
+
+    def test_acs_only_filter_dropped_when_switching(self, page: Page, static_server: str):
+        page.goto(static_server + "/#src=cps&burden=2")
+        page.reload()
+        page.wait_for_selector("#loading", state="hidden")
+        expect(page.locator("#active-chips")).not_to_contain_text("Cost burden")
+
+    def test_local_area_search_and_stats(self, page: Page):
+        page.locator(".tab-btn[data-tab='geo']").click()
+        page.fill("#local-search", "medford")
+        item = page.locator(".local-item", has_text="Malden & Medford")
+        expect(item).to_be_visible()
+        item.click()
+        expect(page.locator("#active-chips")).to_contain_text("Local area: Malden & Medford, MA")
+        stats = page.evaluate("localStats[25]['puma=2500609']")
+        expect(page.locator("#s-med")).to_contain_text(f"${stats['med']:,}")
+        expect(page.locator("#n-info")).to_contain_text(f"{stats['n']:,} survey records")
+        assert page.locator("#chart-svg circle").count() > 100
+        page.locator(".tab-btn[data-tab='econ'], .tab-btn[data-tab='work']").first.click()
+        page.locator('#f-housing .f-btn[data-val="2"]').click()
+        renters = page.evaluate("localStats[25]['puma=2500609|house=2']")
+        expect(page.locator("#s-med")).to_contain_text(f"${renters['med']:,}")
+
+    def test_local_area_deep_link(self, page: Page, static_server: str):
+        page.goto(static_server + "/#puma=2500609")
+        page.reload()
+        page.wait_for_selector("#loading", state="hidden")
+        expect(page.locator("#active-chips")).to_contain_text("Malden & Medford")
+        stats = page.evaluate("localStats[25]['puma=2500609']")
         expect(page.locator("#s-med")).to_contain_text(f"${stats['med']:,}")
