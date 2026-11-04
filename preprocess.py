@@ -60,10 +60,12 @@ LABELS = {
     "earner_count": {"0": "No earners", "1": "One earner", "2": "Two earners", "3": "Three or more"},
     "breadwinner": {"0": "Sole/dominant", "1": "Primary earner", "2": "Co-earner", "3": "Secondary earner",
                     "4": "Non-earner"},
-    "passive_pct": {"0": "≥75% wages", "1": "50–74% wages", "2": "25–49% mixed", "3": "<25% wages",
-                    "4": "Entirely passive"},
-    "passive_source": {"0": "SS/SSI", "1": "Retirement/pension", "2": "Capital (int/div/rent)",
-                       "3": "Public assistance", "4": "Primarily wages"},
+    # "Earnings" = wages + self-employment/business income. Capital gains aren't in either survey: the Census
+    # Bureau's money-income definition excludes them.
+    "passive_pct": {"0": "≥75% earnings", "1": "50–74% earnings", "2": "25–49% earnings", "3": "<25% earnings",
+                    "4": "No earnings"},
+    "passive_source": {"0": "SS/SSI", "1": "Retirement/pension", "2": "Interest/dividends/rent",
+                       "3": "Public assistance", "4": "Mainly earnings"},
     "kids": {"0": "No children", "1": "Kids present"},
     "youngest_child": {"0": "No children", "1": "Under 5", "2": "5–12", "3": "13–17"},
     "hours_category": {"0": "Full-time", "1": "Part-time", "2": "Marginal", "3": "N/A"},

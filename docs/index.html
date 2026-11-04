@@ -390,7 +390,7 @@
       <div id="tab-color" class="tab-panel active">
         <div id="color-mode">
           <button class="cm-btn active" data-mode="passive_pct">Income mix</button>
-          <button class="cm-btn" data-mode="passive_source">Passive source</button>
+          <button class="cm-btn" data-mode="passive_source">Unearned source</button>
           <button class="cm-btn" data-mode="earner_count">Earners</button>
           <button class="cm-btn" data-mode="breadwinner">Breadwinner</button>
           <button class="cm-btn" data-mode="work_status">Work status</button>
@@ -473,11 +473,12 @@
           <div class="filter-btns" id="f-breadwinner"></div>
         </div>
         <div class="filter-group">
-          <div class="stat-label">Income mix</div>
+          <div class="stat-label">Income mix: share from earnings</div>
           <div class="filter-btns" id="f-passive_pct"></div>
+          <p class="geo-note">Earnings are wages plus self-employment and business income. Capital gains aren't counted: the Census Bureau's income definition leaves them out.</p>
         </div>
         <div class="filter-group">
-          <div class="stat-label">Passive income source</div>
+          <div class="stat-label">Main source of unearned income</div>
           <div class="filter-btns" id="f-passive_source"></div>
         </div>
         <div class="filter-group">
@@ -537,7 +538,7 @@
           <dt>X axis</dt><dd>Household income on a log scale. Drag to select a range.</dd>
           <dt>Y axis</dt><dd>Frequency — taller clusters mean more households near that income. Dots are also spread apart vertically to reduce overlap, so the exact y position of each dot isn't meaningful.</dd>
           <dt>Dot size</dt><dd>Proportional to the household's sampling weight. A larger dot represents more US households.</dd>
-          <dt>Colors</dt><dd>Set by the <em>Group</em> tab. Click a legend swatch to filter by that category. Topcoded incomes (dots with a thin light outline): a household member's income was above the survey's cap; see Data below.</dd>
+          <dt>Colors</dt><dd>Set by the <em>Group</em> tab. Click a legend swatch to filter by that category. Earnings mean wages plus self-employment and business income; capital gains aren't in either survey (the Census Bureau's income definition excludes them). Topcoded incomes (dots with a thin light outline): a household member's income was above the survey's cap; see Data below.</dd>
           <dt>Dot count / Dim others / Matches only</dt><dd><strong>1K / 3K / 5K</strong> sets the most dots drawn; a cap is greyed out when a smaller one already shows every household. <strong>Dim others</strong> draws a fixed random sample of all households and dims the ones that don't match your filters, so the same dots stay put as you click around. <strong>Matches only</strong> draws only households that match your filters, up to the cap; useful for a narrow slice, where you want to see that group's own spread.</dd>
           <dt>Data</dt><dd id="about-data">—</dd>
           <dt>ACS or CPS</dt><dd>Two Census Bureau surveys, switchable at the top right. The <strong>ACS</strong> is about 20 times larger, so it can show states, metro areas, local areas and narrow slices reliably, and it has housing costs. The <strong>CPS</strong> asks about income in far more detail, so income sources such as pensions and investments are measured better; it is the official source for national income. When a slice exists in both, the sidebar shows the other survey's figure too.</dd>
@@ -2012,9 +2013,9 @@ function showTooltip(event, i) {
 
   const earnerLine = nEarners === 0
     ? 'No earners'
-    : `${nEarners} earner${nEarners !== 1 ? 's' : ''} · ${fmt$(wageInc)} wages`;
+    : `${nEarners} earner${nEarners !== 1 ? 's' : ''} · ${fmt$(wageInc)} earnings`;
   const passiveLine = (passiveInc != null && passiveInc > 0)
-    ? `${fmt$(passiveInc)} passive${psrcLabel && psrcLabel !== 'Primarily wages' ? ' (' + psrcLabel + ')' : ''}`
+    ? `${fmt$(passiveInc)} unearned${psrcLabel && psrcLabel !== 'Mainly earnings' ? ' (' + psrcLabel + ')' : ''}`
     : null;
 
   tt.innerHTML = `
@@ -2120,7 +2121,7 @@ const DIM_LABELS = {
   kids: 'Kids', city: 'Area type', region: 'Region', metro: 'Metro', metro_area: 'Metro area', puma: 'Local area', burden: 'Cost burden', multi_job_proxy: '2nd job',
   housing: 'Housing', year: 'Year',
   earner_count: 'Earners', breadwinner: 'Breadwinner',
-  passive_pct: 'Inc. mix', passive_source: 'Passive src',
+  passive_pct: 'Earnings share', passive_source: 'Unearned src',
 };
 
 function renderActiveChips() {

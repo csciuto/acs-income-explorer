@@ -18739,18 +18739,18 @@
    "4": "Non-earner"
   },
   "passive_pct": {
-   "0": "≥75% wages",
-   "1": "50–74% wages",
-   "2": "25–49% mixed",
-   "3": "<25% wages",
-   "4": "Entirely passive"
+   "0": "≥75% earnings",
+   "1": "50–74% earnings",
+   "2": "25–49% earnings",
+   "3": "<25% earnings",
+   "4": "No earnings"
   },
   "passive_source": {
    "0": "SS/SSI",
    "1": "Retirement/pension",
-   "2": "Capital (int/div/rent)",
+   "2": "Interest/dividends/rent",
    "3": "Public assistance",
-   "4": "Primarily wages"
+   "4": "Mainly earnings"
   },
   "kids": {
    "0": "No children",

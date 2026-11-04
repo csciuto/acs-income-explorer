@@ -57,8 +57,10 @@ sums run over every member. Income items coded "not in universe" (all 9s, or 9�
 | CPS only | | `multi_job_proxy` (hours at all jobs − main job) |
 | `topcoded` | a member at the (year, state) maximum of an income item, which is where the ACS puts topcoded values | 0: the CPS swaps top values instead |
 
-Shared definitions: `passive_pct` buckets the wage share of income (≥75%, 50–74%, 25–49%, under 25%, none);
-`passive_source` is the largest of the four groups, set only when wages are under 75% of income; `breadwinner` is
+Shared definitions: `passive_pct` buckets the earnings share of income (≥75%, 50–74%, 25–49%, under 25%, none),
+where earnings are `wage_inc` (wages plus self-employment and business income, so a business owner's draw counts as
+earnings) and everything else is unearned;
+`passive_source` is the largest of the four groups, set only when earnings are under 75% of income; `breadwinner` is
 the householder's share of household earnings; `earner_count` counts members with earnings, capped at 3;
 `work_status` takes the first match of full-time full-year wage, full-time full-year self-employed, full-time
 part-year, part-time, unemployed, retired (not in labor force, 55+, with Social Security), not working.
@@ -71,6 +73,15 @@ part-year, part-time, unemployed, retired (not in labor force, 55+, with Social 
   pensions and annuities are INCPEN1, INCPEN2 and INCRANN ([IPUMS](https://cps.ipums.org/cps/asec_2019_changes.shtml)).
   The earlier version left them out, so almost no household looked pension-dependent. The preprocessor now refuses
   an extract without them, and reports how much of HHINCOME its income items account for (98.6% for 2021–2025).
+
+### What income leaves out
+
+Both surveys use the Census Bureau's money income: cash received before taxes. Realized capital gains are excluded
+by definition, so a household whose wealth grows through selling stock or property shows none of it. Tax data
+give a sense of scale: for 2012 returns with $1M-$5M of income, 38% came from wages, 27% from business income and
+20% from capital gains (Tax Policy Center, from IRS Statistics of Income). The ACS asks about interest, dividends and
+rent in a single question; the CPS asks about each separately and finds about twice as many households living mainly
+on them, so the CPS is the better source on unearned income.
 
 ## Statistics
 
