@@ -877,6 +877,26 @@ class TestLocalAreaTooltip:
         expect(page.locator("#tooltip")).to_contain_text("Cambridge, MA")
 
 
+class TestHelp:
+    def test_help_link_opens_the_guide(self, page: Page, static_server: str):
+        link = page.locator("#help-link")
+        expect(link).to_have_attribute("href", "help.html")
+        errors = []
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        page.goto(static_server + "/help.html")
+        expect(page.locator("h1")).to_contain_text("How to use")
+        imgs = page.locator("main img")
+        assert imgs.count() == 6
+        for i in range(imgs.count()):
+            img = imgs.nth(i)
+            img.scroll_into_view_if_needed()
+            page.wait_for_function("el => el.complete && el.naturalWidth > 0", arg=img.element_handle())
+            assert img.get_attribute("alt")
+        for a in page.locator("nav.toc a").all():
+            assert page.locator(a.get_attribute("href")).count() == 1
+        assert errors == []
+
+
 class TestSources:
     """ACS / CPS switch, source-specific filters, the comparison line, local areas."""
 

@@ -74,3 +74,10 @@ household filter in the Demo tab. Switching source rewrites the hash with
 
 Adding a dimension: preprocess `SHARED_DIMS`/`SOURCE_DIMS` + `LABELS` + loader column; frontend `PALETTES`,
 `.cm-btn`, filter container, `FILTER_DEFS`, `DIM_LABELS`, `DIM_TO_KEY`; tests.
+
+## Help page
+
+`docs/help.html` with clips in `docs/help/*.webp` (animated WebP, ~300-700KB each), recorded by
+`.venv/bin/python tools/help_clips.py [name…]` (Playwright + Pillow: `uv pip install --python .venv/bin/python pillow`).
+Re-record a clip whenever the UI it shows changes.
+
