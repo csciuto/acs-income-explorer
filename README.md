@@ -34,6 +34,8 @@ How to read it:
 - **Reliability:** under 50 sample households, no statistics; under 200 or 500, a warning.
 - **The dots are a sample** (300,000 households per survey; up to 300 per local area).
 
+Questions, corrections or ideas: **corey.sciuto+aie@gmail.com**.
+
 Cite IPUMS ([USA](https://usa.ipums.org/usa/citation.shtml), [CPS](https://cps.ipums.org/cps/citation.shtml)) if
 you publish results.
 
