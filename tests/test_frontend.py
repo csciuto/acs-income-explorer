@@ -10,6 +10,14 @@ from playwright.sync_api import Page, expect
 LOAD_TIMEOUT = 45_000  # ms — CDN fetch + ~10MB Arrow data
 
 
+def pick_place(page: Page, query: str, name: str):
+    """Find a place with the Place tab's search and choose the result whose text contains `name`."""
+    page.locator(".tab-btn[data-tab='geo']").click()
+    page.fill("#place-search", query)
+    page.locator(".place-item", has_text=name).first.click()
+    expect(page.locator("#place-title")).to_contain_text(name.split(" ·")[0])
+
+
 @pytest.fixture(autouse=True)
 def app(page: Page, static_server: str):
     page.set_default_timeout(LOAD_TIMEOUT)
@@ -111,15 +119,14 @@ class TestFilters:
         assert page.locator("#chart-svg circle").count() > 0
 
     def test_nonmetro_filter_shows_dots(self, page: Page):
-        page.locator(".tab-btn[data-tab='geo']").click()
+        page.locator(".tab-btn[data-tab='demo']").click()
         page.locator('#f-city .f-btn[data-val="2"]').click()
         assert page.locator("#chart-svg circle").count() > 0
 
     def test_state_filter_dims_non_state_dots(self, page: Page):
         # Selecting a state keeps all 3000 ghost dots but dims non-matching ones.
         # Kentucky (fips=21) has ~981 rows — well under 3000.
-        page.locator(".tab-btn[data-tab='geo']").click()
-        page.locator('#state-list .state-cb[data-fips="21"]').click()
+        pick_place(page, "Kentucky", "Kentucky")
         page.wait_for_timeout(400)
         total = page.locator("#chart-svg circle").count()
         active = page.locator("#chart-svg circle[pointer-events='all']").count()
@@ -189,7 +196,7 @@ class TestColorMode:
 
     def test_every_color_mode_has_filter_and_vice_versa(self, page: Page):
         # 'state' has checkbox UI (not f-state filter btns)
-        SPECIAL = {'state'}
+        SPECIAL = {'region'}  # regions are places, chosen in the Place tab
         color_modes = {
             btn.get_attribute("data-mode")
             for btn in page.locator(".cm-btn").all()
@@ -313,47 +320,12 @@ class TestTooltip:
 # ---------------------------------------------------------------------------
 
 class TestStateSelector:
-    def _open_geo_tab(self, page: Page):
-        page.locator(".tab-btn[data-tab='geo']").click()
-
-    def test_state_list_populated(self, page: Page):
-        self._open_geo_tab(page)
-        assert page.locator("#state-list .state-check-label").count() >= 50
-
-    def test_state_selection_adds_chip(self, page: Page):
-        self._open_geo_tab(page)
-        before = page.locator("#active-chips .chip").count()
-        page.locator("#state-list .state-cb").first.click()
-        chips_text = page.locator("#active-chips").text_content()
-        assert "State:" in chips_text
-        assert page.locator("#active-chips .chip").count() == before + 1
-
-    def test_state_uncheck_removes_chip(self, page: Page):
-        self._open_geo_tab(page)
-        cb = page.locator("#state-list .state-cb").first
-        cb.click()  # check
-        before = page.locator("#active-chips .chip").count()
-        cb.click()  # uncheck
-        after = page.locator("#active-chips .chip").count()
-        assert after == before - 1
-
-    def test_state_search_filters_list(self, page: Page):
-        self._open_geo_tab(page)
-        page.locator("#state-search").fill("Massa")
-        visible = page.evaluate("""
-            Array.from(document.querySelectorAll('#state-list .state-check-label'))
-                .filter(l => l.style.display !== 'none').length
-        """)
-        assert visible >= 1
-
-    def test_state_chip_click_deselects(self, page: Page):
-        self._open_geo_tab(page)
-        page.locator("#state-list .state-cb").first.click()
-        assert page.locator("#active-chips .chip").count() >= 1
-        state_chip = page.locator("#active-chips .chip").filter(has_text="State:")
-        state_chip.first.click()
-        state_chips_after = page.locator("#active-chips .chip").filter(has_text="State:").count()
-        assert state_chips_after == 0
+    def test_state_adds_chip_and_chip_returns_to_us(self, page: Page):
+        pick_place(page, "Ohio", "Ohio")
+        expect(page.locator("#active-chips")).to_contain_text("State: Ohio")
+        page.locator("#active-chips .chip", has_text="State:").click()
+        expect(page.locator("#place-title")).to_contain_text("United States")
+        expect(page.locator("#active-chips")).not_to_contain_text("State:")
 
     def test_year_filter_buttons_exist(self, page: Page):
         page.locator(".tab-btn[data-tab='survey']").click()
@@ -373,8 +345,8 @@ class TestStateSelector:
         assert page.locator(".dots-btn.active").get_attribute("data-maxdots") == "3000"
 
     def test_static_all_buttons_exist(self, page: Page):
-        expect(page.locator("#btn-static")).to_be_visible()
-        expect(page.locator("#btn-showall")).to_be_visible()
+        expect(page.locator("#btn-static")).to_have_text("Dim others")
+        expect(page.locator("#btn-showall")).to_have_text("Matches only")
 
     def test_static_is_default_active(self, page: Page):
         expect(page.locator("#btn-static")).to_have_class(re.compile(r'\bactive\b'))
@@ -773,15 +745,13 @@ class TestACS:
         assert page.locator("[data-mode='multi_job_proxy'], #f-multi_job_proxy").count() == 0
 
     def test_metro_picker_uses_precomputed_metro_stats(self, page: Page):
-        page.locator(".tab-btn[data-tab='geo']").click()
-        page.fill("#metro-search", "Boston")
-        page.locator(".metro-item", has_text="Boston-Cambridge").click()
+        pick_place(page, "boston", "Boston-Cambridge")
         expect(page.locator("#active-chips")).to_contain_text("Metro area: Boston")
         stats = page.evaluate("precomputed['metro=14460']")
         expect(page.locator("#n-info")).to_contain_text(f"{stats['n']:,} survey records")
         expect(page.locator("#s-med")).to_contain_text(f"${stats['med']:,}")
         assert page.locator("#chart-svg circle").count() > 100
-        page.locator("#btn-clear-metro").click()
+        page.locator("#place-current button", has_text="United States").click()
         expect(page.locator("#active-chips")).not_to_contain_text("Metro area")
 
     def test_metro_plus_filter_uses_metro_scope_key(self, page: Page):
@@ -795,10 +765,20 @@ class TestACS:
         page.locator('#f-burden .f-btn[data-val="2"]').click()
         stats = page.evaluate("precomputed['national|burden=2']")
         expect(page.locator("#s-med")).to_contain_text(f"${stats['med']:,}")
-        page.locator(".tab-btn[data-tab='geo']").click()
+        page.locator(".tab-btn[data-tab='demo']").click()
         page.locator('#f-city .f-btn[data-val="0"]').click()
         stats = page.evaluate("precomputed['national|burden=2|city=0']")
         expect(page.locator("#s-med")).to_contain_text(f"${stats['med']:,}")
+
+    def test_dot_caps_grey_out_when_they_change_nothing(self, page: Page):
+        expect(page.locator(".dots-btn.idle")).to_have_count(0)  # 300,000 households: every cap matters
+        page.goto(page.url.split("#")[0] + "#puma=2500609&sm=0")
+        page.reload()
+        page.wait_for_selector("#loading", state="hidden")
+        page.wait_for_function("lastPoolSize > 0 && lastPoolSize <= 1000")  # one local area: at most 300 sampled
+        expect(page.locator('.dots-btn[data-maxdots="3000"]')).to_have_class(re.compile("idle"))
+        expect(page.locator('.dots-btn[data-maxdots="5000"]')).to_have_class(re.compile("idle"))
+        expect(page.locator('.dots-btn[data-maxdots="1000"]')).not_to_have_class(re.compile("idle"))
 
     def test_topcoded_dots_keep_their_color(self, page: Page):
         page.wait_for_function("document.querySelectorAll('#chart-svg circle').length > 100")
@@ -822,65 +802,79 @@ class TestACS:
         expect(page.locator("#s-med")).to_contain_text(f"${stats['med']:,}")
 
 
-class TestGeographyChoices:
-    """Geography choices that can't go together are greyed out or hidden (ACS)."""
+class TestPlace:
+    """One place at a time, found by search, shown with the larger areas containing it."""
 
-    def _geo(self, page: Page, hash_: str = ""):
-        if hash_:
-            page.goto(page.url.split("#")[0] + hash_)
-            page.reload()
-            page.wait_for_selector("#loading", state="hidden")
+    def test_search_labels_each_result_with_its_type(self, page: Page):
         page.locator(".tab-btn[data-tab='geo']").click()
+        page.fill("#place-search", "medford")
+        results = page.locator("#place-results")
+        expect(results).to_contain_text("Malden & Medford, MA")
+        expect(results.locator(".place-item", has_text="Malden & Medford")).to_contain_text("Local area")
+        expect(results.locator(".place-item", has_text="Medford, OR").first).to_contain_text("Metro area")
 
-    def _state(self, page: Page, name: str):
-        return page.locator("#state-list .state-check-label", has_text=re.compile(rf"^\s*{name}\s*$"))
+    def test_local_area_shows_its_metro_state_and_us(self, page: Page):
+        pick_place(page, "malden", "Malden & Medford")
+        expect(page.locator("#place-current")).to_contain_text("United States")
+        expect(page.locator("#place-current")).to_contain_text("Massachusetts")
+        expect(page.locator("#place-current")).to_contain_text("Boston-Cambridge-Newton")
+        ctx = page.locator("#place-context tr")
+        expect(ctx).to_have_count(4)
+        for scope, row in (("metro=14460", 1), ("state=25", 2), ("national", 3)):
+            med = page.evaluate(f"precomputed['{scope}'].med")
+            expect(ctx.nth(row)).to_contain_text(f"${med:,}")
 
-    def test_metro_greys_out_other_states_and_rural(self, page: Page):
-        self._geo(page)
-        page.fill("#metro-search", "Boston")
-        page.locator(".metro-item", has_text="Boston-Cambridge").click()
-        expect(self._state(page, "Idaho")).to_have_class(re.compile("unavailable"))
-        expect(self._state(page, "Idaho").locator("input")).to_be_disabled()
-        for ok in ("Massachusetts", "New Hampshire"):
-            expect(self._state(page, ok)).not_to_have_class(re.compile("unavailable"))
-        expect(page.locator('#f-city .f-btn[data-val="2"]')).to_be_disabled()   # non-metro
-        expect(page.locator('#f-city .f-btn[data-val="1"]')).to_be_enabled()    # suburb
+    def test_context_follows_the_filters(self, page: Page):
+        page.goto(page.url.split("#")[0] + "#puma=2500609&housing=2")
+        page.reload()
+        page.wait_for_selector("#loading", state="hidden")
+        med = page.evaluate("precomputed['state=25|house=2'].med")
+        expect(page.locator("#place-context")).to_contain_text(f"${med:,}")
 
-    def test_state_narrows_metro_list(self, page: Page):
-        self._geo(page)
-        self._state(page, "Idaho").locator("input").check()
-        expect(page.locator(".metro-item:not(.local-item)", has_text="Boise")).to_be_visible()
-        expect(page.locator(".metro-item:not(.local-item)", has_text="Boston-Cambridge")).to_be_hidden()
-        expect(page.locator("#metro-note")).to_contain_text("fit your other geography choices")
+    def test_picking_another_place_replaces_it(self, page: Page):
+        pick_place(page, "malden", "Malden & Medford")
+        pick_place(page, "ohio", "Ohio")
+        assert page.evaluate("currentPlace()") == {"level": "state", "code": 39}
+        assert "puma" not in page.url and "states=39" in page.url
 
-    def test_rural_hides_almost_every_metro(self, page: Page):
-        self._geo(page)
-        page.locator('#f-city .f-btn[data-val="2"]').click()
-        # A handful of rural local areas sit inside a metro area (the city/rural and metro codes use different
-        # vintages of the Census definitions), so a few metros remain; Boston isn't one of them.
-        expect(page.locator(".metro-item:not(.local-item)", has_text="Boston-Cambridge")).to_be_hidden()
-        assert page.locator(".metro-item:not(.local-item):visible").count() < 10
-        expect(page.locator("#metro-note")).to_contain_text("fit your other geography choices")
-        expect(self._state(page, "New Jersey")).to_have_class(re.compile("unavailable"))  # no rural areas
+    def test_breadcrumb_and_context_jump_to_a_larger_area(self, page: Page):
+        pick_place(page, "malden", "Malden & Medford")
+        page.locator("#place-current button", has_text="Massachusetts").click()
+        expect(page.locator("#place-title")).to_contain_text("Massachusetts")
+        page.locator("#place-context button", has_text="Northeast").click()
+        expect(page.locator("#place-title")).to_contain_text("Northeast")
+        med = page.evaluate("precomputed['national|region=1'].med")
+        expect(page.locator("#s-med")).to_contain_text(f"${med:,}")
 
-    def test_local_search_stays_within_state(self, page: Page):
-        self._geo(page)
-        self._state(page, "Idaho").locator("input").check()
-        page.fill("#local-search", "Middlesex")
-        expect(page.locator("#local-list")).to_contain_text("No matching area within your other geography choices")
+    def test_old_link_with_several_places_keeps_the_most_specific(self, page: Page):
+        page.goto(page.url.split("#")[0] + "#states=25,33&metro_area=14460")
+        page.reload()
+        page.wait_for_selector("#loading", state="hidden")
+        assert page.evaluate("currentPlace()") == {"level": "metro", "code": 14460}
 
-    def test_conflicting_link_explains_and_clears(self, page: Page):
-        self._geo(page, "#metro_area=14460&states=16")
-        expect(page.locator("#geo-note")).to_contain_text("don't overlap")
-        expect(self._state(page, "Idaho")).to_have_class(re.compile("conflict"))
-        page.locator("#geo-note button").click()
-        expect(page.locator("#geo-note")).to_be_hidden()
-        expect(page.locator("#active-chips")).not_to_contain_text("Metro area")
-        expect(page.locator("#active-chips")).not_to_contain_text("State:")
+    def test_cps_falls_back_to_the_state(self, page: Page):
+        page.goto(page.url.split("#")[0] + "#src=cps&puma=2500609")
+        page.reload()
+        page.wait_for_selector("#loading", state="hidden")
+        assert page.evaluate("currentPlace()") == {"level": "state", "code": 25}
+        page.locator(".tab-btn[data-tab='geo']").click()
+        expect(page.locator("#place-note")).to_contain_text("doesn't identify local areas")
+        page.fill("#place-search", "boston")
+        expect(page.locator("#place-results")).to_contain_text("No place matches")
 
-    def test_cps_has_no_geography_limits(self, page: Page):
-        self._geo(page, "#src=cps&city=2")
-        expect(self._state(page, "New Jersey")).not_to_have_class(re.compile("unavailable"))
+    def test_area_type_is_a_household_filter(self, page: Page):
+        assert page.locator("#tab-demo #f-city").count() == 1
+        assert page.locator("#tab-geo #f-city").count() == 0
+
+
+class TestLocalAreaTooltip:
+    def test_tooltip_names_the_local_area(self, page: Page):
+        page.goto(page.url.split("#")[0] + "#puma=2500611")
+        page.reload()
+        page.wait_for_selector("#loading", state="hidden")
+        page.wait_for_function("document.querySelectorAll('#chart-svg circle').length > 20")
+        page.locator("#chart-svg circle").nth(20).hover(force=True)  # dots overlap; any dot here is in Cambridge
+        expect(page.locator("#tooltip")).to_contain_text("Cambridge, MA")
 
 
 class TestSources:
@@ -889,8 +883,7 @@ class TestSources:
     def test_acs_is_default_and_shows_acs_only_filters(self, page: Page):
         expect(page.locator("#source-switch button[data-src='acs']")).to_have_class(re.compile("active"))
         expect(page.locator(".sub")).to_contain_text("American Community Survey")
-        assert page.locator("#f-burden").count() == 1 and page.locator("#metro-list").count() == 1
-        assert page.locator("#local-group").count() == 1
+        assert page.locator("#f-burden").count() == 1 and page.locator("#place-search").count() == 1
         assert page.locator("#f-multi_job_proxy, .cm-btn[data-mode='multi_job_proxy']").count() == 0
 
     def test_switch_to_cps_changes_data_and_filters(self, page: Page):
@@ -898,7 +891,7 @@ class TestSources:
         page.wait_for_selector("#loading", state="hidden")
         expect(page.locator(".sub")).to_contain_text("Current Population Survey")
         assert "src=cps" in page.url
-        assert page.locator("#f-burden, #metro-list, #local-group").count() == 0
+        assert page.locator("#f-burden").count() == 0
         assert page.locator("#f-multi_job_proxy").count() == 1
         stats = page.evaluate("precomputed['national']")
         expect(page.locator("#n-info")).to_contain_text(f"{stats['n']:,} survey records")
@@ -908,9 +901,7 @@ class TestSources:
         page.wait_for_function("otherPrecomputed !== null")
         other = page.evaluate("otherPrecomputed['national']")
         expect(page.locator("#other-src")).to_contain_text(f"CPS median: ${other['med']:,}")
-        page.locator(".tab-btn[data-tab='geo']").click()
-        page.fill("#metro-search", "Boston")
-        page.locator(".metro-item", has_text="Boston-Cambridge").click()
+        pick_place(page, "boston", "Boston-Cambridge")
         expect(page.locator("#other-src")).to_have_text("")   # the CPS has no metro statistics
 
     def test_comparison_switch_button(self, page: Page):
@@ -928,11 +919,7 @@ class TestSources:
         expect(page.locator("#active-chips")).not_to_contain_text("Cost burden")
 
     def test_local_area_search_and_stats(self, page: Page):
-        page.locator(".tab-btn[data-tab='geo']").click()
-        page.fill("#local-search", "medford")
-        item = page.locator(".local-item", has_text="Malden & Medford")
-        expect(item).to_be_visible()
-        item.click()
+        pick_place(page, "medford", "Malden & Medford")
         expect(page.locator("#active-chips")).to_contain_text("Local area: Malden & Medford, MA")
         stats = page.evaluate("localStats[25]['puma=2500609']")
         expect(page.locator("#s-med")).to_contain_text(f"${stats['med']:,}")

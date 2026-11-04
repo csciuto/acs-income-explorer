@@ -15,7 +15,11 @@ bars or a 100% view, with standard errors and reliability warnings.
 | Households | about 6 million | about 290,000 |
 | Good at | states, metro areas, local areas, narrow slices, housing costs | income sources (pensions, interest, dividends), the official national income figures, multiple jobs |
 
-Switch at the top right. When a slice exists in both, the sidebar shows the other survey's median too and flags
+Pick one place at a time in the Place tab (the US, a region, a state, a metro area or a local area such as
+Malden & Medford); the stats show the same figures for the larger areas containing it. To compare places, open
+each in its own tab: the address keeps every choice.
+
+Switch surveys at the top right. When a slice exists in both, the sidebar shows the other survey's median too and flags
 gaps larger than chance. [METHODOLOGY.md](METHODOLOGY.md) has the definitions; the two differ for real reasons
 (the CPS asks about 50 income questions, the ACS 8; the ACS covers the 12 months before each interview).
 

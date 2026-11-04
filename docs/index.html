@@ -103,6 +103,7 @@
   .dots-btn:hover, .sample-btn:hover:not(:disabled) { color: var(--text); background: var(--surface2); }
   .dots-btn.active, .sample-btn.active { color: var(--bg); background: var(--accent); }
   .sample-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .dots-btn.idle:not(.active) { opacity: 0.35; }
   #dot-count { font-size: 11px; color: var(--text-dimmer); padding: 4px 6px; white-space: nowrap; }
   .brush-layer .selection { fill: var(--accent); fill-opacity: 0.12; stroke: var(--accent); stroke-width: 1; }
   .brush-layer .handle { fill: var(--accent); fill-opacity: 0.6; rx: 2; }
@@ -157,7 +158,6 @@
   #state-list { max-height: 200px; overflow-y: auto; margin-top: 4px; }
   #metro-search { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 4px; font-size: 12px; outline: none; margin-top: 4px; }
   #metro-search:focus { border-color: var(--accent); }
-  #metro-list { max-height: 200px; overflow-y: auto; margin-top: 4px; display: flex; flex-direction: column; }
   .metro-item { text-align: left; font-size: 12px; padding: 3px 4px; color: var(--text-dim); background: none; border: none; border-radius: 3px; cursor: pointer; }
   .metro-item:hover { background: var(--surface2); color: var(--text); }
   .metro-item.active { background: var(--accent); color: #fff; }
@@ -173,6 +173,22 @@
   .state-check-label.unavailable, .f-btn:disabled { opacity: 0.35; cursor: not-allowed; }
   .state-check-label.unavailable:hover, .f-btn:disabled:hover { background: none; color: var(--text-dim); border-color: var(--border); }
   .state-check-label.conflict, .f-btn.conflict, .metro-item.conflict { outline: 1px dashed var(--accent); }
+  .place-crumbs { font-size: 12px; line-height: 1.6; margin-bottom: 8px; color: var(--text-dim); }
+  .place-crumbs button { background: none; border: none; padding: 0; color: var(--accent); cursor: pointer; font-size: 12px; text-decoration: underline; }
+  .place-crumbs .here { color: var(--text); font-weight: 600; }
+  .place-crumbs .sep { margin: 0 4px; color: var(--text-dimmer); }
+  #place-results { display: grid; gap: 2px; max-height: 320px; overflow-y: auto; margin-top: 6px; }
+  .place-item { display: grid; text-align: left; background: none; border: none; border-radius: 3px; padding: 4px 6px; cursor: pointer; color: var(--text); font-size: 12px; }
+  .place-item:hover, .place-item:focus-visible { background: var(--surface2); }
+  .place-item small { color: var(--text-dim); font-size: 11px; }
+  .place-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; line-height: 1.35; }
+  .place-title small { display: block; font-weight: 400; font-size: 11px; color: var(--text-dim); }
+  #place-context { margin-top: 8px; }
+  #place-context table { width: 100%; border-collapse: collapse; font-size: 11px; font-variant-numeric: tabular-nums; }
+  #place-context td { padding: 2px 0; color: var(--text-dim); vertical-align: top; }
+  #place-context td.v { text-align: right; white-space: nowrap; color: var(--text); }
+  #place-context tr.here td { color: var(--text); font-weight: 600; }
+  #place-context button { background: none; border: none; padding: 0; color: var(--text-dim); cursor: pointer; font-size: 11px; text-align: left; text-decoration: underline dotted; }
   .geo-note { font-size: 11px; color: var(--text-dim); line-height: 1.5; margin: 0 0 8px; }
   .geo-note.warn { color: var(--text); border-left: 2px solid var(--accent); padding-left: 8px; }
   .geo-note button { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 11px; padding: 0; text-decoration: underline; }
@@ -336,11 +352,13 @@
       </div>
       <div id="stats-summary" class="stats-tab-panel active">
         <div id="stats-panel">
+          <div id="place-title" class="place-title"></div>
           <div class="stat-row"><span class="stat-label">Median</span><span class="stat-val" id="s-med">—</span></div>
           <div class="stat-row"><span class="stat-label">Mean</span><span class="stat-val" id="s-mean">—</span></div>
           <div class="stat-row"><span class="stat-label">P25 / P75</span><span class="stat-val" id="s-p2575">—</span></div>
           <div id="rel-badge"></div>
           <div id="n-info"></div>
+          <div id="place-context"></div>
           <div id="other-src"></div>
         </div>
       </div>
@@ -360,7 +378,7 @@
       <div id="tab-bar">
         <button class="tab-btn active" data-tab="color">Group</button>
         <button class="tab-btn" data-tab="demo">Demo</button>
-        <button class="tab-btn" data-tab="geo">Geo</button>
+        <button class="tab-btn" data-tab="geo">Place</button>
         <button class="tab-btn" data-tab="work">Econ</button>
         <button class="tab-btn" data-tab="survey">Survey</button>
       </div>
@@ -382,9 +400,9 @@
           <button class="cm-btn" data-mode="housing">Housing</button>
           <button class="cm-btn" data-mode="burden">Housing cost burden</button>
           <button class="cm-btn" data-mode="kids">Kids</button>
-          <button class="cm-btn" data-mode="city">City / suburb</button>
+          <button class="cm-btn" data-mode="city">Area type</button>
           <button class="cm-btn" data-mode="multi_job_proxy">Secondary hours</button>
-          <button class="cm-btn" data-mode="state">State</button>
+          <button class="cm-btn" data-mode="region">Region</button>
           <button class="cm-btn" data-mode="year">Survey year</button>
         </div>
       </div>
@@ -419,42 +437,21 @@
           <div class="stat-label">Kids present</div>
           <div class="filter-btns" id="f-kids"></div>
         </div>
-      </div>
-
-      <!-- Geography tab -->
-      <div id="tab-geo" class="tab-panel">
-        <p class="geo-note" id="geo-note" hidden></p>
         <div class="filter-group">
-          <div class="stat-label">City, suburb or rural</div>
+          <div class="stat-label">Area type: city, suburb or rural</div>
           <div class="filter-btns" id="f-city"></div>
         </div>
+      </div>
+
+      <!-- Place tab: one place at a time -->
+      <div id="tab-geo" class="tab-panel">
         <div class="filter-group">
-          <div class="stat-label" style="display:flex;justify-content:space-between;align-items:baseline">
-            <span>Metro area</span>
-            <button id="btn-clear-metro" style="display:none;font-size:10px;color:var(--text-dim);background:none;border:1px solid var(--border);border-radius:3px;padding:1px 6px;cursor:pointer">Clear</button>
-          </div>
-          <input type="text" id="metro-search" placeholder="Search metro areas…" autocomplete="off">
-          <p class="geo-note" id="metro-note" hidden></p>
-          <div id="metro-list"></div>
-        </div>
-        <div class="filter-group" id="local-group">
-          <div class="stat-label" style="display:flex;justify-content:space-between;align-items:baseline">
-            <span>Local area</span>
-            <button id="btn-clear-local" style="display:none;font-size:10px;color:var(--text-dim);background:none;border:1px solid var(--border);border-radius:3px;padding:1px 6px;cursor:pointer">Clear</button>
-          </div>
-          <input type="text" id="local-search" placeholder="Town, county or neighborhood…" autocomplete="off">
-          <div id="local-list"><div class="hint">Areas of about 100,000+ people, the smallest the Census Bureau publishes household records for.</div></div>
-        </div>
-        <div class="filter-group">
-          <div class="stat-label" style="display:flex;justify-content:space-between;align-items:baseline">
-            <span>States</span>
-            <span style="display:flex;align-items:center;gap:6px">
-              <span id="state-count" style="color:var(--text-dim);font-size:11px"></span>
-              <button id="btn-clear-states" style="display:none;font-size:10px;color:var(--text-dim);background:none;border:1px solid var(--border);border-radius:3px;padding:1px 6px;cursor:pointer">Clear</button>
-            </span>
-          </div>
-          <input type="text" id="state-search" placeholder="Search states…">
-          <div id="state-list"></div>
+          <div class="stat-label">Place</div>
+          <nav id="place-current" class="place-crumbs" aria-label="Current place"></nav>
+          <input type="search" id="place-search" placeholder="State, metro area, town or neighborhood…" autocomplete="off" aria-label="Find a place">
+          <div id="place-results" role="listbox" aria-label="Places"></div>
+          <p class="geo-note warn" id="place-note" hidden></p>
+          <p class="geo-note">One place at a time. To compare places, open each in its own tab; the address keeps every choice.</p>
         </div>
       </div>
 
@@ -522,8 +519,8 @@
         <button class="dots-btn" data-maxdots="5000">5K</button>
       </div>
       <div id="sample-toggle">
-        <button id="btn-static" class="sample-btn active" title="Static: randomly drawn from all households — same dots persist as you change filters and color">Static</button>
-        <button id="btn-showall" class="sample-btn" title="All: only matching households shown, up to the dot limit">All</button>
+        <button id="btn-static" class="sample-btn active" title="Draw a fixed random sample of all households and dim the ones that don't match your filters. The same dots stay put as you change filters.">Dim others</button>
+        <button id="btn-showall" class="sample-btn" title="Draw only households that match your filters, up to the dot limit.">Matches only</button>
       </div>
       <span id="dot-count"></span>
       <button id="btn-filters">Filters</button>
@@ -538,7 +535,7 @@
           <dt>Y axis</dt><dd>Frequency — taller clusters mean more households near that income. Dots are also spread apart vertically to reduce overlap, so the exact y position of each dot isn't meaningful.</dd>
           <dt>Dot size</dt><dd>Proportional to the household's sampling weight. A larger dot represents more US households.</dd>
           <dt>Colors</dt><dd>Set by the <em>Group</em> tab. Click a legend swatch to filter by that category. Topcoded incomes (dots with a thin light outline): a household member's income was above the survey's cap; see Data below.</dd>
-          <dt>Dot count / Static / All</dt><dd><strong>1K / 3K / 5K</strong> sets the maximum dots drawn. <strong>Static</strong> draws randomly from all households and dims non-matching ones as you adjust filters — the same dots persist as you click around within a state or national view. <strong>All</strong> draws only from households that match your current filters, up to the dot limit; useful when zoomed into a state or narrow filter where you want to see the actual population.</dd>
+          <dt>Dot count / Dim others / Matches only</dt><dd><strong>1K / 3K / 5K</strong> sets the most dots drawn; a cap is greyed out when a smaller one already shows every household. <strong>Dim others</strong> draws a fixed random sample of all households and dims the ones that don't match your filters, so the same dots stay put as you click around. <strong>Matches only</strong> draws only households that match your filters, up to the cap; useful for a narrow slice, where you want to see that group's own spread.</dd>
           <dt>Data</dt><dd id="about-data">—</dd>
           <dt>ACS or CPS</dt><dd>Two Census Bureau surveys, switchable at the top right. The <strong>ACS</strong> is about 20 times larger, so it can show states, metro areas, local areas and narrow slices reliably, and it has housing costs. The <strong>CPS</strong> asks about income in far more detail, so income sources such as pensions and investments are measured better; it is the official source for national income. When a slice exists in both, the sidebar shows the other survey's figure too.</dd>
         </dl>
@@ -597,6 +594,7 @@ let brushModeActive = false;
 let viewMode = 'dots';   // 'dots' | 'bars'
 let sampleMode = true;   // true=static (sample all rows, dim non-matching); false=all (only matching rows)
 let maxDots = 3000;      // dot cap: 1000 | 3000 | 5000
+let lastPoolSize = 0;    // households the chart could draw from, to grey out caps that change nothing
 
 function isMobile() { return window.innerWidth < 768; }
 
@@ -606,6 +604,7 @@ function isMobile() { return window.innerWidth < 768; }
 const STATE_PALETTE = ['#4a7cbc', '#e07070', '#4a9c5e', '#c9a227', '#a97cc4', '#5bc8c8'];
 
 const PALETTES = {
+  region:          ['#888', '#4a7cbc', '#4a9c5e', '#c9a227', '#c94040'],
   passive_pct:     ['#4a9c5e', '#7ab87a', '#c9a227', '#bc7040', '#c94040'],
   passive_source:  ['#4a7cbc', '#8892b0', '#c9a227', '#c94040', '#4a9c5e'],
   earner_count:    ['#c94040', '#4a7cbc', '#4a9c5e', '#c9a227'],
@@ -690,11 +689,11 @@ async function init() {
     Object.entries(codebook.metros).map(([k, m]) => [k, m.name])
   );
   codebook.localAreas = codebook.sources.acs?.local_areas || {};
-  // Each local area lies in one state, one metro area (0 = none) and one city/suburb/rural type, so this table
-  // tells which geography choices can go together.
-  codebook.geoAreas = source === 'acs' ? Object.entries(codebook.localAreas)
+  // Each local area lies in one state and one metro area (0 = none): the place breadcrumbs and the CPS
+  // fallback (metro or local area -> its state) come from this table.
+  codebook.geoAreas = Object.entries(codebook.localAreas)
     .filter(([, a]) => a.metro !== undefined && a.city !== undefined)
-    .map(([code, a]) => ({ code: parseInt(code), state: a.state, metro: a.metro, city: a.city })) : [];
+    .map(([code, a]) => ({ code: parseInt(code), state: a.state, metro: a.metro, city: a.city, n: a.n }));
   codebook.labels.puma = Object.fromEntries(
     Object.entries(codebook.localAreas).map(([k, a]) => [k, localName(a).join(' · ')])
   );
@@ -716,18 +715,19 @@ async function init() {
   for (const { id, dim } of FILTER_DEFS) {
     if (!nationalTable[dim]) document.getElementById(id)?.closest('.filter-group')?.remove();
   }
-  if (!nationalTable.metro_area) document.getElementById('metro-list')?.closest('.filter-group')?.remove();
   if (!nationalTable.puma || !Object.keys(codebook.localAreas).length) document.getElementById('local-group')?.remove();
 
   buildFilterUI();
-  buildGeographyTab();
-  if (nationalTable.metro_area) buildMetroPicker();
-  if (document.getElementById('local-group')) buildLocalPicker();
+  buildPlacePicker();
   applyUrl();
+  normalizePlace();  // before dropping columns this survey lacks: a CPS link to a local area falls back to its state
   for (const k of Object.keys(filters)) if (!nationalTable[k]) delete filters[k];  // a filter the other survey had
+  if (filters.puma) {
+    filters.puma = new Set([...filters.puma].filter(c => codebook.localAreas[c]));
+    if (!filters.puma.size) delete filters.puma;
+  }
   if (filters.puma) await ensureLocal([...filters.puma][0]);
-  syncMetroPicker();
-  syncLocalPicker();
+  syncPlace();
   hideLoading();
   renderLegend();
   render();
@@ -781,132 +781,9 @@ async function ensureLocal(code) {
   await localLoading[st];
 }
 
-function buildLocalPicker() {
-  const list = document.getElementById('local-list');
-  const input = document.getElementById('local-search');
-  const all = Object.entries(codebook.localAreas).map(([code, a]) => {
-    const [name, where] = localName(a);
-    return { code: parseInt(code), name, where: where || '', text: (a.name + ' ' + name).toLowerCase(), n: a.n };
-  }).sort((a, b) => a.name.localeCompare(b.name));
-  const hint = list.innerHTML;
-  const draw = () => {
-    const q = input.value.toLowerCase().trim();
-    const sel = filters.puma && filters.puma.size ? [...filters.puma][0] : null;
-    const ok = geoAllowed();
-    let items = q.length >= 2 ? all.filter(a => a.text.includes(q) && (!ok || ok.puma.has(a.code) || a.code === sel))
-                              : all.filter(a => a.code === sel);
-    if (!items.length) {
-      list.innerHTML = q.length >= 2
-        ? `<div class="hint">No matching area${ok && ok.narrowed ? ' within your other geography choices' : ''}.</div>` : hint;
-      return;
-    }
-    list.innerHTML = items.slice(0, 60).map(a =>
-      `<button class="metro-item local-item" data-code="${a.code}" title="${a.n.toLocaleString()} survey households">${a.name}${a.where ? ` <small>${a.where}</small>` : ''}</button>`).join('')
-      + (items.length > 60 ? `<div class="hint">${items.length - 60} more; keep typing.</div>` : '');
-    list.querySelectorAll('.local-item').forEach(b => b.addEventListener('click', async () => {
-      const code = parseInt(b.dataset.code);
-      if (filters.puma && filters.puma.has(code)) { delete filters.puma; render(); return; }
-      b.textContent = 'Loading…';
-      await ensureLocal(code);
-      filters.puma = new Set([code]);
-      input.value = '';
-      render();
-    }));
-    syncLocalPicker();
-  };
-  input.addEventListener('input', draw);
-  list._draw = draw;
-  document.getElementById('btn-clear-local').addEventListener('click', () => { delete filters.puma; render(); });
-}
 
-// Which geography values are still possible given the other geography choices (states, metro area,
-// city/suburb/rural, local area). Each dimension is checked against all the others but not itself, so you
-// can still switch within it. Returns null when the source has no local-area table (the CPS).
-function geoAllowed() {
-  const areas = codebook.geoAreas;
-  if (!areas || !areas.length) return null;
-  const S = selectedFips.size ? selectedFips : null;
-  const M = filters.metro_area && filters.metro_area.size ? filters.metro_area : null;
-  const C = filters.city && filters.city.size ? filters.city : null;
-  const P = filters.puma && filters.puma.size ? filters.puma : null;
-  const ok = { state: new Set(), metro: new Set(), city: new Set(), puma: new Set(), narrowed: !!(S || M || C || P), any: false };
-  for (const a of areas) {
-    const s = !S || S.has(a.state), m = !M || M.has(a.metro), c = !C || C.has(a.city), p = !P || P.has(a.code);
-    if (m && c && p) ok.state.add(a.state);
-    if (s && c && p) ok.metro.add(a.metro);
-    if (s && m && p) ok.city.add(a.city);
-    if (s && m && c) ok.puma.add(a.code);
-    if (s && m && c && p) ok.any = true;
-  }
-  return ok;
-}
 
-function syncGeoAvailability() {
-  const ok = geoAllowed();
-  const note = document.getElementById('geo-note');
-  const metroNote = document.getElementById('metro-note');
-  const why = 'Not possible with your other geography choices';
-  // City / suburb / rural buttons
-  document.querySelectorAll('#f-city .f-btn').forEach(btn => {
-    const v = parseInt(btn.dataset.val);
-    const on = !!(filters.city && filters.city.has(v));
-    const allowed = !ok || ok.city.has(v);
-    btn.disabled = !allowed && !on;
-    btn.classList.toggle('conflict', !allowed && on);
-    btn.title = allowed ? '' : why;
-  });
-  // States
-  document.querySelectorAll('.state-check-label').forEach(lbl => {
-    const f = parseInt(lbl.dataset.fips);
-    const on = selectedFips.has(f);
-    const allowed = !ok || ok.state.has(f);
-    lbl.classList.toggle('unavailable', !allowed && !on);
-    lbl.classList.toggle('conflict', !allowed && on);
-    lbl.querySelector('input').disabled = !allowed && !on;
-    lbl.title = allowed ? '' : why;
-  });
-  // Metro areas: list only the ones that fit
-  let shown = 0, total = 0;
-  document.querySelectorAll('.metro-item:not(.local-item)').forEach(b => {
-    const code = parseInt(b.dataset.code);
-    const on = !!(filters.metro_area && filters.metro_area.has(code));
-    const allowed = !ok || ok.metro.has(code);
-    b.classList.toggle('geo-hidden', !allowed && !on);
-    b.classList.toggle('conflict', !allowed && on);
-    total++; if (allowed || on) shown++;
-  });
-  if (metroNote) {
-    metroNote.hidden = !ok || shown === total;
-    metroNote.textContent = shown === 0
-      ? 'No metro area fits your other geography choices (for example, rural areas are outside every metro area).'
-      : `Showing the ${shown} metro area${shown === 1 ? '' : 's'} that fit your other geography choices.`;
-  }
-  if (note) {
-    note.hidden = !ok || ok.any || !ok.narrowed;
-    note.classList.add('warn');
-    if (!note.hidden) {
-      note.innerHTML = 'These geography choices don\'t overlap, so no households match. ';
-      const b = document.createElement('button');
-      b.textContent = 'Clear geography';
-      b.addEventListener('click', () => {
-        selectedFips.clear(); delete filters.metro_area; delete filters.city; delete filters.puma;
-        updateStateColorMap(); syncStateCheckboxes(); syncFilterButtons(); render();
-      });
-      note.append(b);
-    }
-  }
-}
 
-function syncLocalPicker() {
-  const list = document.getElementById('local-list');
-  if (!list) return;
-  const sel = filters.puma;
-  if (!document.getElementById('local-search').value && list._draw && !list.dataset.syncing) {
-    list.dataset.syncing = '1'; list._draw(); delete list.dataset.syncing;
-  }
-  list.querySelectorAll('.local-item').forEach(b => b.classList.toggle('active', !!(sel && sel.has(parseInt(b.dataset.code)))));
-  document.getElementById('btn-clear-local').style.display = sel && sel.size ? '' : 'none';
-}
 
 // ============================================================
 // Default filters
@@ -944,9 +821,221 @@ function updateStateColorMap() {
 // ============================================================
 function currentCols() {
   // a chosen local area draws on that state's local file, which holds far more of its households
-  const pu = filters.puma && filters.puma.size === 1 ? [...filters.puma][0] : null;
+  const pu = filters.puma && filters.puma.size ? [...filters.puma][0] : null;
   if (pu != null && localTables[Math.floor(pu / 100000)]) return localTables[Math.floor(pu / 100000)];
   return nationalTable;
+}
+
+// ============================================================
+// Place: one at a time (United States, a region, a state, a metro area or a local area)
+// ============================================================
+// Stored in the existing selections so links keep working: states=FIPS, region=R, metro_area=CBSA, puma=CODE.
+const PLACE_TYPE = { us: 'Country', region: 'Region', state: 'State', metro: 'Metro area', puma: 'Local area' };
+let placeNote = '';
+
+function currentPlace() {
+  if (filters.puma && filters.puma.size) return { level: 'puma', code: [...filters.puma][0] };
+  if (filters.metro_area && filters.metro_area.size) return { level: 'metro', code: [...filters.metro_area][0] };
+  if (selectedFips.size) return { level: 'state', code: [...selectedFips][0] };
+  if (filters.region && filters.region.size) return { level: 'region', code: [...filters.region][0] };
+  return { level: 'us', code: 0 };
+}
+
+function placeName(p) {
+  if (p.level === 'us') return 'United States';
+  if (p.level === 'region') return codebook.labels.region?.[p.code] ?? `Region ${p.code}`;
+  if (p.level === 'state') return codebook.states?.[String(p.code)]?.name ?? `State ${p.code}`;
+  if (p.level === 'metro') return codebook.metros?.[p.code]?.name ?? `Metro area ${p.code}`;
+  const a = codebook.localAreas?.[p.code];
+  return a ? localName(a)[0] : `Local area ${p.code}`;
+}
+
+// States a metro area reaches, largest share of survey households first.
+function metroStates(code) {
+  const byState = new Map();
+  for (const a of codebook.geoAreas || []) if (a.metro === code) byState.set(a.state, (byState.get(a.state) || 0) + a.n);
+  return [...byState.entries()].sort((a, b) => b[1] - a[1]).map(([st]) => st);
+}
+
+// The place and the larger areas containing it, smallest first (local area -> metro -> state -> US).
+function placeChain(p) {
+  const chain = [p];
+  if (p.level === 'puma') {
+    const a = codebook.localAreas[p.code];
+    if (a?.metro && codebook.metros?.[a.metro]) chain.push({ level: 'metro', code: a.metro });
+    if (a) chain.push({ level: 'state', code: a.state });
+  } else if (p.level === 'metro') {
+    const st = metroStates(p.code);
+    if (st.length === 1) chain.push({ level: 'state', code: st[0] });
+  } else if (p.level === 'state') {
+    const r = fipsToRegion.get(p.code);
+    if (r) chain.push({ level: 'region', code: r });
+  }
+  if (p.level !== 'us') chain.push({ level: 'us', code: 0 });
+  return chain;
+}
+
+// The precomputed cell for a place and a set of single-valued filters, or null.
+function placeCell(p, dimFilter, table = precomputed, locals = localStats) {
+  if (!table) return null;
+  if (p.level === 'puma') return (locals[Math.floor(p.code / 100000)] || {})[buildKey(`puma=${p.code}`, dimFilter)] ?? null;
+  if (p.level === 'metro') return table[buildKey(`metro=${p.code}`, dimFilter)] ?? null;
+  if (p.level === 'state') return table[buildKey(`state=${p.code}`, dimFilter)] ?? null;
+  if (p.level === 'region') return table[buildKey('national', { ...dimFilter, region: p.code })] ?? null;
+  return table[buildKey('national', dimFilter)] ?? null;
+}
+
+const GEO_FILTERS = new Set(['metro_area', 'puma', 'region']);
+
+// The household filters (not the place) as a stats key, or null when one has several values.
+function householdFilterKey() {
+  const dimFilter = {};
+  for (const [dim, vals] of Object.entries(filters)) {
+    if (!vals || vals.size === 0 || GEO_FILTERS.has(dim)) continue;
+    if (vals.size > 1) return null;
+    dimFilter[DIM_TO_KEY[dim] ?? dim] = [...vals][0];
+  }
+  return dimFilter;
+}
+
+async function setPlace(level, code = 0, note = '') {
+  selectedFips.clear();
+  delete filters.metro_area; delete filters.puma; delete filters.region;
+  if (level === 'puma') { await ensureLocal(code); filters.puma = new Set([code]); }
+  else if (level === 'metro') filters.metro_area = new Set([code]);
+  else if (level === 'state') selectedFips.add(code);
+  else if (level === 'region') filters.region = new Set([code]);
+  placeNote = note;
+  updateStateColorMap();
+  chartScope = null;
+  render();
+}
+
+// Old links could hold several states or a mix of levels: keep the most specific single place. The CPS has
+// no metro or local areas, so those fall back to their state, with a note.
+function normalizePlace() {
+  const p = currentPlace();
+  let target = p, note = '';
+  if (source !== 'acs' && (p.level === 'puma' || p.level === 'metro')) {
+    const st = p.level === 'puma' ? codebook.localAreas[p.code]?.state : metroStates(p.code)[0];
+    target = st ? { level: 'state', code: st } : { level: 'us', code: 0 };
+    note = `The ${srcInfo.short} doesn't identify ${p.level === 'puma' ? 'local' : 'metro'} areas, so this shows ${placeName(target)} instead of ${placeName(p)}.`;
+  }
+  selectedFips = new Set(target.level === 'state' ? [target.code] : []);
+  delete filters.metro_area; delete filters.puma; delete filters.region;
+  if (target.level === 'puma') filters.puma = new Set([target.code]);
+  if (target.level === 'metro') filters.metro_area = new Set([target.code]);
+  if (target.level === 'region') filters.region = new Set([target.code]);
+  placeNote = note;
+  updateStateColorMap();
+}
+
+function placeIndex() {
+  if (placeIndex.cache?.source === source) return placeIndex.cache.items;
+  const items = [{ level: 'us', code: 0, name: 'United States', where: '' }];
+  for (const [k, v] of Object.entries(codebook.labels.region || {})) items.push({ level: 'region', code: +k, name: v, where: '' });
+  for (const [k, v] of Object.entries(codebook.states || {})) items.push({ level: 'state', code: +k, name: v.name, where: v.abbr });
+  if (source === 'acs') {
+    for (const [k, m] of Object.entries(codebook.metros || {})) items.push({ level: 'metro', code: +k, name: m.name, where: '' });
+    for (const [k, a] of Object.entries(codebook.localAreas || {})) {
+      const [name, county] = localName(a);
+      const metro = a.metro && codebook.metros?.[a.metro] ? codebook.metros[a.metro].name : '';
+      items.push({ level: 'puma', code: +k, name, where: [county, metro].filter(Boolean).join(' · ') });
+    }
+  }
+  for (const it of items) it.text = `${it.name} ${it.where} ${PLACE_TYPE[it.level]}`.toLowerCase();
+  placeIndex.cache = { source, items };
+  return items;
+}
+
+const LEVEL_RANK = { us: 0, region: 1, state: 2, metro: 3, puma: 4 };
+
+function searchPlaces(q) {
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  const hits = placeIndex().filter(it => words.every(w => it.text.includes(w)));
+  const starts = it => it.name.toLowerCase().startsWith(words[0]) ? 0 : 1;
+  return hits.sort((a, b) => starts(a) - starts(b) || LEVEL_RANK[a.level] - LEVEL_RANK[b.level] || a.name.localeCompare(b.name));
+}
+
+function buildPlacePicker() {
+  const input = document.getElementById('place-search');
+  const list = document.getElementById('place-results');
+  const draw = () => {
+    const q = input.value.trim();
+    if (q.length < 2) { list.innerHTML = ''; return; }
+    const hits = searchPlaces(q);
+    if (!hits.length) {
+      list.innerHTML = `<div class="hint">No place matches “${q.replace(/[<>&]/g, '')}”.${source !== 'acs' ? ` The ${srcInfo.short} covers the US, regions and states.` : ''}</div>`;
+      return;
+    }
+    list.innerHTML = hits.slice(0, 40).map(it =>
+      `<button class="place-item" role="option" data-level="${it.level}" data-code="${it.code}">${it.name}<small>${PLACE_TYPE[it.level]}${it.where ? ' · ' + it.where : ''}</small></button>`).join('')
+      + (hits.length > 40 ? `<div class="hint">${hits.length - 40} more; keep typing.</div>` : '');
+  };
+  input.addEventListener('input', draw);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') list.querySelector('.place-item')?.click();
+    if (e.key === 'ArrowDown') { list.querySelector('.place-item')?.focus(); e.preventDefault(); }
+  });
+  list.addEventListener('keydown', e => {
+    const b = e.target.closest('.place-item');
+    if (!b) return;
+    if (e.key === 'ArrowDown') { (b.nextElementSibling || b).focus(); e.preventDefault(); }
+    if (e.key === 'ArrowUp') { (b.previousElementSibling || input).focus(); e.preventDefault(); }
+  });
+  list.addEventListener('click', async e => {
+    const b = e.target.closest('.place-item');
+    if (!b) return;
+    b.querySelector('small').textContent = 'Loading…';
+    await setPlace(b.dataset.level, parseInt(b.dataset.code));
+    input.value = '';
+    list.innerHTML = '';
+  });
+  document.getElementById('place-current').addEventListener('click', e => {
+    const b = e.target.closest('button[data-level]');
+    if (b) setPlace(b.dataset.level, parseInt(b.dataset.code));
+  });
+  document.getElementById('place-context').addEventListener('click', e => {
+    const b = e.target.closest('button[data-level]');
+    if (b) setPlace(b.dataset.level, parseInt(b.dataset.code));
+  });
+}
+
+function syncPlace() {
+  const p = currentPlace();
+  const chain = placeChain(p).reverse();  // US first
+  const crumbs = document.getElementById('place-current');
+  if (crumbs) {
+    crumbs.innerHTML = chain.map((c, i) => i === chain.length - 1
+      ? `<span class="here">${placeName(c)}</span>`
+      : `<button data-level="${c.level}" data-code="${c.code}">${placeName(c)}</button><span class="sep">›</span>`).join('');
+  }
+  const note = document.getElementById('place-note');
+  if (note) { note.hidden = !placeNote; note.textContent = placeNote; }
+  const title = document.getElementById('place-title');
+  if (title) {
+    const sub = p.level === 'us' ? '' : [PLACE_TYPE[p.level], ...placeChain(p).slice(1, -1).map(placeName)].join(' · ');
+    title.innerHTML = `${placeName(p)}${sub ? `<small>${sub}</small>` : ''}`;
+  }
+}
+
+// Under the main figures: the same filters in each larger area containing the place, where computed.
+function renderPlaceContext(stats) {
+  const box = document.getElementById('place-context');
+  if (!box) return;
+  const p = currentPlace();
+  const dimFilter = householdFilterKey();
+  if (p.level === 'us' || !dimFilter || brushRange) { box.innerHTML = ''; return; }
+  const rows = placeChain(p).map((c, i) => {
+    const cell = i === 0 && stats?.source === 'precomputed' ? stats : placeCell(c, dimFilter);
+    const val = cell && cell.med != null
+      ? `${fmt$(cell.med)}${cell.se_med ? ` <span class="stat-se">±${fmt$(cell.se_med)}</span>` : ''}`
+      : '<span title="Not computed for this place with these filters">—</span>';
+    const name = i === 0 ? placeName(c) : `<button data-level="${c.level}" data-code="${c.code}">${placeName(c)}</button>`;
+    return `<tr class="${i === 0 ? 'here' : ''}"><td>${name}</td><td class="v">${val}</td></tr>`;
+  });
+  box.innerHTML = `<table aria-label="Median in this place and the larger areas containing it">${rows.join('')}</table>`;
 }
 
 // ============================================================
@@ -1157,6 +1246,19 @@ function updateDotCountDisplay() {
   const total = visibleRows.length;
   const shown = dotData.length;
   el.textContent = shown < total ? `${shown.toLocaleString()} of ${total.toLocaleString()} households` : '';
+  syncDotCapButtons();
+}
+
+// A bigger cap changes nothing once a smaller one already draws every household in the pool.
+function syncDotCapButtons() {
+  const caps = [...document.querySelectorAll('.dots-btn')].map(b => parseInt(b.dataset.maxdots)).sort((a, b) => a - b);
+  const enough = caps.find(c => c >= lastPoolSize) ?? Infinity;
+  document.querySelectorAll('.dots-btn').forEach(b => {
+    const v = parseInt(b.dataset.maxdots);
+    const idle = v > enough;
+    b.classList.toggle('idle', idle);
+    b.title = idle ? `Only ${lastPoolSize.toLocaleString()} households to draw; ${enough.toLocaleString()} already shows them all` : `Draw up to ${v.toLocaleString()} dots`;
+  });
 }
 
 function syncSampleButtons() {
@@ -1179,7 +1281,7 @@ const DIM_TO_KEY = {
   age_bucket: 'age', sex: 'sex', marst: 'marst', educ: 'educ',
   work_status: 'work', passive_pct: 'ppct', passive_source: 'psrc', earner_count: 'earners', breadwinner: 'bread',
   kids: 'kids', race_ethnicity: 'race', city: 'city', burden: 'burden', multi_job_proxy: 'mjob',
-  housing: 'house', metro: 'metro', year: 'year',
+  housing: 'house', metro: 'metro', year: 'year', region: 'region',
 };
 
 function getStats() {
@@ -1187,40 +1289,14 @@ function getStats() {
   const rows = visibleRows;
   const n = rows.length;
 
-  let scope = 'national';
-  if (selectedFips.size === 1) scope = `state=${[...selectedFips][0]}`;
-  const metroSel = filters.metro_area;
-  if (metroSel && metroSel.size === 1 && selectedFips.size === 0) scope = `metro=${[...metroSel][0]}`;
-  const localSel = filters.puma;
-  let table = precomputed;
-  if (localSel && localSel.size === 1 && selectedFips.size === 0) {
-    const pu = [...localSel][0];
-    scope = `puma=${pu}`;
-    table = localStats[Math.floor(pu / 100000)] || {};
-  }
-
-  const dimFilter = {};
-  let hasMultiValue = selectedFips.size > 1;
-
-  for (const [dim, vals] of Object.entries(filters)) {
-    if (!vals || vals.size === 0) continue;
-    if (dim === 'metro_area' && scope.startsWith('metro=')) continue;
-    if (dim === 'puma' && scope.startsWith('puma=')) continue;
-    if (dim === 'metro_area' || dim === 'puma') { hasMultiValue = true; continue; }
-    if (vals.size === 1) {
-      dimFilter[DIM_TO_KEY[dim] ?? dim] = [...vals][0];
-    } else {
-      hasMultiValue = true;
-    }
-  }
-
+  // A precomputed cell (with standard errors) exists for one place and single-valued household filters.
+  const p = currentPlace();
+  const dimFilter = householdFilterKey();
   let otherCell = null;
-  if (!hasMultiValue) {
-    const key = buildKey(scope, dimFilter);
-    otherCell = otherPrecomputed?.[key] ?? null;
-    if (table[key]) {
-      return { ...table[key], source: 'precomputed', other: otherCell };
-    }
+  if (dimFilter) {
+    otherCell = (p.level === 'metro' || p.level === 'puma') ? null : placeCell(p, dimFilter, otherPrecomputed, {});
+    const cell = placeCell(p, dimFilter);
+    if (cell) return { ...cell, source: 'precomputed', other: otherCell };
   }
 
   if (n < 50) return { n, rel: 0, source: 'live', other: otherCell };
@@ -1340,7 +1416,8 @@ function applyUrl() {
   if (!hash) return;
   const params = new URLSearchParams(hash);
 
-  const cm = params.get('cm');
+  let cm = params.get('cm');
+  if (cm === 'state') cm = 'region';  // older links: coloring by chosen states became coloring by region
   if (cm) {
     colorMode = cm;
     document.querySelectorAll('.cm-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === cm));
@@ -1351,7 +1428,6 @@ function applyUrl() {
   if (statesStr) {
     selectedFips.clear();
     statesStr.split(',').forEach(s => { const f = parseInt(s); if (!isNaN(f)) selectedFips.add(f); });
-    syncStateCheckboxes();
     updateStateColorMap();
   }
 
@@ -1417,9 +1493,8 @@ function render() {
     updateDotOpacity();
   }
   syncFilterButtons();
-  syncMetroPicker();
-  syncLocalPicker();
-  syncGeoAvailability();
+  syncPlace();
+  renderPlaceContext(stats);
   renderActiveChips();
   renderBrushInfo();
   renderLegend();
@@ -1442,7 +1517,7 @@ function renderChart() {
   const cols = currentCols();
   const mobileMax = Math.min(maxDots, 800);
   const limit = isMobile() ? mobileMax : maxDots;
-  // Static mode samples every household, dimming non-matches; a chosen metro area narrows the pool to it
+  // Dim-others mode samples every household, dimming non-matches; a chosen metro area narrows the pool to it
   const metroSel = filters.metro_area && filters.metro_area.size ? filters.metro_area : null;
   const localSel = filters.puma && filters.puma.size ? filters.puma : null;
   const all = Array.from({length: cols.inc.length}, (_, i) => i);
@@ -1450,6 +1525,7 @@ function renderChart() {
     ? (localSel ? all.filter(i => localSel.has(cols.puma[i]))
        : metroSel ? all.filter(i => metroSel.has(cols.metro_area[i])) : all)
     : visibleRows;
+  lastPoolSize = rowPool.length;
   const dotRows = subsample(rowPool, limit);
   const hasFilters = selectedFips.size > 0 || Object.values(filters).some(s => s && s.size > 0);
 
@@ -1936,6 +2012,7 @@ function showTooltip(event, i) {
     ${passiveLine ? `<div class="tt-dim">${passiveLine}</div>` : ''}
     <div class="tt-dim">${label('age_bucket', cols.age_bucket[i])} · ${label('marst', cols.marst[i])} · ${label('educ', cols.educ[i])}</div>
     <div class="tt-dim">${cols.metro_area?.[i] ? label('metro_area', cols.metro_area[i]) : stateName} · ${label('city', cols.city[i])}</div>
+    ${cols.puma?.[i] ? `<div class="tt-dim">${label('puma', cols.puma[i])}</div>` : ''}
     <div class="tt-dim">${label('work_status', cols.work_status[i])} · ${label('housing', cols.housing[i])}${cols.burden?.[i] < 3 ? ', ' + label('burden', cols.burden[i]) + ' of income' : ''}</div>
     <div class="tt-dim">Weight: ${Math.round(cols.weight[i]).toLocaleString()} households · ${yr}</div>
   `;
@@ -2028,7 +2105,7 @@ function syncFilterButtons() {
 const DIM_LABELS = {
   age_bucket: 'Age', sex: 'Sex', marst: 'Marital', educ: 'Educ', has_roommate: 'Roommates',
   work_status: 'Work', race_ethnicity: 'Race',
-  kids: 'Kids', city: 'Area', metro: 'Metro', metro_area: 'Metro area', puma: 'Local area', burden: 'Cost burden', multi_job_proxy: '2nd job',
+  kids: 'Kids', city: 'Area type', region: 'Region', metro: 'Metro', metro_area: 'Metro area', puma: 'Local area', burden: 'Cost burden', multi_job_proxy: '2nd job',
   housing: 'Housing', year: 'Year',
   earner_count: 'Earners', breadwinner: 'Breadwinner',
   passive_pct: 'Inc. mix', passive_source: 'Passive src',
@@ -2062,7 +2139,7 @@ function renderActiveChips() {
     chip.className = 'chip';
     chip.innerHTML = `<span>State: ${name}</span><span class="x">✕</span>`;
     chip.addEventListener('click', () => {
-      toggleState(fips);
+      setPlace('us');
     });
     container.append(chip);
   }
@@ -2085,103 +2162,11 @@ function renderActiveChips() {
   }
 }
 
-// ============================================================
-// Geography tab — state checkboxes + region shortcuts
-// ============================================================
-function buildGeographyTab() {
-  const regionLabels = codebook?.labels?.region ?? {};
-  const stateEntries = Object.entries(codebook?.states ?? {})
-    .sort((a,b) => a[1].name.localeCompare(b[1].name));
-
-  // Alphabetical flat state list
-  const stateList = document.getElementById('state-list');
-  stateList.innerHTML = stateEntries.map(([fipsStr, info]) => {
-    const fips = parseInt(fipsStr);
-    return `<label class="state-check-label" data-fips="${fips}">
-      <input type="checkbox" class="state-cb" data-fips="${fips}" value="${fips}">
-      ${info.name}
-    </label>`;
-  }).join('');
-
-  // Wire state checkboxes
-  stateList.querySelectorAll('.state-cb').forEach(cb => {
-    cb.addEventListener('change', () => {
-      const fips = parseInt(cb.dataset.fips);
-      if (cb.checked) selectedFips.add(fips);
-      else selectedFips.delete(fips);
-      syncStateCheckboxes();
-      updateStateColorMap();
-      render();
-    });
-  });
-
-  // Search
-  document.getElementById('state-search').addEventListener('input', function() {
-    const q = this.value.toLowerCase().trim();
-    stateList.querySelectorAll('.state-check-label').forEach(lbl => {
-      lbl.style.display = !q || lbl.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
-  });
-
-  document.getElementById('btn-clear-states').addEventListener('click', () => {
-    selectedFips.clear();
-    updateStateColorMap();
-    syncStateCheckboxes();
-    render();
-  });
-}
 
 
-// Metro areas: a searchable single-choice list. Choosing one filters to it and, with no states selected,
-// uses its precomputed stats (scope "metro=CODE").
-function buildMetroPicker() {
-  const list = document.getElementById('metro-list');
-  const entries = Object.entries(codebook?.metros ?? {}).sort((a, b) => a[1].name.localeCompare(b[1].name));
-  list.innerHTML = entries.map(([code, m]) =>
-    `<button class="metro-item" data-code="${code}" title="${m.n.toLocaleString()} survey households">${m.name}</button>`).join('');
-  list.querySelectorAll('.metro-item').forEach(b => b.addEventListener('click', () => {
-    const code = parseInt(b.dataset.code);
-    const cur = filters.metro_area;
-    if (cur && cur.size === 1 && cur.has(code)) delete filters.metro_area;
-    else filters.metro_area = new Set([code]);
-    render();
-  }));
-  document.getElementById('metro-search').addEventListener('input', function () {
-    const q = this.value.toLowerCase().trim();
-    list.querySelectorAll('.metro-item').forEach(b => { b.classList.toggle('search-hidden', !!q && !b.textContent.toLowerCase().includes(q)); });
-  });
-  document.getElementById('btn-clear-metro').addEventListener('click', () => { delete filters.metro_area; render(); });
-}
 
-function syncMetroPicker() {
-  const sel = filters.metro_area;
-  document.querySelectorAll('.metro-item').forEach(b => b.classList.toggle('active', !!(sel && sel.has(parseInt(b.dataset.code)))));
-  const act = document.querySelector('.metro-item.active');
-  const list = document.getElementById('metro-list');
-  if (act && list && (act.offsetTop < list.scrollTop || act.offsetTop > list.scrollTop + list.clientHeight - act.offsetHeight)) {
-    list.scrollTop = act.offsetTop - list.offsetTop - list.clientHeight / 2;
-  }
-  const clr = document.getElementById('btn-clear-metro');
-  if (clr) clr.style.display = sel && sel.size ? '' : 'none';
-}
 
-function toggleState(fips) {
-  if (selectedFips.has(fips)) selectedFips.delete(fips);
-  else selectedFips.add(fips);
-  syncStateCheckboxes();
-  updateStateColorMap();
-  render();
-}
 
-function syncStateCheckboxes() {
-  document.querySelectorAll('.state-cb').forEach(cb => {
-    cb.checked = selectedFips.has(parseInt(cb.dataset.fips));
-  });
-  const el = document.getElementById('state-count');
-  if (el) el.textContent = selectedFips.size > 0 ? `${selectedFips.size} selected` : '';
-  const clearBtn = document.getElementById('btn-clear-states');
-  if (clearBtn) clearBtn.style.display = selectedFips.size > 0 ? '' : 'none';
-}
 
 
 // ============================================================
@@ -2271,7 +2256,6 @@ document.getElementById('btn-clear').addEventListener('click', () => {
   if (brushLayer) brushLayer.call(d3brush.move, null);
   switchStatsTab('summary');
   updateStateColorMap();
-  syncStateCheckboxes();
   syncFilterButtons();
   render();
 });
@@ -2295,7 +2279,7 @@ document.querySelectorAll('.dots-btn').forEach(btn => {
   });
 });
 
-// Static / All sample mode toggle
+// Dim others / Matches only toggle
 document.getElementById('btn-static').addEventListener('click', () => {
   if (sampleMode) return;
   sampleMode = true;
