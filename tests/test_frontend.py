@@ -55,7 +55,7 @@ class TestPageLoad:
 
     def test_n_info_shows_record_count(self, page: Page):
         text = page.locator("#n-info").text_content()
-        assert "survey records" in text
+        assert "surveyed" in text
 
 
 # ---------------------------------------------------------------------------
@@ -748,7 +748,7 @@ class TestACS:
         pick_place(page, "boston", "Boston-Cambridge")
         expect(page.locator("#active-chips")).to_contain_text("Metro area: Boston")
         stats = page.evaluate("precomputed['metro=14460']")
-        expect(page.locator("#n-info")).to_contain_text(f"{stats['n']:,} survey records")
+        expect(page.locator("#n-info")).to_contain_text(f"{stats['n']:,} surveyed")
         expect(page.locator("#s-med")).to_contain_text(f"${stats['med']:,}")
         assert page.locator("#chart-svg circle").count() > 100
         page.locator("#place-current button", has_text="United States").click()
@@ -861,7 +861,7 @@ class TestPlace:
         self._cps(page, "puma=2500609")
         assert page.evaluate("currentPlace()") == {"level": "metro", "code": 14460}
         page.locator(".tab-btn[data-tab='geo']").click()
-        expect(page.locator("#place-note")).to_contain_text("doesn't identify local areas")
+        expect(page.locator("#place-note")).to_contain_text("No local areas in the CPS")
         med = page.evaluate("precomputed['metro=14460'].med")
         expect(page.locator("#s-med")).to_contain_text(f"${med:,}")
 
@@ -869,7 +869,7 @@ class TestPlace:
         self._cps(page, "metro_area=32780")  # Medford, OR: too few CPS households
         assert page.evaluate("currentPlace()") == {"level": "state", "code": 41}
         page.locator(".tab-btn[data-tab='geo']").click()
-        expect(page.locator("#place-note")).to_contain_text("Medford, OR isn't one of the metro areas")
+        expect(page.locator("#place-note")).to_contain_text("Too few CPS households in Medford, OR")
 
     def test_cps_search_offers_large_metros_but_no_local_areas(self, page: Page):
         self._cps(page, "")
@@ -931,16 +931,16 @@ class TestSources:
         assert page.locator("#f-burden").count() == 0
         assert page.locator("#f-multi_job_proxy").count() == 1
         stats = page.evaluate("precomputed['national']")
-        expect(page.locator("#n-info")).to_contain_text(f"{stats['n']:,} survey records")
+        expect(page.locator("#n-info")).to_contain_text(f"{stats['n']:,} surveyed")
         expect(page.locator("#ipums-link")).to_have_text("IPUMS CPS")
 
     def test_comparison_line_shows_the_other_survey(self, page: Page):
         page.wait_for_function("otherPrecomputed !== null")
         other = page.evaluate("otherPrecomputed['national']")
-        expect(page.locator("#other-src")).to_contain_text(f"CPS median: ${other['med']:,}")
+        expect(page.locator("#other-src")).to_contain_text(f"CPS: ${other['med']:,}")
         pick_place(page, "boston", "Boston-Cambridge")
         other = page.evaluate("otherPrecomputed['metro=14460']")
-        expect(page.locator("#other-src")).to_contain_text(f"CPS median: ${other['med']:,}")
+        expect(page.locator("#other-src")).to_contain_text(f"CPS: ${other['med']:,}")
         pick_place(page, "malden", "Malden & Medford")
         expect(page.locator("#other-src")).to_have_text("")   # the CPS has no local areas
 
@@ -950,7 +950,7 @@ class TestSources:
         page.wait_for_selector("#loading", state="hidden")
         expect(page.locator("#source-switch button[data-src='cps']")).to_have_class(re.compile("active"))
         page.wait_for_function("otherPrecomputed !== null")
-        expect(page.locator("#other-src")).to_contain_text("ACS median")
+        expect(page.locator("#other-src")).to_contain_text("ACS: $")
 
     def test_acs_only_filter_dropped_when_switching(self, page: Page, static_server: str):
         page.goto(static_server + "/#src=cps&burden=2")
@@ -963,7 +963,7 @@ class TestSources:
         expect(page.locator("#active-chips")).to_contain_text("Local area: Malden & Medford, MA")
         stats = page.evaluate("localStats[25]['puma=2500609']")
         expect(page.locator("#s-med")).to_contain_text(f"${stats['med']:,}")
-        expect(page.locator("#n-info")).to_contain_text(f"{stats['n']:,} survey records")
+        expect(page.locator("#n-info")).to_contain_text(f"{stats['n']:,} surveyed")
         assert page.locator("#chart-svg circle").count() > 100
         page.locator(".tab-btn[data-tab='econ'], .tab-btn[data-tab='work']").first.click()
         page.locator('#f-housing .f-btn[data-val="2"]').click()

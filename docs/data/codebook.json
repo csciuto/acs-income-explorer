@@ -3,10 +3,10 @@
   "acs": {
    "name": "American Community Survey",
    "short": "ACS",
-   "about": "IPUMS USA, ACS 5-year sample 2020–2024 (about 5% of US households). Income covers the 12 months before each interview, put into 2024 dollars with the Census Bureau's ADJINC.",
-   "strengths": "Large enough for states, metro areas, local areas and narrow slices. Housing costs.",
-   "se": "Standard errors from the 80 ACS household replicate weights (successive difference replication).",
-   "topcodes": "Income items above a state's cutoff are replaced by the state mean of those values; households with a member at that value are flagged as topcoded.",
+   "about": "ACS 5-year sample, 2020–2024, about 5% of households.",
+   "strengths": "Best for places and narrow groups.",
+   "se": "± is the standard error.",
+   "topcodes": "Outlined dots: income above the survey's cap.",
    "years": {
     "0": "2020",
     "1": "2021",
@@ -18366,10 +18366,10 @@
   "cps": {
    "name": "Current Population Survey (ASEC)",
    "short": "CPS",
-   "about": "IPUMS CPS, Annual Social and Economic Supplement 2021–2025 (income years 2020–2024), in 2024 dollars with the CPI-U. The Census Bureau's official source for national income.",
-   "strengths": "About 50 income questions (the ACS has 8), so income sources such as pensions, interest and dividends are measured better. Calendar-year income. Multiple jobs.",
-   "se": "Standard errors from the 160 CPS household replicate weights (Fay's balanced repeated replication).",
-   "topcodes": "The CPS swaps the highest values between similar records instead of capping them, so no household is flagged.",
+   "about": "CPS income supplement, income years 2020–2024.",
+   "strengths": "Best for income sources; the official national figures.",
+   "se": "± is the standard error.",
+   "topcodes": "",
    "years": {
     "0": "2020",
     "1": "2021",

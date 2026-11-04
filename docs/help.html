@@ -59,9 +59,8 @@
 <header>
   <a class="back" href="./">← Back to the explorer</a>
   <h1>How to use the American Income Explorer</h1>
-  <p class="lede">The explorer shows how much American households earn, using millions of Census Bureau survey
-    records. Each dot is a real household from the survey. You narrow them down to the households you care about
-    and read off their income. All amounts are in 2024 dollars.</p>
+  <p class="lede">Each dot is a real surveyed household. Narrow them down and read off their income, in 2024
+    dollars.</p>
   <nav class="toc" aria-label="Sections">
     <a href="#chart">Reading the chart</a>
     <a href="#filters">Choosing households</a>
@@ -76,111 +75,82 @@
 <main>
   <section id="chart">
     <h2>Reading the chart</h2>
-    <p>Household income runs left to right on a <b>log scale</b>, so $10k to $100k takes the same space as $100k
-      to $1M. Each dot is one surveyed household; a bigger dot stands for more households like it. Point at a dot
-      to see that household: its income, who lives there, where, and how it earns.</p>
-    <p>Colors come from the <span class="ui">Group</span> tab. Pick a grouping, such as age, to color every dot
-      by it; click a color in the legend to keep just that group.</p>
+    <p>Income runs left to right on a <b>log scale</b>: $10k to $100k takes the same space as $100k to $1M. Up and
+      down has no scale; the swarm is just taller where more households earn that much. Bigger dots stand for more
+      households. Point at one for details.</p>
+    <p>The <span class="ui">Group</span> tab sets the colors. Click a legend item to keep just that group.</p>
     <figure>
       <img src="help/chart.webp" alt="Pointing at three households on the chart shows each one's details; choosing Age in the Group tab recolors the dots by age." width="900" height="540" loading="lazy">
-      <figcaption>Point at dots for details; recolor by age.</figcaption>
     </figure>
   </section>
 
   <section id="filters">
     <h2>Choosing households</h2>
-    <p>The <span class="ui">Demo</span>, <span class="ui">Econ</span> and <span class="ui">Survey</span> tabs hold
-      filters: age, education, work status, housing, income sources, the survey year and more. Each choice appears
-      as a chip above the chart; click a chip to remove it, or <span class="ui">Clear all</span> to start over.
-      The figures at the top left always describe the households you've chosen.</p>
-    <p>Picking two values of the same filter (say, ages 55–64 and 65+) includes both.</p>
+    <p>Filters live in the <span class="ui">Demo</span>, <span class="ui">Econ</span> and
+      <span class="ui">Survey</span> tabs. Each choice becomes a chip above the chart; click it to remove it. Two
+      values of one filter (say, 55–64 and 65+) include both.</p>
     <figure>
       <img src="help/filters.webp" alt="Choosing Retired in the Econ tab and 65 and over in the Demo tab adds two chips and updates the median; clicking a chip removes it." width="900" height="540" loading="lazy">
-      <figcaption>Retired, then 65+, then remove a chip.</figcaption>
     </figure>
   </section>
 
   <section id="places">
     <h2>Places</h2>
-    <p>The <span class="ui">Place</span> tab looks at one place at a time: the whole country, a region, a state, a
-      metro area, or a local area such as Malden &amp; Medford. Type part of a name; each result says what kind of
-      place it is. Local areas have about 100,000 people or more, the smallest areas the Census Bureau publishes
-      household records for.</p>
-    <p>Under the figures you'll see the same median for each larger area containing your place, so you can tell
-      at a glance whether it runs high or low. Click any of them, or the path at the top of the tab, to move up.</p>
-    <p>To compare two places, open each in its own browser tab. The address keeps every choice, so you can also
-      bookmark or share a view.</p>
+    <p>Search the <span class="ui">Place</span> tab for a state, metro area or local area (about 100,000 people,
+      such as Malden &amp; Medford). The figures then show the larger areas around it too; click one to move up.</p>
+    <p>One place at a time. To compare, open another tab; the address keeps every choice, so views can be
+      bookmarked and shared.</p>
     <figure>
       <img src="help/places.webp" alt="Typing medford in the Place tab lists matching places; choosing Malden and Medford shows its median beside the Boston metro, Massachusetts and the United States; clicking Massachusetts moves up to the state." width="900" height="540" loading="lazy">
-      <figcaption>Find Malden &amp; Medford, compare it with its metro, state and the US, then move up.</figcaption>
     </figure>
   </section>
 
   <section id="range">
     <h2>An income range</h2>
-    <p>Click <span class="ui">Range</span> and drag across the chart to pick an income band, such as
-      $100k–$250k. The <span class="ui">Range</span> panel at the top left then shows what share of households
-      fall in it and their median and mean. Click the band's chip to clear it.</p>
+    <p>Click <span class="ui">Range</span> and drag across the chart. The <span class="ui">Range</span> panel shows
+      that band's share of households and its median.</p>
     <figure>
       <img src="help/range.webp" alt="Turning on Range and dragging across the chart from $100,000 to $250,000 shows the share of households in that band." width="900" height="540" loading="lazy">
-      <figcaption>Drag from $100k to $250k.</figcaption>
     </figure>
   </section>
 
   <section id="views">
     <h2>Dots, bars and 100%</h2>
     <ul>
-      <li><span class="ui">Dots</span> show individual households. <span class="ui">Bars</span> stack the number
-        of households at each income, colored by group. <span class="ui">100%</span> shows each income's mix of
-        groups as shares.</li>
-      <li><span class="ui">1K</span> <span class="ui">3K</span> <span class="ui">5K</span> set how many dots to
-        draw. A choice greys out when a smaller one already shows every household.</li>
-      <li><span class="ui">Dim others</span> keeps the same dots as you change filters and fades the ones that
-        don't match. <span class="ui">Matches only</span> draws only the households you've chosen, which shows a
-        narrow group's own spread.</li>
+      <li><span class="ui">Bars</span>: households at each income, stacked by group. <span class="ui">100%</span>:
+        the same as shares.</li>
+      <li><span class="ui">1K</span> <span class="ui">3K</span> <span class="ui">5K</span>: most dots drawn.</li>
+      <li><span class="ui">Dim others</span> fades households that don't match; <span class="ui">Matches only</span>
+        hides them.</li>
     </ul>
     <figure>
       <img src="help/views.webp" alt="California households shown as stacked bars, then as 100 percent shares, then as dots; switching between Dim others and Matches only." width="900" height="540" loading="lazy">
-      <figcaption>Bars, 100%, back to dots; Matches only and Dim others.</figcaption>
     </figure>
   </section>
 
   <section id="surveys">
     <h2>Two surveys</h2>
-    <p>Switch surveys at the top right.</p>
     <ul>
-      <li><b>ACS</b> (American Community Survey, the default): about 6 million households. Best for places,
-        narrow groups and housing costs.</li>
-      <li><b>CPS</b> (Current Population Survey): about 290,000 households, but about 50 questions on income
-        against the ACS's 8. Best for where income comes from (pensions, investments, earnings) and the official
-        national figures. It covers the US, regions, states and about 60 of the largest metro areas, with wider
-        margins of error than the ACS.</li>
+      <li><b>ACS</b> (default): about 6 million households. Best for places and narrow groups.</li>
+      <li><b>CPS</b>: about 290,000 households but far more income questions. Best for income sources. States and
+        large metros only.</li>
     </ul>
-    <p>When the same group exists in both, a line under the figures gives the other survey's median and says
-      whether the gap is bigger than chance. Gaps are normal: the surveys ask different questions.</p>
+    <p>Under the figures, the other survey's median; "differs" marks a gap bigger than chance.</p>
     <figure>
       <img src="help/surveys.webp" alt="For households living mainly on pensions, the ACS median is shown with the CPS median underneath; switching to the CPS shows the same comparison the other way round." width="900" height="540" loading="lazy">
-      <figcaption>Pension households in the ACS, then in the CPS.</figcaption>
     </figure>
   </section>
 
   <section id="numbers" class="tips">
     <h2>Reading the numbers</h2>
     <ul>
-      <li><b>Median</b> is the middle household: half earn more, half less. <b>P25 / P75</b> mark the quarter
-        points.</li>
-      <li><b>± SE</b> is the standard error: the true median is within about two of these of the figure 95% of
-        the time.</li>
-      <li>A figure with no ± comes from the explorer's sample of households (300,000 nationally, up to 300 per
-        local area) rather than the full survey, for example when two values of a filter are chosen. Treat it as
-        a rough guide.</li>
-      <li>Warnings appear under 500 and under 200 survey households; under 50 there's no figure at all.</li>
-      <li>A dash (—) beside a larger area means that combination wasn't computed.</li>
-      <li><b>Earnings</b> means wages plus self-employment and business income. <b>Capital gains aren't counted</b>
-        in either survey: the Census Bureau's definition of income leaves them out, so very high incomes look more
-        earnings-based than they are.</li>
-      <li>"Topcoded" households (a thin light outline) had an income above the survey's cap, so their true
-        income is at least what's shown.</li>
+      <li><b>Median</b>: half earn more, half less. <b>P25 / P75</b>: the quarter points.</li>
+      <li><b>±</b> is the standard error; the true figure is within two of them 95% of the time.</li>
+      <li>No ±: estimated from a sample. A rough guide.</li>
+      <li>⚠ marks small samples; under 50 households, no figure.</li>
+      <li><b>—</b>: not available for these filters.</li>
+      <li><b>Earnings</b> = wages + self-employment. Capital gains aren't counted in either survey.</li>
+      <li>Outlined dots: income above the survey's cap.</li>
     </ul>
   </section>
 </main>

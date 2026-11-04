@@ -215,6 +215,7 @@
 
   /* ---- chart about panel ---- */
   #chart-about-wrap { padding: 0 16px 6px; }
+  #chart-caption { font-size: 11px; color: var(--text-dim); margin-right: 8px; }
   #btn-about { background: none; border: none; color: var(--text-dimmer); font-size: 11px; cursor: pointer; padding: 2px 4px; border-radius: 3px; }
   #btn-about:hover { color: var(--text-dim); background: var(--surface2); }
   #chart-about { display: none; margin-top: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; font-size: 11px; color: var(--text-dim); line-height: 1.7; }
@@ -331,11 +332,11 @@
 
 <div id="header">
   <h1>American Income Explorer</h1>
-  <span class="sub" id="header-sub">Household income · Weighted</span>
-  <a id="help-link" href="help.html" target="_blank" rel="noopener" title="How to use the explorer, with short clips">Help</a>
+  <span class="sub" id="header-sub"></span>
+  <a id="help-link" href="help.html" target="_blank" rel="noopener" title="How to use it">Help</a>
   <div id="source-switch" role="group" aria-label="Data source">
-    <button data-src="acs" title="American Community Survey: states, metro and local areas, housing costs">ACS</button>
-    <button data-src="cps" title="Current Population Survey: detailed income sources, the official national income figures">CPS</button>
+    <button data-src="acs" title="American Community Survey: best for places">ACS</button>
+    <button data-src="cps" title="Current Population Survey: best for income sources">CPS</button>
   </div>
 </div>
 
@@ -441,7 +442,7 @@
           <div class="filter-btns" id="f-kids"></div>
         </div>
         <div class="filter-group">
-          <div class="stat-label">Area type: city, suburb or rural</div>
+          <div class="stat-label">Area type</div>
           <div class="filter-btns" id="f-city"></div>
         </div>
       </div>
@@ -454,7 +455,7 @@
           <input type="search" id="place-search" placeholder="State, metro area, town or neighborhood…" autocomplete="off" aria-label="Find a place">
           <div id="place-results" role="listbox" aria-label="Places"></div>
           <p class="geo-note warn" id="place-note" hidden></p>
-          <p class="geo-note">One place at a time. To compare places, open each in its own tab; the address keeps every choice.</p>
+          <p class="geo-note">To compare places, open each in a new tab.</p>
         </div>
       </div>
 
@@ -465,7 +466,7 @@
           <div class="filter-btns" id="f-work_status"></div>
         </div>
         <div class="filter-group">
-          <div class="stat-label">Earners in household</div>
+          <div class="stat-label">Earners</div>
           <div class="filter-btns" id="f-earner_count"></div>
         </div>
         <div class="filter-group">
@@ -473,12 +474,12 @@
           <div class="filter-btns" id="f-breadwinner"></div>
         </div>
         <div class="filter-group">
-          <div class="stat-label">Income mix: share from earnings</div>
+          <div class="stat-label">Share from earnings</div>
           <div class="filter-btns" id="f-passive_pct"></div>
-          <p class="geo-note">Earnings are wages plus self-employment and business income. Capital gains aren't counted: the Census Bureau's income definition leaves them out.</p>
+          <p class="geo-note">Earnings = wages + self-employment. Capital gains aren't counted.</p>
         </div>
         <div class="filter-group">
-          <div class="stat-label">Main source of unearned income</div>
+          <div class="stat-label">Main unearned income</div>
           <div class="filter-btns" id="f-passive_source"></div>
         </div>
         <div class="filter-group">
@@ -523,8 +524,8 @@
         <button class="dots-btn" data-maxdots="5000">5K</button>
       </div>
       <div id="sample-toggle">
-        <button id="btn-static" class="sample-btn active" title="Draw a fixed random sample of all households and dim the ones that don't match your filters. The same dots stay put as you change filters.">Dim others</button>
-        <button id="btn-showall" class="sample-btn" title="Draw only households that match your filters, up to the dot limit.">Matches only</button>
+        <button id="btn-static" class="sample-btn active" title="Fade households that don't match">Dim others</button>
+        <button id="btn-showall" class="sample-btn" title="Show only matching households">Matches only</button>
       </div>
       <span id="dot-count"></span>
       <button id="btn-filters">Filters</button>
@@ -532,16 +533,17 @@
     </div>
     <div id="legend"></div>
     <div id="chart-about-wrap">
-      <button id="btn-about">ⓘ About this chart</button>
+      <span id="chart-caption">Each dot is a household. Taller = more households at that income.</span>
+      <button id="btn-about">ⓘ About</button>
       <div id="chart-about">
         <dl>
-          <dt>X axis</dt><dd>Household income on a log scale. Drag to select a range.</dd>
-          <dt>Y axis</dt><dd>Frequency — taller clusters mean more households near that income. Dots are also spread apart vertically to reduce overlap, so the exact y position of each dot isn't meaningful.</dd>
-          <dt>Dot size</dt><dd>Proportional to the household's sampling weight. A larger dot represents more US households.</dd>
-          <dt>Colors</dt><dd>Set by the <em>Group</em> tab. Click a legend swatch to filter by that category. Earnings mean wages plus self-employment and business income; capital gains aren't in either survey (the Census Bureau's income definition excludes them). Topcoded incomes (dots with a thin light outline): a household member's income was above the survey's cap; see Data below.</dd>
-          <dt>Dot count / Dim others / Matches only</dt><dd><strong>1K / 3K / 5K</strong> sets the most dots drawn; a cap is greyed out when a smaller one already shows every household. <strong>Dim others</strong> draws a fixed random sample of all households and dims the ones that don't match your filters, so the same dots stay put as you click around. <strong>Matches only</strong> draws only households that match your filters, up to the cap; useful for a narrow slice, where you want to see that group's own spread.</dd>
+          <dt>Dots</dt><dd>One per surveyed household. Bigger dots stand for more households.</dd>
+          <dt>Across</dt><dd>Household income, log scale. Drag to pick a range.</dd>
+          <dt>Up and down</dt><dd>No scale: the swarm is taller where more households earn that much.</dd>
+          <dt>Colors</dt><dd>Set in the Group tab. Click a legend item to filter.</dd>
+          <dt>1K / 3K / 5K</dt><dd>Most dots drawn.</dd>
+          <dt>Dim others / Matches only</dt><dd>Fade non-matching households, or hide them.</dd>
           <dt>Data</dt><dd id="about-data">—</dd>
-          <dt>ACS or CPS</dt><dd>Two Census Bureau surveys, switchable at the top right. The <strong>ACS</strong> is about 20 times larger, so it can show states, metro areas, local areas and narrow slices reliably, and it has housing costs. The <strong>CPS</strong> asks about income in far more detail, so income sources such as pensions and investments are measured better; it is the official source for national income. When a slice exists in both, the sidebar shows the other survey's figure too.</dd>
         </dl>
       </div>
     </div>
@@ -747,10 +749,9 @@ async function init() {
 function applySourceUI() {
   const yrs = Object.values(srcInfo.years);
   document.getElementById('header-sub').textContent =
-    `${srcInfo.name} · income ${yrs[0]}–${yrs[yrs.length - 1]} in ${srcInfo.dollars} · Weighted`;
+    `${srcInfo.name} · ${yrs[0]}–${yrs[yrs.length - 1]} · ${srcInfo.dollars}`;
   document.getElementById('about-data').textContent =
-    `${srcInfo.about} The chart draws from a sample of households; the statistics in the sidebar come from all ` +
-    `${srcInfo.n_households.toLocaleString()} survey households when the view is precomputed. ${srcInfo.se} ${srcInfo.topcodes}`;
+    `${srcInfo.about} ${srcInfo.strengths} ${srcInfo.se} ${srcInfo.topcodes}`.trim();
   const link = document.getElementById('ipums-link');
   link.href = source === 'cps' ? 'https://cps.ipums.org' : 'https://usa.ipums.org';
   link.textContent = source === 'cps' ? 'IPUMS CPS' : 'IPUMS USA';
@@ -928,11 +929,11 @@ function normalizePlace() {
     const a = codebook.localAreas[p.code];
     target = a?.metro && codebook.metros[a.metro] ? { level: 'metro', code: a.metro }
            : a ? { level: 'state', code: a.state } : { level: 'us', code: 0 };
-    note = `The ${srcInfo.short} doesn't identify local areas, so this shows ${placeName(target)} instead of ${placeName(p)}.`;
+    note = `No local areas in the ${srcInfo.short}. Showing ${placeName(target)}.`;
   } else if (p.level === 'metro' && !codebook.metros[p.code]) {
     const st = metroStates(p.code)[0];
     target = st ? { level: 'state', code: st } : { level: 'us', code: 0 };
-    note = `${placeName(p)} isn't one of the metro areas the ${srcInfo.short} has enough households for, so this shows ${placeName(target)}.`;
+    note = `Too few ${srcInfo.short} households in ${placeName(p)}. Showing ${placeName(target)}.`;
   }
   selectedFips = new Set(target.level === 'state' ? [target.code] : []);
   delete filters.metro_area; delete filters.puma; delete filters.region;
@@ -979,7 +980,7 @@ function buildPlacePicker() {
     if (q.length < 2) { list.innerHTML = ''; return; }
     const hits = searchPlaces(q);
     if (!hits.length) {
-      list.innerHTML = `<div class="hint">No place matches “${q.replace(/[<>&]/g, '')}”.${source !== 'acs' ? ` The ${srcInfo.short} covers the US, regions, states and its ${Object.keys(codebook.metros).length} largest metro areas.` : ''}</div>`;
+      list.innerHTML = `<div class="hint">No place matches “${q.replace(/[<>&]/g, '')}”.${source !== 'acs' ? ` The ${srcInfo.short} has states and large metros only.` : ''}</div>`;
       return;
     }
     list.innerHTML = hits.slice(0, 40).map(it =>
@@ -1044,7 +1045,7 @@ function renderPlaceContext(stats) {
     const cell = i === 0 && stats?.source === 'precomputed' ? stats : placeCell(c, dimFilter);
     const val = cell && cell.med != null
       ? `${fmt$(cell.med)}${cell.se_med ? ` <span class="stat-se">±${fmt$(cell.se_med)}</span>` : ''}`
-      : '<span title="Not computed for this place with these filters">—</span>';
+      : '<span title="Not available for these filters">—</span>';
     const name = i === 0 ? placeName(c) : `<button data-level="${c.level}" data-code="${c.code}">${placeName(c)}</button>`;
     return `<tr class="${i === 0 ? 'here' : ''}"><td>${name}</td><td class="v">${val}</td></tr>`;
   });
@@ -1112,7 +1113,7 @@ function renderBrushInfo(transient) {
   const el = document.getElementById('brush-range-info');
   const r = transient || brushRange;
   if (!r) {
-    el.innerHTML = '<div class="no-range">Click Range, then drag on the chart to select an income band.</div>';
+    el.innerHTML = '<div class="no-range">Click Range, then drag across the chart.</div>';
     return;
   }
   if (!visibleRows || !visibleRows.length) { el.innerHTML = ''; return; }
@@ -1255,6 +1256,8 @@ function subsample(rows, limit) {
 
 function updateDotCountDisplay() {
   const el = document.getElementById('dot-count');
+  const cap = document.getElementById('chart-caption');
+  if (cap) cap.hidden = viewMode !== 'dots';
   if (!el || viewMode !== 'dots') { if (el) el.textContent = ''; return; }
   const total = visibleRows.length;
   const shown = dotData.length;
@@ -1358,7 +1361,7 @@ function renderStats(stats) {
     document.getElementById('s-med').textContent = '—';
     document.getElementById('s-mean').textContent = '—';
     document.getElementById('s-p2575').textContent = '—';
-    document.getElementById('rel-badge').innerHTML = `<span class="reliability rel-0">⚠ Too few records (n=${n}) for statistics</span>`;
+    document.getElementById('rel-badge').innerHTML = `<span class="reliability rel-0">⚠ Too few households (${n})</span>`;
     document.getElementById('n-info').textContent = '';
     renderOther(stats);
     return;
@@ -1368,14 +1371,14 @@ function renderStats(stats) {
   document.getElementById('s-med').innerHTML = `${fmt$(stats.med)}<span class="stat-se">${seStr}</span>`;
   document.getElementById('s-mean').textContent = fmt$(stats.mean);
   document.getElementById('s-p2575').textContent = `${fmt$(stats.p25)} / ${fmt$(stats.p75)}`;
-  const relMsg = rel === 1 ? '⚠ Small sample — interpret with care' :
-                 rel === 2 ? '⚠ Moderate sample — interpret with care' : '';
+  const relMsg = rel === 1 ? '⚠ Small sample' :
+                 rel === 2 ? '⚠ Modest sample' : '';
   document.getElementById('rel-badge').innerHTML = relMsg
     ? `<span class="reliability rel-${rel}">${relMsg}</span>` : '';
 
   const nRep = !stats.n_rep ? '' : stats.n_rep >= 1e6 ? ` · ~${(stats.n_rep / 1e6).toFixed(1)}M households`
-    : ` · ~${Math.round(stats.n_rep / 1e3).toLocaleString()}K households a year`;
-  document.getElementById('n-info').textContent = `${n.toLocaleString()} survey records${nRep}`;
+    : ` · ~${Math.round(stats.n_rep / 1e3).toLocaleString()}K households`;
+  document.getElementById('n-info').textContent = `${n.toLocaleString()} surveyed${nRep}`;
   renderOther(stats);
 }
 
@@ -1391,9 +1394,9 @@ function renderOther(stats) {
   let gap = '';
   if (stats.med && o.med && stats.se_med != null && o.se_med != null) {
     const z = (stats.med - o.med) / Math.hypot(stats.se_med || 0, o.se_med || 0);
-    if (Math.abs(z) > 2) gap = ` <span class="gap">· the surveys differ by ${fmt$(Math.abs(stats.med - o.med))}</span>`;
+    if (Math.abs(z) > 2) gap = ` <span class="gap">· differs</span>`;
   }
-  el.innerHTML = `${name} median: ${fmt$(o.med)}${se} (n=${o.n.toLocaleString()})${gap} <button type="button">Switch to ${name}</button>`;
+  el.innerHTML = `${name}: ${fmt$(o.med)}${se}${gap} <button type="button">Switch</button>`;
   el.querySelector('button').onclick = () => setSource(otherSrc);
 }
 
@@ -1598,15 +1601,6 @@ function renderChart() {
   )
   .select('.domain').remove();
 
-  // Y-axis frequency label
-  svgEl.append('text')
-    .attr('transform', `translate(10,${marginT + chartH / 2}) rotate(-90)`)
-    .attr('text-anchor', 'middle')
-    .attr('dominant-baseline', 'central')
-    .attr('fill', '#8892b0')
-    .attr('font-size', 10)
-    .style('letter-spacing', '0.05em')
-    .text('FREQ.');
 
   // Dots
   svgEl.append('g')
@@ -1905,7 +1899,7 @@ function _renderBreakdownRows(container, rows, n) {
         <span style="color:var(--text-dimmer);text-align:right">${r.totalW != null ? (r.totalW/1e6).toFixed(1) : '—'}</span>
       `).join('')}
     </div>
-    <div style="font-size:10px;color:var(--text-dimmer);margin-top:6px">${n.toLocaleString()} survey records · HH (M) = millions of households</div>
+    <div style="font-size:10px;color:var(--text-dimmer);margin-top:6px">HH (M) = millions of households</div>
   `;
 }
 
@@ -2027,7 +2021,7 @@ function showTooltip(event, i) {
     <div class="tt-dim">${cols.metro_area?.[i] ? label('metro_area', cols.metro_area[i]) : stateName} · ${label('city', cols.city[i])}</div>
     ${cols.puma?.[i] ? `<div class="tt-dim">${label('puma', cols.puma[i])}</div>` : ''}
     <div class="tt-dim">${label('work_status', cols.work_status[i])} · ${label('housing', cols.housing[i])}${cols.burden?.[i] < 3 ? ', ' + label('burden', cols.burden[i]) + ' of income' : ''}</div>
-    <div class="tt-dim">Weight: ${Math.round(cols.weight[i]).toLocaleString()} households · ${yr}</div>
+    <div class="tt-dim">Stands for ${Math.round(cols.weight[i]).toLocaleString()} households · ${yr}</div>
   `;
   tt.style.display = 'block';
   moveTooltip(event);

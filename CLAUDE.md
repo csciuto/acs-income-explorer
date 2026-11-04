@@ -81,3 +81,8 @@ Adding a dimension: preprocess `SHARED_DIMS`/`SOURCE_DIMS` + `LABELS` + loader c
 `.venv/bin/python tools/help_clips.py [name…]` (Playwright + Pillow: `uv pip install --python .venv/bin/python pillow`).
 Re-record a clip whenever the UI it shows changes.
 
+
+## Visible text
+
+Labels, not sentences. A note is one short line; explanations of method belong in METHODOLOGY.md, not the page.
+Survey notes shown to readers live in `NOTES` in preprocess.py (copied into codebook.json) and follow the same rule.
