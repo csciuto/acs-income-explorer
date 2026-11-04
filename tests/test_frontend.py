@@ -852,14 +852,31 @@ class TestPlace:
         page.wait_for_selector("#loading", state="hidden")
         assert page.evaluate("currentPlace()") == {"level": "metro", "code": 14460}
 
-    def test_cps_falls_back_to_the_state(self, page: Page):
-        page.goto(page.url.split("#")[0] + "#src=cps&puma=2500609")
+    def _cps(self, page: Page, hash_: str):
+        page.goto(page.url.split("#")[0] + "#src=cps&" + hash_)
         page.reload()
         page.wait_for_selector("#loading", state="hidden")
-        assert page.evaluate("currentPlace()") == {"level": "state", "code": 25}
+
+    def test_cps_local_area_falls_back_to_its_metro(self, page: Page):
+        self._cps(page, "puma=2500609")
+        assert page.evaluate("currentPlace()") == {"level": "metro", "code": 14460}
         page.locator(".tab-btn[data-tab='geo']").click()
         expect(page.locator("#place-note")).to_contain_text("doesn't identify local areas")
+        med = page.evaluate("precomputed['metro=14460'].med")
+        expect(page.locator("#s-med")).to_contain_text(f"${med:,}")
+
+    def test_cps_small_metro_falls_back_to_its_state(self, page: Page):
+        self._cps(page, "metro_area=32780")  # Medford, OR: too few CPS households
+        assert page.evaluate("currentPlace()") == {"level": "state", "code": 41}
+        page.locator(".tab-btn[data-tab='geo']").click()
+        expect(page.locator("#place-note")).to_contain_text("Medford, OR isn't one of the metro areas")
+
+    def test_cps_search_offers_large_metros_but_no_local_areas(self, page: Page):
+        self._cps(page, "")
+        page.locator(".tab-btn[data-tab='geo']").click()
         page.fill("#place-search", "boston")
+        expect(page.locator(".place-item", has_text="Boston-Cambridge")).to_contain_text("Metro area")
+        page.fill("#place-search", "malden")
         expect(page.locator("#place-results")).to_contain_text("No place matches")
 
     def test_area_type_is_a_household_filter(self, page: Page):
@@ -922,7 +939,10 @@ class TestSources:
         other = page.evaluate("otherPrecomputed['national']")
         expect(page.locator("#other-src")).to_contain_text(f"CPS median: ${other['med']:,}")
         pick_place(page, "boston", "Boston-Cambridge")
-        expect(page.locator("#other-src")).to_have_text("")   # the CPS has no metro statistics
+        other = page.evaluate("otherPrecomputed['metro=14460']")
+        expect(page.locator("#other-src")).to_contain_text(f"CPS median: ${other['med']:,}")
+        pick_place(page, "malden", "Malden & Medford")
+        expect(page.locator("#other-src")).to_have_text("")   # the CPS has no local areas
 
     def test_comparison_switch_button(self, page: Page):
         page.wait_for_function("otherPrecomputed !== null")

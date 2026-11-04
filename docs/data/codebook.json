@@ -18407,7 +18407,8 @@
     "has_roommate",
     "hh_size",
     "city",
-    "multi_job_proxy"
+    "multi_job_proxy",
+    "metro_area"
    ],
    "dims": {
     "age": "age_bucket",
@@ -18428,7 +18429,245 @@
     "year": "year"
    },
    "n_households": 290850,
-   "dollars": "2024 dollars"
+   "dollars": "2024 dollars",
+   "metros": {
+    "10740": {
+     "name": "Albuquerque, NM",
+     "n": 2673
+    },
+    "12060": {
+     "name": "Atlanta-Sandy Springs-Roswell, GA",
+     "n": 3495
+    },
+    "12420": {
+     "name": "Austin-Round Rock, TX",
+     "n": 1317
+    },
+    "12580": {
+     "name": "Baltimore-Columbia-Towson, MD",
+     "n": 1540
+    },
+    "12940": {
+     "name": "Baton Rouge, LA",
+     "n": 1234
+    },
+    "13820": {
+     "name": "Birmingham-Hoover, AL",
+     "n": 1452
+    },
+    "14260": {
+     "name": "Boise City, ID",
+     "n": 2072
+    },
+    "14460": {
+     "name": "Boston-Cambridge-Newton, MA-NH",
+     "n": 5022
+    },
+    "15540": {
+     "name": "Burlington-South Burlington, VT",
+     "n": 1316
+    },
+    "16740": {
+     "name": "Charlotte-Concord-Gastonia, NC-SC",
+     "n": 1882
+    },
+    "16980": {
+     "name": "Chicago-Naperville-Elgin, IL-IN-WI",
+     "n": 5804
+    },
+    "17140": {
+     "name": "Cincinnati, OH-KY-IN",
+     "n": 1115
+    },
+    "17460": {
+     "name": "Cleveland-Elyria, OH",
+     "n": 1407
+    },
+    "18140": {
+     "name": "Columbus, OH",
+     "n": 1129
+    },
+    "19100": {
+     "name": "Dallas-Fort Worth-Arlington, TX",
+     "n": 4554
+    },
+    "19740": {
+     "name": "Denver-Aurora-Lakewood, CO",
+     "n": 2092
+    },
+    "19820": {
+     "name": "Detroit-Warren-Dearborn, MI",
+     "n": 2879
+    },
+    "25540": {
+     "name": "Hartford-West Hartford-East Hartford, CT",
+     "n": 1008
+    },
+    "26420": {
+     "name": "Houston-The Woodlands-Sugar Land, TX",
+     "n": 4331
+    },
+    "26900": {
+     "name": "Indianapolis-Carmel-Anderson, IN",
+     "n": 1297
+    },
+    "27140": {
+     "name": "Jackson, MS",
+     "n": 1057
+    },
+    "28140": {
+     "name": "Kansas City, MO-KS",
+     "n": 1825
+    },
+    "29820": {
+     "name": "Las Vegas-Henderson-Paradise, NV",
+     "n": 3004
+    },
+    "30780": {
+     "name": "Little Rock-North Little Rock-Conway, AR",
+     "n": 1355
+    },
+    "31080": {
+     "name": "Los Angeles-Long Beach-Anaheim, CA",
+     "n": 9147
+    },
+    "31700": {
+     "name": "Manchester-Nashua, NH",
+     "n": 1032
+    },
+    "32820": {
+     "name": "Memphis, TN-MS-AR",
+     "n": 1290
+    },
+    "33100": {
+     "name": "Miami-Fort Lauderdale-West Palm Beach, FL",
+     "n": 4308
+    },
+    "33340": {
+     "name": "Milwaukee-Waukesha-West Allis, WI",
+     "n": 1104
+    },
+    "33460": {
+     "name": "Minneapolis-St. Paul-Bloomington, MN-WI",
+     "n": 2445
+    },
+    "34980": {
+     "name": "Nashville-Davidson--Murfreesboro--Franklin, TN",
+     "n": 1418
+    },
+    "35380": {
+     "name": "New Orleans-Metairie, LA",
+     "n": 1683
+    },
+    "35620": {
+     "name": "New York-Newark-Jersey City, NY-NJ-PA",
+     "n": 11639
+    },
+    "36260": {
+     "name": "Ogden-Clearfield, UT",
+     "n": 1036
+    },
+    "36420": {
+     "name": "Oklahoma City, OK",
+     "n": 1710
+    },
+    "36540": {
+     "name": "Omaha-Council Bluffs, NE-IA",
+     "n": 1646
+    },
+    "36740": {
+     "name": "Orlando-Kissimmee-Sanford, FL",
+     "n": 1884
+    },
+    "37980": {
+     "name": "Philadelphia-Camden-Wilmington, PA-NJ-DE-MD",
+     "n": 4749
+    },
+    "38060": {
+     "name": "Phoenix-Mesa-Scottsdale, AZ",
+     "n": 3148
+    },
+    "38300": {
+     "name": "Pittsburgh, PA",
+     "n": 1561
+    },
+    "38900": {
+     "name": "Portland-Vancouver-Hillsboro, OR-WA",
+     "n": 2535
+    },
+    "39300": {
+     "name": "Providence-Warwick, RI-MA",
+     "n": 3029
+    },
+    "39580": {
+     "name": "Raleigh, NC",
+     "n": 1188
+    },
+    "40060": {
+     "name": "Richmond, VA",
+     "n": 1000
+    },
+    "40140": {
+     "name": "Riverside-San Bernardino-Ontario, CA",
+     "n": 3002
+    },
+    "40900": {
+     "name": "Sacramento--Roseville--Arden-Arcade, CA",
+     "n": 1476
+    },
+    "41180": {
+     "name": "St. Louis, MO-IL",
+     "n": 2046
+    },
+    "41540": {
+     "name": "Salisbury, MD-DE",
+     "n": 1048
+    },
+    "41620": {
+     "name": "Salt Lake City, UT",
+     "n": 1608
+    },
+    "41700": {
+     "name": "San Antonio-New Braunfels, TX",
+     "n": 1820
+    },
+    "41740": {
+     "name": "San Diego-Carlsbad, CA",
+     "n": 2179
+    },
+    "41860": {
+     "name": "San Francisco-Oakland-Hayward, CA",
+     "n": 3183
+    },
+    "41940": {
+     "name": "San Jose-Sunnyvale-Santa Clara, CA",
+     "n": 1428
+    },
+    "42660": {
+     "name": "Seattle-Tacoma-Bellevue, WA",
+     "n": 2908
+    },
+    "45300": {
+     "name": "Tampa-St. Petersburg-Clearwater, FL",
+     "n": 2217
+    },
+    "46140": {
+     "name": "Tulsa, OK",
+     "n": 1135
+    },
+    "46520": {
+     "name": "Urban Honolulu, HI",
+     "n": 3352
+    },
+    "47260": {
+     "name": "Virginia Beach-Norfolk-Newport News, VA-NC",
+     "n": 1034
+    },
+    "47900": {
+     "name": "Washington-Arlington-Alexandria, DC-VA-MD-WV",
+     "n": 8661
+    }
+   }
   }
  },
  "labels": {

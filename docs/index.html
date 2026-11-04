@@ -687,7 +687,10 @@ async function init() {
   srcInfo = codebook.sources[source];
   codebook.year_display = srcInfo.years;
   codebook.labels.year = { ...srcInfo.years };
-  codebook.metros = codebook.sources.acs?.metros || {};
+  // Metro areas this survey can show (the CPS names only larger ones); names from either survey for notes.
+  codebook.metros = srcInfo.metros || {};
+  codebook.metroNames = Object.fromEntries(['acs', 'cps'].flatMap(k =>
+    Object.entries(codebook.sources[k]?.metros || {}).map(([c, m]) => [c, m.name])));
   codebook.labels.metro_area = Object.fromEntries(
     Object.entries(codebook.metros).map(([k, m]) => [k, m.name])
   );
@@ -848,7 +851,7 @@ function placeName(p) {
   if (p.level === 'us') return 'United States';
   if (p.level === 'region') return codebook.labels.region?.[p.code] ?? `Region ${p.code}`;
   if (p.level === 'state') return codebook.states?.[String(p.code)]?.name ?? `State ${p.code}`;
-  if (p.level === 'metro') return codebook.metros?.[p.code]?.name ?? `Metro area ${p.code}`;
+  if (p.level === 'metro') return codebook.metroNames?.[p.code] ?? `Metro area ${p.code}`;
   const a = codebook.localAreas?.[p.code];
   return a ? localName(a)[0] : `Local area ${p.code}`;
 }
@@ -919,10 +922,15 @@ async function setPlace(level, code = 0, note = '') {
 function normalizePlace() {
   const p = currentPlace();
   let target = p, note = '';
-  if (source !== 'acs' && (p.level === 'puma' || p.level === 'metro')) {
-    const st = p.level === 'puma' ? codebook.localAreas[p.code]?.state : metroStates(p.code)[0];
+  if (source !== 'acs' && p.level === 'puma') {
+    const a = codebook.localAreas[p.code];
+    target = a?.metro && codebook.metros[a.metro] ? { level: 'metro', code: a.metro }
+           : a ? { level: 'state', code: a.state } : { level: 'us', code: 0 };
+    note = `The ${srcInfo.short} doesn't identify local areas, so this shows ${placeName(target)} instead of ${placeName(p)}.`;
+  } else if (p.level === 'metro' && !codebook.metros[p.code]) {
+    const st = metroStates(p.code)[0];
     target = st ? { level: 'state', code: st } : { level: 'us', code: 0 };
-    note = `The ${srcInfo.short} doesn't identify ${p.level === 'puma' ? 'local' : 'metro'} areas, so this shows ${placeName(target)} instead of ${placeName(p)}.`;
+    note = `${placeName(p)} isn't one of the metro areas the ${srcInfo.short} has enough households for, so this shows ${placeName(target)}.`;
   }
   selectedFips = new Set(target.level === 'state' ? [target.code] : []);
   delete filters.metro_area; delete filters.puma; delete filters.region;
@@ -938,8 +946,8 @@ function placeIndex() {
   const items = [{ level: 'us', code: 0, name: 'United States', where: '' }];
   for (const [k, v] of Object.entries(codebook.labels.region || {})) items.push({ level: 'region', code: +k, name: v, where: '' });
   for (const [k, v] of Object.entries(codebook.states || {})) items.push({ level: 'state', code: +k, name: v.name, where: v.abbr });
+  for (const [k, m] of Object.entries(codebook.metros || {})) items.push({ level: 'metro', code: +k, name: m.name, where: '' });
   if (source === 'acs') {
-    for (const [k, m] of Object.entries(codebook.metros || {})) items.push({ level: 'metro', code: +k, name: m.name, where: '' });
     for (const [k, a] of Object.entries(codebook.localAreas || {})) {
       const [name, county] = localName(a);
       const metro = a.metro && codebook.metros?.[a.metro] ? codebook.metros[a.metro].name : '';
@@ -969,7 +977,7 @@ function buildPlacePicker() {
     if (q.length < 2) { list.innerHTML = ''; return; }
     const hits = searchPlaces(q);
     if (!hits.length) {
-      list.innerHTML = `<div class="hint">No place matches “${q.replace(/[<>&]/g, '')}”.${source !== 'acs' ? ` The ${srcInfo.short} covers the US, regions and states.` : ''}</div>`;
+      list.innerHTML = `<div class="hint">No place matches “${q.replace(/[<>&]/g, '')}”.${source !== 'acs' ? ` The ${srcInfo.short} covers the US, regions, states and its ${Object.keys(codebook.metros).length} largest metro areas.` : ''}</div>`;
       return;
     }
     list.innerHTML = hits.slice(0, 40).map(it =>
@@ -1297,7 +1305,7 @@ function getStats() {
   const dimFilter = householdFilterKey();
   let otherCell = null;
   if (dimFilter) {
-    otherCell = (p.level === 'metro' || p.level === 'puma') ? null : placeCell(p, dimFilter, otherPrecomputed, {});
+    otherCell = p.level === 'puma' ? null : placeCell(p, dimFilter, otherPrecomputed, {});
     const cell = placeCell(p, dimFilter);
     if (cell) return { ...cell, source: 'precomputed', other: otherCell };
   }

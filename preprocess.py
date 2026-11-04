@@ -29,6 +29,7 @@ from pipeline import common as C
 
 SAMPLE = {"acs": 300_000, "cps": 300_000}
 LOCAL_SAMPLE_PER_AREA = 300
+CPS_METRO_MIN_N = 1000  # CPS metros listed on the page need this many survey households
 
 SHARED_COLUMNS = ["id", "inc", "wage_inc", "passive_inc", "weight", "state", "year", "region", "age_bucket", "sex",
                   "marst", "educ", "metro", "kids", "youngest_child", "n_children", "work_status", "hours_category",
@@ -186,6 +187,12 @@ def run_source(name, dat, ddi, out, args, codebook):
         "n_households": meta["n_households"],
         "dollars": meta["dollars"],
     }
+    if name == "cps" and (d["metro_area"] > 0).any():
+        # Only metros with enough households to say something are listed; names from the ACS's 2013 delineation
+        names = json.loads((Path(__file__).parent / "geo" / "metro_names_2013.json").read_text())
+        counts = d.groupby("metro_area").size()
+        entry["metros"] = {str(int(c)): {"name": names[str(int(c))], "n": int(n)} for c, n in counts.items()
+                           if c != 0 and n >= CPS_METRO_MIN_N and str(int(c)) in names}
     if name == "acs":
         met = spec["MET2013"]["labels"]
         counts = d.groupby("metro_area").size()

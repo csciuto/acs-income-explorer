@@ -10,7 +10,7 @@ SOURCE = "cps"
 N_REP = 160
 REP_PREFIX = "REPWT"
 HOUSEHOLD_VARS = ["YEAR", "SERIAL", "ASECWTH", "CPI99", "STATEFIP", "METRO", "HHINCOME", "OWNERSHP"]
-OPTIONAL_VARS = ["ASECFLAG", "REGION"]
+OPTIONAL_VARS = ["ASECFLAG", "REGION", "METFIPS"]
 PERSON_VARS = ["PERNUM", "RELATE", "AGE", "SEX", "MARST", "RACE", "HISPAN", "EDUC", "EMPSTAT", "CLASSWKR",
                "WKSWORK2", "UHRSWORKLY", "UHRSWORKT", "UHRSWORK1", "NCHILD", "YNGCH", "SPMMORT",
                "INCWAGE", "INCBUS", "INCSS", "INCWELFR", "INCRETIR", "INCINT", "INCDIVID", "INCRENT"]
@@ -25,7 +25,7 @@ PENSION_INCOME = ["INCPEN1", "INCPEN2", "INCRANN"]
 REL_PARTNER = (1114, 1116, 1117)    # unmarried partner (1114 before the 2019 redesign, 1116/1117 after)
 REL_ROOMMATE = (1113, 1115, 1241)   # partner/roommate, housemate/roommate, roomer/boarder/lodger
 
-EXTRA_COLUMNS = ["city", "multi_job_proxy"]
+EXTRA_COLUMNS = ["city", "multi_job_proxy", "metro_area"]
 
 
 def check(spec):
@@ -85,6 +85,13 @@ def build(p, spec, nominal=False):
     mt = h["METRO"]   # 1 not in metro, 2 central city, 3 outside central city, 4 central city status unknown
     d["metro"] = np.where(mt == 1, 0, np.where(np.isin(mt, [2, 3, 4]), 1, 2)).astype(np.uint8)
     d["city"] = np.select([mt == 2, mt == 3, mt == 1], [0, 1, 2], 3).astype(np.uint8)
+    # Metro area (CBSA code, same codes as the ACS's MET2013); 99998/99999 = not identified or missing -> 0.
+    # The Census Bureau names only larger metros in the public CPS files.
+    if "METFIPS" in p:
+        mf = H.head(p["METFIPS"])
+        d["metro_area"] = np.where(mf < 99998, mf, 0).astype(np.uint32)
+    else:
+        d["metro_area"] = np.zeros(len(d), np.uint32)
 
     d["kids"], d["youngest_child"], d["n_children"] = C.kids(h["NCHILD"], h["YNGCH"])
 

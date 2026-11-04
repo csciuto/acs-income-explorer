@@ -11,7 +11,7 @@ How `preprocess.py` turns two IPUMS extracts into the explorer's data. What to r
 | Income period | 12 months before each interview, interviews all year | previous calendar year (2020–2024) |
 | Size | about 6 million households | about 290,000 households |
 | Income questions | 8 | about 50 |
-| Geography | states, 260+ metro areas, 2,462 local areas (PUMAs) | states |
+| Geography | states, 260+ metro areas, 2,462 local areas (PUMAs) | states; the 59 metro areas with 1,000+ survey households (METFIPS; the Census Bureau names only larger metros, and about a quarter of people live outside an identified one) |
 | Replicate weights | 80, successive difference replication | 160, Fay's balanced repeated replication |
 | Best for | places and narrow slices, housing costs | income sources, the official national figure |
 
@@ -85,7 +85,7 @@ Precomputed cells use every household.
 |---|---|
 | `national` | overall, each dimension value, each pair of values |
 | `state=FIPS` | overall and each dimension value |
-| `metro=CBSA` (ACS) | overall; each dimension value for metros with 2,000+ households |
+| `metro=CBSA` | overall; each dimension value for metros with 2,000+ households (CPS: listed only with 1,000+) |
 | `puma=CODE` (ACS, one file per state) | overall and each value of age, work, housing, cost burden, kids, education, race, earners, income mix |
 
 The page also shows the other survey's median whenever the same key exists in both.

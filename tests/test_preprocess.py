@@ -29,8 +29,8 @@ ACS_LAYOUT = [("YEAR", 4, 0), ("SERIAL", 8, 0), ("HHWT", 10, 2), ("GQ", 1, 0), (
               ("INCOTHER", 5, 0)]
 ACS_MULTI = ACS_LAYOUT[:1] + [("MULTYEAR", 4, 0), ("ADJUST", 7, 6)] + ACS_LAYOUT[1:]
 CPS_LAYOUT = [("YEAR", 4, 0), ("SERIAL", 6, 0), ("ASECFLAG", 1, 0), ("ASECWTH", 11, 4), ("CPI99", 4, 3),
-              ("STATEFIP", 2, 0), ("METRO", 1, 0), ("HHINCOME", 8, 0), ("OWNERSHP", 2, 0), ("PERNUM", 2, 0),
-              ("RELATE", 4, 0), ("AGE", 2, 0), ("SEX", 1, 0), ("MARST", 1, 0), ("RACE", 3, 0), ("HISPAN", 3, 0),
+              ("STATEFIP", 2, 0), ("METRO", 1, 0), ("METFIPS", 5, 0), ("HHINCOME", 8, 0), ("OWNERSHP", 2, 0),
+              ("PERNUM", 2, 0), ("RELATE", 4, 0), ("AGE", 2, 0), ("SEX", 1, 0), ("MARST", 1, 0), ("RACE", 3, 0), ("HISPAN", 3, 0),
               ("EDUC", 3, 0), ("EMPSTAT", 2, 0), ("CLASSWKR", 2, 0), ("WKSWORK2", 1, 0), ("UHRSWORKLY", 3, 0),
               ("UHRSWORKT", 3, 0), ("UHRSWORK1", 3, 0), ("NCHILD", 1, 0), ("YNGCH", 2, 0), ("SPMMORT", 1, 0),
               ("INCWAGE", 8, 0), ("INCBUS", 8, 0), ("INCFARM", 8, 0), ("INCSS", 6, 0), ("INCSSI", 6, 0),
@@ -75,7 +75,7 @@ CPS_P = dict(RELATE=101, AGE=40, SEX=1, MARST=6, RACE=100, HISPAN=0, EDUC=111, E
              UHRSWORKLY=40, UHRSWORKT=40, UHRSWORK1=40, NCHILD=0, YNGCH=99, SPMMORT=3, INCWAGE=0, INCBUS=0, INCFARM=0,
              INCSS=0, INCSSI=0, INCWELFR=0, INCRETIR=0, INCPEN1=0, INCPEN2=0, INCRANN=0, INCSURV=0, INCDISAB=0,
              INCINT=0, INCDIVID=0, INCRENT=0)
-CPS_H = dict(YEAR=2025, ASECFLAG=1, ASECWTH=1000, STATEFIP=25, METRO=2, HHINCOME=0, OWNERSHP=22)
+CPS_H = dict(YEAR=2025, ASECFLAG=1, ASECWTH=1000, STATEFIP=25, METRO=2, METFIPS=14460, HHINCOME=0, OWNERSHP=22)
 
 
 def records(households, full, n_rep, hdef, pdef, wt_name, cpi_year):
@@ -306,6 +306,13 @@ def test_cps_multiple_jobs_and_city(make):
                               ({"HHINCOME": 1, "METRO": 2}, [{"UHRSWORKT": 80, "UHRSWORK1": 40}])])
     assert d["multi_job_proxy"].tolist() == [1, 0, 3]
     assert d["city"].tolist() == [1, 2, 0]
+
+
+def test_cps_metro_area_from_metfips(make):
+    d, *_ = run(make, "cps", [({"HHINCOME": 1, "METFIPS": 14460}, [{}]),
+                              ({"HHINCOME": 1, "METFIPS": 99998, "METRO": 1}, [{}]),   # not identified
+                              ({"HHINCOME": 1, "METFIPS": 35620}, [{}])])
+    assert d["metro_area"].tolist() == [14460, 0, 35620]
 
 
 def test_cps_rejects_non_asec_records(make):

@@ -50,11 +50,11 @@ The ACS 5-year file is ~16M person records; peak memory is high, so close other 
 Shared: `id inc wage_inc passive_inc weight state year region age_bucket sex marst educ metro kids youngest_child
 n_children work_status hours_category weeks_worked earner_count breadwinner passive_pct passive_source
 race_ethnicity housing topcoded has_roommate hh_size`. ACS adds `city metro_area puma burden`; CPS adds
-`city multi_job_proxy`. `year` indexes `codebook.sources[src].years` (both 2020–2024; CPS by income year).
+`city multi_job_proxy metro_area`. `year` indexes `codebook.sources[src].years` (both 2020–2024; CPS by income year).
 
 ## Stats keys
 
-`scope|dim=val|…`, dims sorted. Scopes `national`, `state=FIPS`, `metro=CBSA` (ACS), `puma=CODE` (ACS, in
+`scope|dim=val|…`, dims sorted. Scopes `national`, `state=FIPS`, `metro=CBSA` (both; CPS names from `geo/metro_names_2013.json`), `puma=CODE` (ACS, in
 `acs/local/<state>.json`). Dims: `age sex marst educ region city work kids race house earners bread ppct psrc year`
 plus `burden` (ACS) and `mjob` (CPS). Cells `{n, n_rep, med, mean, p25, p75, rel, se_med, …}`; under 50 absent.
 
@@ -66,8 +66,8 @@ demand). `currentCols()` returns the local table when a local area is selected. 
 `state=` (one state) > `puma=` > `metro=` > `national`, builds the key via `DIM_TO_KEY`, falls back to live stats.
 UI elements for columns a source lacks are removed at load. Place tab: one place at a time (US, region, state, metro, local area), stored
 in the old selections so links work (`states=`, `region=`, `metro_area=`, `puma=`). `currentPlace()`, `setPlace()`,
-`normalizePlace()` (old multi-place links keep the most specific; the CPS falls back from metro/local area to the
-state with `placeNote`), `placeChain()` (place -> larger areas) and `placeCell()` (precomputed cell for a place and
+`normalizePlace()` (old multi-place links keep the most specific; the CPS falls back from a local area to its metro
+or state, and from a metro it doesn't list to the state, with `placeNote`), `placeChain()` (place -> larger areas) and `placeCell()` (precomputed cell for a place and
 single-valued household filters) drive the stats, breadcrumbs and the larger-area rows. Area type (`city`) is a
 household filter in the Demo tab. Switching source rewrites the hash with
 `history.replaceState` and reloads (a hash assignment would fire popstate and drop `src`).

@@ -52,7 +52,7 @@ automatically; keep them. Add:
 |---|---|
 | REPWT (household replicate weights, 160) | standard errors; pick *household* with ASECWTH |
 | CPI99 | constant dollars |
-| REGION, STATEFIP, METRO | geography and principal city vs suburb |
+| REGION, STATEFIP, METRO, METFIPS | region, state, principal city vs suburb, metro area |
 | HHINCOME | household income |
 | OWNERSHP | owner vs renter |
 | SPMMORT | owner with or without a mortgage |
