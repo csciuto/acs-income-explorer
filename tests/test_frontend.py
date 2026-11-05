@@ -704,6 +704,9 @@ class TestMobile:
         count = mobile_page.locator("#chart-svg circle").count()
         assert count <= 800, f"Expected ≤800 dots on mobile, got {count}"
 
+    def test_filters_button_names_stats_too(self, mobile_page: Page):
+        expect(mobile_page.locator("#btn-filters")).to_have_text("Stats & filters")
+
     def test_dot_tap_opens_pin_sheet(self, mobile_page: Page):
         mobile_page.locator("#chart-svg circle").first.tap(force=True)
         sheet = mobile_page.locator("#pin-sheet")
