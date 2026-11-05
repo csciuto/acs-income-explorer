@@ -935,6 +935,16 @@ class TestHelp:
             assert page.locator(a.get_attribute("href")).count() == 1
         assert errors == []
 
+    def test_phones_get_phone_clips(self, mobile_page: Page, static_server: str):
+        mobile_page.goto(static_server + "/help.html")
+        imgs = mobile_page.locator("main img")
+        for i in range(imgs.count()):
+            img = imgs.nth(i)
+            img.scroll_into_view_if_needed()
+            mobile_page.wait_for_function("el => el.complete && el.naturalWidth > 0", arg=img.element_handle())
+            assert "/help/m-" in img.evaluate("el => el.currentSrc")
+        assert mobile_page.evaluate("document.documentElement.scrollWidth") <= 390
+
 
 class TestSources:
     """ACS / CPS switch, source-specific filters, the comparison line, local areas."""

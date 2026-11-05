@@ -44,6 +44,7 @@
   b { font-weight: 600; }
   .ui { font-size: 13px; background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; padding: 0 5px; white-space: nowrap; }
   figure { margin: 0; display: grid; gap: 6px; }
+  figure picture { display: block; }
   figure img { width: 100%; max-width: 900px; height: auto; display: block; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
   figcaption { font-size: 12px; color: var(--text-dimmer); }
   .tips { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px 18px; display: grid; gap: 8px; max-width: 76ch; }
@@ -77,24 +78,33 @@
     <h2>Reading the chart</h2>
     <p>Income runs left to right on a <b>log scale</b>: $10k to $100k takes the same space as $100k to $1M. Up and
       down has no scale; the swarm is just taller where more households earn that much. Bigger dots stand for more
-      households. Point at one for details; click it to pin the full record. In <span class="ui">Dim others</span>
+      households. Point at (or tap) one for details; click or tap to pin its full record. In <span class="ui">Dim others</span>
       a pinned household stays put as you change filters.</p>
     <p>The <span class="ui">Group</span> tab sets the colors. Click a legend item to keep just that group.</p>
     <figure>
-      <img src="help/chart.webp" alt="Pointing at three households on the chart shows each one's details; choosing Age in the Group tab recolors the dots by age." width="900" height="540" loading="lazy">
+      <picture>
+        <source media="(max-width: 600px)" srcset="help/m-chart.webp" width="468" height="864">
+        <img src="help/chart.webp" alt="Pointing at three households on the chart shows each one's details; choosing Age in the Group tab recolors the dots by age." width="900" height="540" loading="lazy">
+      </picture>
     </figure>
     <figure>
-      <img src="help/pin.webp" alt="Clicking a dot opens its full record in the Household tab. Choosing a different age group dims the dot and the tab says Filtered out by Age; choosing its own age group says Matches." width="900" height="540" loading="lazy">
+      <picture>
+        <source media="(max-width: 600px)" srcset="help/m-pin.webp" width="468" height="864">
+        <img src="help/pin.webp" alt="Clicking a dot opens its full record in the Household tab. Choosing a different age group dims the dot and the tab says Filtered out by Age; choosing its own age group says Matches." width="900" height="540" loading="lazy">
+      </picture>
     </figure>
   </section>
 
   <section id="filters">
     <h2>Choosing households</h2>
     <p>Filters live in the <span class="ui">Demo</span>, <span class="ui">Econ</span> and
-      <span class="ui">Survey</span> tabs. Each choice becomes a chip above the chart; click it to remove it. Two
+      <span class="ui">Survey</span> tabs (on a phone, under <span class="ui">Stats &amp; filters</span>). Each choice becomes a chip above the chart; click it to remove it. Two
       values of one filter (say, 55–64 and 65+) include both.</p>
     <figure>
-      <img src="help/filters.webp" alt="Choosing Retired in the Econ tab and 65 and over in the Demo tab adds two chips and updates the median; clicking a chip removes it." width="900" height="540" loading="lazy">
+      <picture>
+        <source media="(max-width: 600px)" srcset="help/m-filters.webp" width="468" height="864">
+        <img src="help/filters.webp" alt="Choosing Retired in the Econ tab and 65 and over in the Demo tab adds two chips and updates the median; clicking a chip removes it." width="900" height="540" loading="lazy">
+      </picture>
     </figure>
   </section>
 
@@ -105,7 +115,10 @@
     <p>One place at a time. To compare, open another tab; the address keeps every choice, so views can be
       bookmarked and shared.</p>
     <figure>
-      <img src="help/places.webp" alt="Typing medford in the Place tab lists matching places; choosing Malden and Medford shows its median beside the Boston metro, Massachusetts and the United States; clicking Massachusetts moves up to the state." width="900" height="540" loading="lazy">
+      <picture>
+        <source media="(max-width: 600px)" srcset="help/m-places.webp" width="468" height="864">
+        <img src="help/places.webp" alt="Typing medford in the Place tab lists matching places; choosing Malden and Medford shows its median beside the Boston metro, Massachusetts and the United States; clicking Massachusetts moves up to the state." width="900" height="540" loading="lazy">
+      </picture>
     </figure>
   </section>
 
@@ -114,7 +127,10 @@
     <p>Click <span class="ui">Range</span> and drag across the chart. The <span class="ui">Range</span> panel shows
       that band's share of households and its median.</p>
     <figure>
-      <img src="help/range.webp" alt="Turning on Range and dragging across the chart from $100,000 to $250,000 shows the share of households in that band." width="900" height="540" loading="lazy">
+      <picture>
+        <source media="(max-width: 600px)" srcset="help/m-range.webp" width="468" height="864">
+        <img src="help/range.webp" alt="Turning on Range and dragging across the chart from $100,000 to $250,000 shows the share of households in that band." width="900" height="540" loading="lazy">
+      </picture>
     </figure>
   </section>
 
@@ -128,7 +144,10 @@
         hides them.</li>
     </ul>
     <figure>
-      <img src="help/views.webp" alt="California households shown as stacked bars, then as 100 percent shares, then as dots; switching between Dim others and Matches only." width="900" height="540" loading="lazy">
+      <picture>
+        <source media="(max-width: 600px)" srcset="help/m-views.webp" width="468" height="864">
+        <img src="help/views.webp" alt="California households shown as stacked bars, then as 100 percent shares, then as dots; switching between Dim others and Matches only." width="900" height="540" loading="lazy">
+      </picture>
     </figure>
   </section>
 
@@ -141,7 +160,10 @@
     </ul>
     <p>Under the figures, the other survey's median; "differs" marks a gap bigger than chance.</p>
     <figure>
-      <img src="help/surveys.webp" alt="For households living mainly on pensions, the ACS median is shown with the CPS median underneath; switching to the CPS shows the same comparison the other way round." width="900" height="540" loading="lazy">
+      <picture>
+        <source media="(max-width: 600px)" srcset="help/m-surveys.webp" width="468" height="864">
+        <img src="help/surveys.webp" alt="For households living mainly on pensions, the ACS median is shown with the CPS median underneath; switching to the CPS shows the same comparison the other way round." width="900" height="540" loading="lazy">
+      </picture>
     </figure>
   </section>
 

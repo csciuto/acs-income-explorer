@@ -3,6 +3,7 @@
 
     .venv/bin/python tools/help_clips.py            # all clips
     .venv/bin/python tools/help_clips.py places     # just one
+    .venv/bin/python tools/help_clips.py m-places   # its phone version (m- clips: portrait, taps instead of hovers)
 
 Serves docs/ locally, drives the explorer with Playwright (a drawn cursor shows where the "user" points),
 captures a frame per step and writes docs/help/<name>.webp. Needs Pillow (`uv pip install pillow`).
@@ -24,6 +25,8 @@ OUT = DOCS / "help"
 PORT = 8099
 VIEW = {"width": 1200, "height": 720}
 SCALE = 0.75  # output width 900px
+PHONE = {"width": 390, "height": 720}
+PHONE_SCALE = 1.2  # recorded at 2x, written 468px wide: sharp at phone width
 
 CURSOR_JS = """
 (() => {
@@ -42,17 +45,25 @@ CURSOR_JS = """
 })();
 """
 
+# On phones: a fingertip instead of an arrow
+FINGER_JS = CURSOR_JS.replace(
+    '<svg width="22" height="22" viewBox="0 0 22 22"><path d="M3 2 L3 18 L7.5 14 L10.5 20.5 L13 19.4 L10 13 L16 13 Z" fill="#fff" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/></svg>',
+    '<div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.45);border:2px solid rgba(255,255,255,0.85)"></div>',
+).replace("${e.clientX - 3}px, ${e.clientY - 2}px", "${e.clientX - 15}px, ${e.clientY - 15}px")
+
 
 class Clip:
-    def __init__(self, page):
+    def __init__(self, page, view=VIEW, scale=SCALE):
         self.page = page
         self.frames = []
-        self.pos = (VIEW["width"] / 2, VIEW["height"] / 2)
+        self.scale = scale
+        self.pos = (view["width"] / 2, view["height"] / 2)
 
     def snap(self, ms=70):
         png = self.page.screenshot(type="png")
         im = Image.open(io.BytesIO(png)).convert("RGB")
-        im = im.resize((int(im.width * SCALE), int(im.height * SCALE)), Image.LANCZOS)
+        im = im.resize((int(im.width * self.scale / 2 if self.scale > 1 else im.width * self.scale),
+                        int(im.height * self.scale / 2 if self.scale > 1 else im.height * self.scale)), Image.LANCZOS)
         self.frames.append((im, ms))
 
     def hold(self, ms):
@@ -66,6 +77,7 @@ class Clip:
         self.pos = (x, y)
 
     def to(self, locator, steps=10, dx=0.5, dy=0.5):
+        locator.scroll_into_view_if_needed()
         box = locator.bounding_box()
         self.move(box["x"] + box["width"] * dx, box["y"] + box["height"] * dy, steps)
 
@@ -110,17 +122,32 @@ def open_app(page, hash_=""):
     page.goto(f"http://localhost:{PORT}/{hash_}")
     page.wait_for_selector("#loading", state="hidden", timeout=90000)
     page.wait_for_timeout(600)
-    page.evaluate(CURSOR_JS)
+    page.evaluate(FINGER_JS if page.viewport_size["width"] < 768 else CURSOR_JS)
+
+
+def free_dot(page, fx=0.55, fy=0.45):
+    """Centre of a dot near (fx, fy) of the chart that no other dot covers, and its record's age group."""
+    return page.evaluate("""([fx, fy]) => {
+      const s = document.getElementById('chart-svg').getBoundingClientRect();
+      const d = b => Math.abs(b.x - s.x - s.width * fx) + Math.abs(b.y - s.y - s.height * fy);
+      const cs = [...document.querySelectorAll('#chart-svg circle')].map(c => ({c, b: c.getBoundingClientRect()}))
+        .filter(({c, b}) => b.width >= 8 && c.getAttribute('pointer-events') === 'all'
+                && document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2) === c)
+        .sort((a, b) => d(a.b) - d(b.b));
+      const {c, b} = cs[0];
+      return [b.x + b.width / 2, b.y + b.height / 2, currentCols().age_bucket[c.__data__.i]];
+    }""", [fx, fy])
 
 
 def chart_x(page, income):
     """Screen x of an income on the chart's log axis (domain $1,000 to $2.5M)."""
     return page.evaluate("""(v) => {
       const s = document.getElementById('chart-svg').getBoundingClientRect();
-      const ticks = [...document.querySelectorAll('#chart-svg .tick')].map(t => ({t: t.textContent, x: t.getBoundingClientRect().x + t.getBoundingClientRect().width / 2}));
-      const a = ticks.find(t => t.t === '$10k'), b = ticks.find(t => t.t === '$1M');
-      if (!a || !b) return s.x + s.width / 2;
-      return a.x + (Math.log10(v) - 4) / 2 * (b.x - a.x);
+      const val = t => parseFloat(t.slice(1)) * (t.endsWith('M') ? 1e6 : t.endsWith('k') ? 1e3 : 1);
+      const ticks = [...document.querySelectorAll('#chart-svg .tick')].map(t => ({v: val(t.textContent), x: t.getBoundingClientRect().x + t.getBoundingClientRect().width / 2}));
+      if (ticks.length < 2) return s.x + s.width / 2;
+      const a = ticks[0], b = ticks[ticks.length - 1];  // any two ticks fix the log scale (the phone axis has no $1M)
+      return a.x + (Math.log10(v) - Math.log10(a.v)) / (Math.log10(b.v) - Math.log10(a.v)) * (b.x - a.x);
     }""", income)
 
 
@@ -235,16 +262,7 @@ def clip_pin(c):
     p = c.page
     open_app(p, "#metro_area=14460")
     c.hold(600)
-    # a dot near the middle whose centre isn't covered by another dot, so a real click lands on it
-    x, y, age = p.evaluate("""() => {
-      const s = document.getElementById('chart-svg').getBoundingClientRect();
-      const cs = [...document.querySelectorAll('#chart-svg circle')].map(c => ({c, b: c.getBoundingClientRect()}))
-        .filter(({c, b}) => b.width >= 8 && document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2) === c)
-        .sort((a, b) => Math.abs(a.b.x - s.x - s.width * 0.55) + Math.abs(a.b.y - s.y - s.height * 0.45)
-                      - Math.abs(b.b.x - s.x - s.width * 0.55) - Math.abs(b.b.y - s.y - s.height * 0.45));
-      const {c, b} = cs[0];
-      return [b.x + b.width / 2, b.y + b.height / 2, currentCols().age_bucket[c.__data__.i]];
-    }""")
+    x, y, age = free_dot(p)  # a real click must land on this dot
     c.move(x, y, 14)
     p.wait_for_timeout(250)
     c.hold(700)
@@ -264,8 +282,146 @@ def clip_pin(c):
     c.hold(1500)
 
 
+# ---- phone versions: same stories, through the Stats & filters sheet and taps ---------------------------------
+
+def sheet(c, open_=True):
+    c.click(c.page.locator("#btn-filters" if open_ else "#btn-close-sidebar"), settle=450)
+
+
+def m_chart(c):
+    p = c.page
+    open_app(p)
+    c.hold(700)
+    x, y, _ = free_dot(p, 0.5, 0.5)
+    c.move(x, y, 12)
+    c.click(settle=400)
+    c.hold(1200)
+    c.click(p.locator("#pin-sheet .pin-head"), settle=500)
+    c.hold(1800)
+    c.click(p.locator("#pin-sheet .pin-close"))
+    sheet(c)
+    c.click(p.locator(".cm-btn[data-mode='age_bucket']"), settle=400)
+    sheet(c, False)
+    c.hold(1500)
+
+
+def m_pin(c):
+    p = c.page
+    open_app(p, "#metro_area=14460")
+    c.hold(600)
+    x, y, age = free_dot(p, 0.5, 0.5)
+    c.move(x, y, 12)
+    c.click(settle=400)
+    c.hold(1200)
+    sheet(c)
+    c.click(p.locator(".tab-btn[data-tab='demo']"))
+    other = 0 if age != 0 else 7
+    c.click(p.locator(f'#f-age_bucket .f-btn[data-val="{other}"]'), settle=500)
+    sheet(c, False)
+    c.to(p.locator("#pin-sheet .pin-status"), steps=12)
+    c.hold(1800)
+    sheet(c)
+    c.click(p.locator(f'#f-age_bucket .f-btn[data-val="{other}"]'), settle=300)
+    c.click(p.locator(f'#f-age_bucket .f-btn[data-val="{age}"]'), settle=500)
+    sheet(c, False)
+    c.to(p.locator("#pin-sheet .pin-status"), steps=12)
+    c.hold(1800)
+
+
+def m_filters(c):
+    p = c.page
+    open_app(p)
+    c.hold(600)
+    sheet(c)
+    c.click(p.locator(".tab-btn[data-tab='work']"))
+    c.click(p.locator('#f-work_status .f-btn[data-val="5"]'), settle=500)
+    c.click(p.locator(".tab-btn[data-tab='demo']"))
+    c.click(p.locator('#f-age_bucket .f-btn[data-val="7"]'), settle=500)
+    c.to(p.locator("#stats-panel"), steps=12)
+    c.hold(1500)
+    sheet(c, False)
+    c.to(p.locator("#active-chips"), steps=10)
+    c.hold(1200)
+    c.click(p.locator("#active-chips .chip").first, settle=600)
+    c.hold(1000)
+
+
+def m_places(c):
+    p = c.page
+    open_app(p)
+    c.hold(500)
+    sheet(c)
+    c.click(p.locator(".tab-btn[data-tab='geo']"))
+    c.click(p.locator("#place-search"), settle=200)
+    c.type("medford")
+    c.hold(600)
+    c.click(p.locator(".place-item", has_text="Malden & Medford").first, settle=1500)
+    c.to(p.locator("#place-context"), steps=12)
+    c.hold(2000)
+    c.click(p.locator("#place-current button", has_text="Massachusetts"), settle=900)
+    c.hold(1200)
+    sheet(c, False)
+    c.hold(1000)
+
+
+def m_range(c):
+    p = c.page
+    open_app(p)
+    c.hold(500)
+    c.click(p.locator("#btn-brush"))
+    svg = p.locator("#chart-svg").bounding_box()
+    c.drag(chart_x(p, 100000), svg["y"] + svg["height"] * 0.55, chart_x(p, 250000))
+    sheet(c)
+    c.to(p.locator("#stats-range"), steps=12)
+    c.hold(2000)
+
+
+def m_views(c):
+    p = c.page
+    open_app(p, "#states=6")
+    c.hold(600)
+    c.click(p.locator(".view-btn[data-view='bars']"), settle=600)
+    c.hold(800)
+    c.click(p.locator(".view-btn[data-view='pct']"), settle=600)
+    c.hold(800)
+    c.click(p.locator(".view-btn[data-view='dots']"), settle=600)
+    c.click(p.locator("#btn-showall"), settle=700)
+    c.hold(1100)
+    c.click(p.locator("#btn-static"), settle=700)
+    c.hold(800)
+
+
+def m_surveys(c):
+    p = c.page
+    open_app(p, "#passive_source=1")
+    c.hold(500)
+    sheet(c)
+    c.to(p.locator("#other-src"), steps=12)
+    c.hold(1800)
+    sheet(c, False)
+    c.to(p.locator("#source-switch button[data-src='cps']"), steps=12)
+    p.mouse.down(); c.snap(90); p.mouse.up()
+    for _ in range(40):
+        p.wait_for_timeout(150)
+        try:
+            c.snap(150)
+            if p.locator("#loading").is_hidden():
+                break
+        except Exception:  # noqa: BLE001  (mid-navigation)
+            pass
+    p.wait_for_selector("#loading", state="hidden", timeout=90000)
+    p.wait_for_timeout(600)
+    p.evaluate(FINGER_JS)
+    p.mouse.move(*c.pos)
+    sheet(c)
+    c.to(p.locator("#other-src"), steps=10)
+    c.hold(2000)
+
+
 CLIPS = {"chart": clip_chart, "pin": clip_pin, "filters": clip_filters, "places": clip_places, "range": clip_range,
-         "views": clip_views, "surveys": clip_surveys}
+         "views": clip_views, "surveys": clip_surveys,
+         "m-chart": m_chart, "m-pin": m_pin, "m-filters": m_filters, "m-places": m_places, "m-range": m_range,
+         "m-views": m_views, "m-surveys": m_surveys}
 
 
 def main():
@@ -277,8 +433,12 @@ def main():
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
         for name in names:
-            page = browser.new_page(viewport=VIEW, device_scale_factor=1)
-            clip = Clip(page)
+            if name.startswith("m-"):
+                page = browser.new_page(viewport=PHONE, device_scale_factor=2, is_mobile=True, has_touch=True)
+                clip = Clip(page, PHONE, PHONE_SCALE)
+            else:
+                page = browser.new_page(viewport=VIEW, device_scale_factor=1)
+                clip = Clip(page)
             CLIPS[name](clip)
             clip.save(name)
             page.close()
