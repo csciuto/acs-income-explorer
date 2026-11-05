@@ -42,9 +42,9 @@
   #header { padding: 14px 20px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 16px; }
   #header h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
   #header .sub { color: var(--text-dim); font-size: 12px; }
-  #help-link { margin-left: auto; align-self: center; font-size: 12px; color: var(--text-dim); text-decoration: none; border: 1px solid var(--border); border-radius: 4px; padding: 3px 10px; }
+  #help-link { margin-left: 8px; align-self: center; font-size: 12px; color: var(--text-dim); text-decoration: none; border: 1px solid var(--border); border-radius: 4px; padding: 3px 10px; }
   #help-link:hover { color: var(--text); border-color: var(--text-dim); }
-  #source-switch { margin-left: 8px; display: flex; gap: 0; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; align-self: center; }
+  #source-switch { margin-left: auto; display: flex; gap: 0; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; align-self: center; }
   #source-switch button { background: none; border: none; color: var(--text-dim); font-size: 12px; padding: 4px 10px; cursor: pointer; }
   #source-switch button + button { border-left: 1px solid var(--border); }
   #source-switch button.active { background: var(--accent); color: #fff; }
@@ -360,11 +360,11 @@
 <div id="header">
   <h1>American Income Explorer</h1>
   <span class="sub" id="header-sub"></span>
-  <a id="help-link" href="help.html" target="_blank" rel="noopener" title="How to use it">Help</a>
   <div id="source-switch" role="group" aria-label="Data source">
     <button data-src="acs" title="American Community Survey: best for places">ACS</button>
     <button data-src="cps" title="Current Population Survey: best for income sources">CPS</button>
   </div>
+  <a id="help-link" href="help.html" target="_blank" rel="noopener" title="How to use it">Help</a>
 </div>
 
 <div id="main">
