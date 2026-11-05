@@ -231,7 +231,40 @@ def clip_surveys(c):
     c.hold(2000)
 
 
-CLIPS = {"chart": clip_chart, "filters": clip_filters, "places": clip_places, "range": clip_range,
+def clip_pin(c):
+    p = c.page
+    open_app(p, "#metro_area=14460")
+    c.hold(600)
+    # a dot near the middle whose centre isn't covered by another dot, so a real click lands on it
+    x, y, age = p.evaluate("""() => {
+      const s = document.getElementById('chart-svg').getBoundingClientRect();
+      const cs = [...document.querySelectorAll('#chart-svg circle')].map(c => ({c, b: c.getBoundingClientRect()}))
+        .filter(({c, b}) => b.width >= 8 && document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2) === c)
+        .sort((a, b) => Math.abs(a.b.x - s.x - s.width * 0.55) + Math.abs(a.b.y - s.y - s.height * 0.45)
+                      - Math.abs(b.b.x - s.x - s.width * 0.55) - Math.abs(b.b.y - s.y - s.height * 0.45));
+      const {c, b} = cs[0];
+      return [b.x + b.width / 2, b.y + b.height / 2, currentCols().age_bucket[c.__data__.i]];
+    }""")
+    c.move(x, y, 14)
+    p.wait_for_timeout(250)
+    c.hold(700)
+    c.click(settle=500)
+    c.to(p.locator("#stats-household"), steps=14, dy=0.3)
+    c.hold(1800)
+    c.click(p.locator(".tab-btn[data-tab='demo']"))
+    other = 0 if age != 0 else 7
+    c.click(p.locator(f'#f-age_bucket .f-btn[data-val="{other}"]'), settle=700)
+    c.to(p.locator("#pin-card .pin-status"), steps=12)
+    c.hold(1500)
+    c.move(x, y, 14)
+    c.hold(1000)
+    c.click(p.locator(f'#f-age_bucket .f-btn[data-val="{other}"]'), steps=14, settle=300)
+    c.click(p.locator(f'#f-age_bucket .f-btn[data-val="{age}"]'), steps=8, settle=700)
+    c.to(p.locator("#pin-card .pin-status"), steps=12)
+    c.hold(1500)
+
+
+CLIPS = {"chart": clip_chart, "pin": clip_pin, "filters": clip_filters, "places": clip_places, "range": clip_range,
          "views": clip_views, "surveys": clip_surveys}
 
 
