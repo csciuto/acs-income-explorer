@@ -922,7 +922,7 @@ class TestHelp:
         page.goto(static_server + "/help.html")
         expect(page.locator("h1")).to_contain_text("How to use")
         imgs = page.locator("main img")
-        assert imgs.count() == 6
+        assert imgs.count() == 7
         for i in range(imgs.count()):
             img = imgs.nth(i)
             img.scroll_into_view_if_needed()
