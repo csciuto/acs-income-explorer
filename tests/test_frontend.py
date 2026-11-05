@@ -359,6 +359,18 @@ class TestStateSelector:
         page.locator(".dots-btn[data-maxdots='3000']").click()
         assert page.locator(".dots-btn.active").get_attribute("data-maxdots") == "3000"
 
+    def test_dots_stay_inside_chart_at_5k(self, page: Page):
+        page.locator(".dots-btn[data-maxdots='5000']").click()
+        page.wait_for_timeout(500)
+        out = page.evaluate("""() => {
+          const axis = document.querySelector('#chart-svg g').getBoundingClientRect();  // x axis sits at the chart's bottom
+          const top = document.getElementById('chart-svg').getBoundingClientRect().top;
+          return [...document.querySelectorAll('#chart-svg circle')].filter(c => {
+            const b = c.getBoundingClientRect(); return b.top < top - 1 || b.bottom > axis.top + 10;
+          }).length;
+        }""")
+        assert out == 0
+
     def test_all_mode_toggle(self, page: Page):
         page.locator("#btn-showall").click()
         expect(page.locator("#btn-showall")).to_have_class(re.compile(r'\bactive\b'))

@@ -1560,13 +1560,17 @@ function renderChart() {
   const BIN_PX = 8;
   const binScale = d3.scaleLog().domain([1000, 2500000]).range([0, chartW / BIN_PX]);
   const bins = {};
-  dotData = dotRows.map(i => {
+  const placed = dotRows.map(i => {
     const inc = Math.max(1000, cols.inc[i]);
     const bx = Math.round(binScale(inc));
-    if (!bins[bx]) bins[bx] = [];
-    const slot = bins[bx].length;
-    bins[bx].push(i);
-    const jitter = (slot % 2 === 0 ? 1 : -1) * Math.ceil(slot / 2) * (BIN_PX - 1);
+    if (!bins[bx]) bins[bx] = 0;
+    return {i, inc, slot: bins[bx]++};
+  });
+  // Squeeze every column by the same factor so the tallest one fits the chart; the shape stays true
+  const tallest = Math.max(1, ...Object.values(bins));
+  const step = Math.min(BIN_PX - 1, (chartH / 2 - 6) / Math.ceil(tallest / 2));
+  dotData = placed.map(({i, inc, slot}) => {
+    const jitter = (slot % 2 === 0 ? 1 : -1) * Math.ceil(slot / 2) * step;
     return {
       i,
       x: xScale(inc) + marginL,
