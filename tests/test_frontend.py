@@ -276,7 +276,7 @@ class TestColorMode:
         expect(page.locator("#group-breakdown")).to_contain_text("Median")
 
     def test_group_breakdown_shows_count(self, page: Page):
-        expect(page.locator("#group-breakdown")).to_contain_text("HH")
+        expect(page.locator("#group-breakdown")).to_contain_text("Households")
 
     def test_breakdown_visible_in_detail_tab(self, page: Page):
         page.locator(".stats-tab-btn[data-stats-tab='detail']").click()
@@ -704,13 +704,20 @@ class TestMobile:
         count = mobile_page.locator("#chart-svg circle").count()
         assert count <= 800, f"Expected ≤800 dots on mobile, got {count}"
 
-    def test_dot_tap_shows_tooltip(self, mobile_page: Page):
+    def test_dot_tap_opens_pin_sheet(self, mobile_page: Page):
         mobile_page.locator("#chart-svg circle").first.tap(force=True)
-        expect(mobile_page.locator("#tooltip")).to_be_visible()
+        sheet = mobile_page.locator("#pin-sheet")
+        expect(sheet).to_be_visible()
+        expect(sheet.locator(".pin-summary")).to_be_visible()
+        expect(sheet.locator(".pin-body")).to_be_hidden()
+        sheet.locator(".pin-head").tap()
+        expect(sheet.locator(".pin-body")).to_be_visible()
+        sheet.locator(".pin-close").tap()
+        expect(sheet).to_be_hidden()
 
-    def test_dot_tap_tooltip_contains_income(self, mobile_page: Page):
+    def test_dot_tap_pins_household(self, mobile_page: Page):
         mobile_page.locator("#chart-svg circle").first.tap(force=True)
-        expect(mobile_page.locator("#tooltip .tt-income")).to_contain_text("$")
+        expect(mobile_page.locator("#pin-sheet .pin-inc")).to_contain_text("$")
 
     def test_filter_works_on_mobile(self, mobile_page: Page):
         mobile_page.locator("#btn-filters").tap()
@@ -989,3 +996,67 @@ class TestSources:
         expect(page.locator("#active-chips")).to_contain_text("Malden & Medford")
         stats = page.evaluate("localStats[25]['puma=2500609']")
         expect(page.locator("#s-med")).to_contain_text(f"${stats['med']:,}")
+
+
+def _click_dot(page: Page, n: int = 0) -> int:
+    """Click the n-th clickable dot via its own handler; returns its record index."""
+    return page.evaluate("""(n) => {
+      const c = [...document.querySelectorAll('#chart-svg circle:not(.pin-ring)')]
+        .filter(c => c.getAttribute('pointer-events') === 'all')[n];
+      const b = c.getBoundingClientRect();
+      c.dispatchEvent(new MouseEvent('click', {bubbles: true, clientX: b.x, clientY: b.y}));
+      return c.__data__.i;
+    }""", n)
+
+
+class TestPinnedHousehold:
+    @pytest.fixture(autouse=True)
+    def setup(self, app):
+        pass
+
+    def test_click_pins_full_record(self, page: Page):
+        _click_dot(page)
+        card = page.locator("#pin-card")
+        expect(card).to_be_visible()
+        for head in ("Income", "Household", "Householder", "Place", "Survey"):
+            expect(card.locator("h4").filter(has_text=re.compile(f"^{head}$"))).to_have_count(1)
+        expect(card).to_contain_text("Race/ethnicity")
+        assert page.locator("#chart-svg .pin-ring").count() == 1
+
+    def test_pin_survives_filters_in_dim_others(self, page: Page):
+        i = _click_dot(page)
+        page.locator(".tab-btn[data-tab='demo']").click()
+        age = page.evaluate("(i) => currentCols().age_bucket[i]", i)
+        other = 0 if age != 0 else 7
+        page.locator(f'#f-age_bucket .f-btn[data-val="{other}"]').click()
+        expect(page.locator("#pin-card")).to_be_visible()
+        expect(page.locator("#pin-card .pin-status")).to_have_text("Filtered out by Age")
+        page.locator(f'#f-age_bucket .f-btn[data-val="{age}"]').click()
+        expect(page.locator("#pin-card .pin-status")).to_have_text("Matches")
+
+    def test_pin_opens_household_tab(self, page: Page):
+        expect(page.locator(".stats-tab-btn[data-stats-tab='household']")).not_to_have_class(re.compile(r"\bactive\b"))
+        _click_dot(page)
+        expect(page.locator(".stats-tab-btn[data-stats-tab='household']")).to_have_class(re.compile(r"\bactive\b"))
+
+    def test_escape_and_close_unpin(self, page: Page):
+        _click_dot(page)
+        page.keyboard.press("Escape")
+        expect(page.locator("#pin-card .pin-empty")).to_be_visible()
+        assert page.locator("#chart-svg .pin-ring").count() == 0
+        _click_dot(page)
+        page.locator("#pin-card .pin-close").click()
+        expect(page.locator("#pin-card .pin-empty")).to_be_visible()
+
+    def test_unpins_when_household_leaves_chart(self, page: Page):
+        i = _click_dot(page)
+        age = page.evaluate("(i) => currentCols().age_bucket[i]", i)
+        page.locator("#btn-showall").click()
+        page.locator(".tab-btn[data-tab='demo']").click()
+        page.locator(f'#f-age_bucket .f-btn[data-val="{0 if age != 0 else 7}"]').click()
+        expect(page.locator("#pin-card .pin-empty")).to_be_visible()
+
+    def test_bars_view_unpins(self, page: Page):
+        _click_dot(page)
+        page.locator(".view-btn[data-view='bars']").click()
+        expect(page.locator("#pin-card .pin-empty")).to_be_visible()

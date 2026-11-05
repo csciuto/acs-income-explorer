@@ -202,6 +202,32 @@
   #tooltip .tt-income { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
   #tooltip .tt-topcode { color: var(--text-dim); font-size: 11px; }
   #tooltip .tt-dim { color: var(--text-dim); }
+  /* Pinned household: a Household tab in the stats panel on desktop, a bottom sheet on phones */
+  #stats-household { max-height: 340px; overflow-y: auto; font-size: 12px; line-height: 1.45; }
+  .pin-empty { color: var(--text-dim); padding: 12px 0; text-align: center; }
+  .pin-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .pin-inc { font-size: 15px; font-weight: 600; }
+  .pin-actions { display: flex; gap: 2px; }
+  .pin-actions button { background: none; border: none; color: var(--text-dim); font-size: 16px; line-height: 1; cursor: pointer; padding: 2px 6px; }
+  .pin-actions button:hover { color: var(--text); }
+  .pin-more, .pin-summary { display: none; }
+  .pin-view h4 { margin: 8px 0 2px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dimmer); }
+  .pin-view dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 0; }
+  .pin-view dt { color: var(--text-dim); }
+  .pin-view dd { margin: 0; text-align: right; }
+  .pin-status { font-size: 11px; margin-top: 2px; }
+  .pin-status.in { color: #6bcc6b; }
+  .pin-status.out { color: var(--text-dim); }
+  #pin-sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 1001; max-height: 70vh; overflow-y: auto;
+    background: var(--surface2); border-top: 1px solid var(--accent); border-radius: 10px 10px 0 0;
+    padding: 10px max(14px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+    font-size: 13px; line-height: 1.45; box-shadow: 0 -6px 24px rgba(0,0,0,0.5); }
+  #pin-sheet[hidden] { display: none; }
+  #sidebar-backdrop.open ~ #pin-sheet { display: none; }  /* filters sheet open on a phone */
+  #pin-sheet .pin-more { display: inline-block; }
+  #pin-sheet .pin-summary { display: block; color: var(--text-dim); }
+  #pin-sheet:not(.open) .pin-body { display: none; }
+  #pin-sheet.open .pin-summary { display: none; }
 
   /* ---- loading overlay ---- */
   #loading { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 9999; }
@@ -299,7 +325,7 @@
     .legend-item { padding: 5px 6px; margin: -5px -6px; }
     .chip { padding: 5px 10px; font-size: 12px; }
 
-    /* Tooltip pinned to top-centre on mobile */
+    /* Tooltip at top-centre on mobile */
     #tooltip {
       top: 56px !important; left: 50% !important;
       transform: translateX(-50%) !important;
@@ -319,6 +345,7 @@
     #btn-close-sidebar     { display: none; }
     #btn-filters           { display: none; }
     #mobile-stats          { display: none; }
+    #pin-sheet             { display: none !important; }
     #sidebar-backdrop      { display: none; }
   }
 </style>
@@ -353,6 +380,7 @@
         <button class="stats-tab-btn active" data-stats-tab="summary">Stats</button>
         <button class="stats-tab-btn" data-stats-tab="detail">By group</button>
         <button class="stats-tab-btn" data-stats-tab="range">Range</button>
+        <button class="stats-tab-btn" data-stats-tab="household">Household</button>
       </div>
       <div id="stats-summary" class="stats-tab-panel active">
         <div id="stats-panel">
@@ -375,6 +403,7 @@
         <button id="btn-expand-range" class="expand-bar" style="display:none">By group ▾</button>
         <div id="range-breakdown" style="display:none"></div>
       </div>
+      <div id="stats-household" class="stats-tab-panel"><div id="pin-card" class="pin-view"></div></div>
     </div>
 
     <div id="sidebar-body">
@@ -537,7 +566,7 @@
       <button id="btn-about">ⓘ About</button>
       <div id="chart-about">
         <dl>
-          <dt>Dots</dt><dd>One per surveyed household. Bigger dots stand for more households.</dd>
+          <dt>Dots</dt><dd>One per surveyed household. Bigger dots stand for more households. Click one to pin it.</dd>
           <dt>Across</dt><dd>Household income, log scale. Drag to pick a range.</dd>
           <dt>Up and down</dt><dd>No scale: the swarm is taller where more households earn that much.</dd>
           <dt>Colors</dt><dd>Set in the Group tab. Click a legend item to filter.</dd>
@@ -556,6 +585,7 @@
 <div id="sidebar-backdrop"></div>
 
 <div id="tooltip"></div>
+<div id="pin-sheet" class="pin-view" role="dialog" aria-label="Pinned household" hidden></div>
 
 <div id="footer">
   <a id="ipums-link" href="https://usa.ipums.org" target="_blank">IPUMS USA</a>
@@ -635,6 +665,15 @@ const PALETTES = {
 // ============================================================
 // Helpers
 // ============================================================
+// Household counts at a sensible unit: 840, 12K, 1.2M
+function fmtHH(n) {
+  if (n == null || isNaN(n)) return '—';
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e4) return `${Math.round(n / 1e3)}K`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
+  return Math.round(n).toLocaleString();
+}
+
 function fmt$(n) {
   if (n == null || isNaN(n)) return '—';
   return '$' + Math.round(n).toLocaleString();
@@ -1104,9 +1143,10 @@ function isDimmed(i, cols, hasFilters) {
 function updateDotOpacity() {
   const cols = currentCols();
   const hasFilters = selectedFips.size > 0 || Object.values(filters).some(s => s && s.size > 0);
-  d3.select('#chart-svg').selectAll('circle')
+  d3.select('#chart-svg').selectAll('circle:not(.pin-ring)')
     .attr('opacity', d => isDimmed(d.i, cols, hasFilters) ? 0.12 : 0.75)
     .attr('pointer-events', d => isDimmed(d.i, cols, hasFilters) ? 'none' : 'all');
+  syncPin();
 }
 
 function renderBrushInfo(transient) {
@@ -1235,7 +1275,7 @@ const TOPCODE_RING = '#d8dce3';
 function updateDotColors() {
   const cols = currentCols();
   const palette = PALETTES[colorMode] || PALETTES.passive_pct;
-  d3.select('#chart-svg').selectAll('circle')
+  d3.select('#chart-svg').selectAll('circle:not(.pin-ring)')
     .attr('fill', d => dotColor(d.i, cols, palette))
     .attr('stroke', d => d.topcode ? TOPCODE_RING : dotColor(d.i, cols, palette));
 }
@@ -1376,8 +1416,7 @@ function renderStats(stats) {
   document.getElementById('rel-badge').innerHTML = relMsg
     ? `<span class="reliability rel-${rel}">${relMsg}</span>` : '';
 
-  const nRep = !stats.n_rep ? '' : stats.n_rep >= 1e6 ? ` · ~${(stats.n_rep / 1e6).toFixed(1)}M households`
-    : ` · ~${Math.round(stats.n_rep / 1e3).toLocaleString()}K households`;
+  const nRep = !stats.n_rep ? '' : ` · ~${fmtHH(stats.n_rep)} households`;
   document.getElementById('n-info').textContent = `${n.toLocaleString()} surveyed${nRep}`;
   renderOther(stats);
 }
@@ -1490,7 +1529,7 @@ function renderMobileStats(stats) {
   el.innerHTML = `
     <div class="mstat"><span class="mstat-label">Median</span><span class="mstat-val">${fmt$(stats.med)}</span></div>
     <div class="mstat"><span class="mstat-label">Mean</span><span class="mstat-val">${fmt$(stats.mean)}</span></div>
-    <div class="mstat"><span class="mstat-label">HH</span><span class="mstat-val">~${(stats.n_rep/1e6).toFixed(1)}M</span></div>
+    <div class="mstat"><span class="mstat-label">HH</span><span class="mstat-val">~${fmtHH(stats.n_rep)}</span></div>
     <div class="mstat"><span class="mstat-label">Records</span><span class="mstat-val">${stats.n.toLocaleString()}</span></div>
   `;
 }
@@ -1508,6 +1547,7 @@ function render() {
   } else {
     updateDotOpacity();
   }
+  syncPin();
   syncFilterButtons();
   syncPlace();
   renderPlaceContext(stats);
@@ -1543,6 +1583,11 @@ function renderChart() {
     : visibleRows;
   lastPoolSize = rowPool.length;
   const dotRows = subsample(rowPool, limit);
+  // A redraw (resize, place change) resamples; keep a pinned household if it's still in the pool
+  if (pinnedRow != null && !dotRows.includes(pinnedRow) && rowPool.includes(pinnedRow)) {
+    if (dotRows.length >= limit) dotRows.pop();
+    dotRows.push(pinnedRow);
+  }
   const hasFilters = selectedFips.size > 0 || Object.values(filters).some(s => s && s.size > 0);
 
   d3.select(svg).selectAll('*').remove();
@@ -1619,12 +1664,14 @@ function renderChart() {
       .attr('stroke-width', d => d.topcode ? 1.2 : 0.5)
       .attr('opacity', d => isDimmed(d.i, cols, hasFilters) ? 0.12 : 0.75)
       .attr('pointer-events', d => isDimmed(d.i, cols, hasFilters) ? 'none' : 'all')
-      .on('mouseover', (event, d) => showTooltip(event, d.i))
+      .on('mouseover', (event, d) => { if (d.i !== pinnedRow) showTooltip(event, d.i); })
       .on('mousemove', moveTooltip)
       .on('mouseout', hideTooltip)
-      .on('touchstart', (event, d) => { event.preventDefault(); showTooltip(event, d.i); }, {passive: false});
+      .on('click', (event, d) => { event.stopPropagation(); pinRow(d.i); })
+      .on('touchstart', (event, d) => { event.preventDefault(); pinRow(d.i); }, {passive: false});
 
   attachBrushLayer(svgEl, xScale, marginL, marginT, chartW, chartH);
+  syncPin();
   updateDotCountDisplay();
 }
 
@@ -1744,7 +1791,7 @@ function renderStackedBars() {
   // Y axis
   const yAxis = isPct
     ? d3.axisLeft(yScale).ticks(5).tickFormat(d => `${Math.round(d * 100)}%`)
-    : d3.axisLeft(yScale).ticks(5).tickFormat(d => `${(d/1e6).toFixed(1)}M`);
+    : d3.axisLeft(yScale).ticks(5).tickFormat(fmtHH);
 
   svgEl.append('g')
     .attr('class', 'axis')
@@ -1796,7 +1843,7 @@ function renderStackedBars() {
           tt.innerHTML = `
             <div class="tt-income">${loInc} – ${hiInc}</div>
             <div class="tt-dim">${catLabel}</div>
-            <div class="tt-dim">${(segW / 1e6).toFixed(2)}M households · ${pct}% of band</div>
+            <div class="tt-dim">${fmtHH(segW)} households · ${pct}% of band</div>
           `;
           tt.style.display = 'block';
           moveTooltip(event);
@@ -1809,7 +1856,7 @@ function renderStackedBars() {
           tt.innerHTML = `
             <div class="tt-income">${loInc} – ${hiInc}</div>
             <div class="tt-dim">${catLabel}</div>
-            <div class="tt-dim">${(segW / 1e6).toFixed(2)}M households · ${pct}% of band</div>
+            <div class="tt-dim">${fmtHH(segW)} households · ${pct}% of band</div>
           `;
           tt.style.display = 'block';
         }, {passive: false});
@@ -1894,16 +1941,15 @@ function _renderBreakdownRows(container, rows, n) {
       <span style="color:var(--text-dimmer)">Group</span>
       <span style="color:var(--text-dimmer)">Median</span>
       <span style="color:var(--text-dimmer)">Mean</span>
-      <span style="color:var(--text-dimmer)">HH (M)</span>
+      <span style="color:var(--text-dimmer)">Households</span>
       ${rows.map(r => `
         <span class="breakdown-dot" style="background:${r.color};align-self:center"></span>
         <span class="breakdown-label">${r.lbl}</span>
         <span class="breakdown-med">${r.med != null ? fmt$(r.med) : '—'}</span>
         <span class="breakdown-med" style="color:var(--text-dim)">${r.mean != null ? fmt$(r.mean) : '—'}</span>
-        <span style="color:var(--text-dimmer);text-align:right">${r.totalW != null ? (r.totalW/1e6).toFixed(1) : '—'}</span>
+        <span style="color:var(--text-dimmer);text-align:right">${r.totalW != null ? fmtHH(r.totalW) : '—'}</span>
       `).join('')}
     </div>
-    <div style="font-size:10px;color:var(--text-dimmer);margin-top:6px">HH (M) = millions of households</div>
   `;
 }
 
@@ -2044,6 +2090,138 @@ function moveTooltip(event) {
 function hideTooltip() {
   document.getElementById('tooltip').style.display = 'none';
 }
+
+// ============================================================
+// Pinned household: click a dot to keep its whole record open. The pin follows the record, so in Dim others
+// you can change filters and watch it match or fade. It closes when the household leaves the chart.
+// ============================================================
+let pinnedRow = null;
+const pinSheet = document.getElementById('pin-sheet');
+
+function pinRow(i) {
+  pinnedRow = i;
+  hideTooltip();
+  if (isMobile()) { pinSheet.hidden = false; pinSheet.classList.remove('open'); }
+  else switchStatsTab('household');
+  syncPin();
+}
+
+function unpin() {
+  pinnedRow = null;
+  pinSheet.hidden = true;
+  pinSheet.classList.remove('open');
+  d3.select('#chart-svg').selectAll('.pin-ring').remove();
+  renderPinEmpty();
+}
+
+function renderPinEmpty() {
+  document.getElementById('pin-card').innerHTML = '<p class="pin-empty">Click a dot to pin it.</p>';
+  pinSheet.innerHTML = '';
+}
+
+function syncPin() {
+  if (pinnedRow == null) return;
+  const d = viewMode === 'dots' ? dotData.find(d => d.i === pinnedRow) : null;
+  if (!d) { unpin(); return; }
+  const svg = d3.select('#chart-svg');
+  svg.selectAll('.pin-ring').remove();
+  svg.append('circle').attr('class', 'pin-ring')
+    .attr('cx', d.x).attr('cy', d.y).attr('r', d.r + 3)
+    .attr('fill', 'none').attr('stroke', '#fff').attr('stroke-width', 1.5).attr('pointer-events', 'none');
+  renderPinCard();
+}
+
+function renderPinCard() {
+  const cols = currentCols(), i = pinnedRow;
+  const lab = dim => cols[dim] != null ? label(dim, cols[dim][i]) : null;
+  const rows = pairs => '<dl>' + pairs.filter(([, v]) => v != null && v !== '')
+    .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('') + '</dl>';
+
+  const out = [];
+  if (selectedFips.size && !selectedFips.has(cols.state[i])) out.push('State');
+  for (const [dim, vals] of Object.entries(filters)) {
+    if (vals?.size && cols[dim] && !vals.has(cols[dim][i])) out.push(DIM_LABELS[dim] ?? dim);
+  }
+  if (!matchesBrush(i, cols)) out.push('Range');
+  const anyFilter = selectedFips.size > 0 || brushRange || Object.values(filters).some(s => s && s.size > 0);
+  const status = !anyFilter ? ''
+    : out.length ? `<div class="pin-status out">Filtered out by ${out.join(', ')}</div>`
+    : '<div class="pin-status in">Matches</div>';
+
+  const kids = cols.n_children?.[i];
+  const youngest = kids > 0 ? lab('youngest_child') : null;
+  const unearned = cols.passive_inc?.[i];
+  const src = lab('passive_source');
+  const stateName = codebook?.states?.[String(cols.state[i])]?.name ?? `State ${cols.state[i]}`;
+  const burden = cols.burden?.[i] < 3 ? lab('burden') + ' of income' : null;
+
+  const html = `
+    <div class="pin-head">
+      <span class="pin-inc">${fmt$(cols.inc[i])}${cols.topcoded[i] === 1 ? ' <span class="tt-topcode">(topcoded)</span>' : ''}</span>
+      <span class="pin-actions"><button class="pin-more" aria-label="More">▴</button><button class="pin-close" aria-label="Close">×</button></span>
+    </div>
+    ${status}
+    <div class="pin-summary">${lab('age_bucket')} · ${lab('housing')} · ${cols.hh_size?.[i] ?? '?'} in household</div>
+    <div class="pin-body">
+    <h4>Income</h4>
+    ${rows([
+      ['Earnings', fmt$(cols.wage_inc[i])],
+      ['Unearned', unearned > 0 ? fmt$(unearned) : '$0'],
+      ['Main unearned', unearned > 0 && src !== 'Mainly earnings' ? src : null],
+      ['Share from earnings', lab('passive_pct')],
+    ])}
+    <h4>Household</h4>
+    ${rows([
+      ['People', cols.hh_size?.[i]],
+      ['Children', kids != null ? (youngest ? `${kids} · youngest ${youngest.toLowerCase()}` : kids) : lab('kids')],
+      ['Earners', lab('earner_count')],
+      ["Householder's share", lab('breadwinner')],
+      ['Roommates', cols.has_roommate ? (cols.has_roommate[i] ? 'Yes' : 'No') : null],
+      ['Housing', lab('housing')],
+      ['Cost burden', burden],
+    ])}
+    <h4>Householder</h4>
+    ${rows([
+      ['Age', lab('age_bucket')],
+      ['Sex', lab('sex')],
+      ['Race/ethnicity', lab('race_ethnicity')],
+      ['Marital', lab('marst')],
+      ['Education', lab('educ')],
+      ['Work', lab('work_status')],
+      ['Hours', lab('hours_category')],
+      ['Secondary hours', lab('multi_job_proxy')],
+    ])}
+    <h4>Place</h4>
+    ${rows([
+      ['Local area', cols.puma?.[i] ? lab('puma') : null],
+      ['Metro', cols.metro_area?.[i] ? lab('metro_area') : null],
+      ['State', stateName],
+      ['Area type', lab('city')],
+      ['Region', lab('region')],
+    ])}
+    <h4>Survey</h4>
+    ${rows([
+      ['Year', label('year', cols.year[i])],
+      ['Stands for', `${Math.round(cols.weight[i]).toLocaleString()} households`],
+    ])}
+    </div>
+  `;
+  document.querySelectorAll('.pin-view').forEach(el => { el.innerHTML = html; });
+}
+
+// One listener per container: the card is re-rendered on every filter change
+document.querySelectorAll('.pin-view').forEach(el => el.addEventListener('click', e => {
+  if (e.target.closest('.pin-close')) { unpin(); return; }
+  if (el === pinSheet && (e.target.closest('.pin-more') || e.target.closest('.pin-head'))) {
+    pinSheet.classList.toggle('open');
+    const more = pinSheet.querySelector('.pin-more');
+    if (more) more.textContent = pinSheet.classList.contains('open') ? '▾' : '▴';
+  }
+}));
+renderPinEmpty();
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && pinnedRow != null) unpin(); });
+document.getElementById('chart-svg').addEventListener('click', () => { if (pinnedRow != null) unpin(); });
 
 // ============================================================
 // Filter UI
