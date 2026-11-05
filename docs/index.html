@@ -393,7 +393,7 @@
           <button class="cm-btn active" data-mode="passive_pct">Income mix</button>
           <button class="cm-btn" data-mode="passive_source">Unearned source</button>
           <button class="cm-btn" data-mode="earner_count">Earners</button>
-          <button class="cm-btn" data-mode="breadwinner">Breadwinner</button>
+          <button class="cm-btn" data-mode="breadwinner">Householder's share</button>
           <button class="cm-btn" data-mode="work_status">Work status</button>
           <button class="cm-btn" data-mode="age_bucket">Age</button>
           <button class="cm-btn" data-mode="sex">Sex</button>
@@ -470,7 +470,7 @@
           <div class="filter-btns" id="f-earner_count"></div>
         </div>
         <div class="filter-group">
-          <div class="stat-label">Breadwinner role</div>
+          <div class="stat-label">Householder's share of earnings</div>
           <div class="filter-btns" id="f-breadwinner"></div>
         </div>
         <div class="filter-group">
@@ -615,7 +615,7 @@ const PALETTES = {
   passive_pct:     ['#4a9c5e', '#7ab87a', '#c9a227', '#bc7040', '#c94040'],
   passive_source:  ['#4a7cbc', '#8892b0', '#c9a227', '#c94040', '#4a9c5e'],
   earner_count:    ['#c94040', '#4a7cbc', '#4a9c5e', '#c9a227'],
-  breadwinner:     ['#4a7cbc', '#4a9c9a', '#c9a227', '#e07070', '#8892b0'],
+  breadwinner:     ['#4a7cbc', '#4a9c9a', '#c9a227', '#e07070', '#a97cc4'],
   work_status:     ['#4a7cbc', '#6bcc6b', '#c9a227', '#e07070', '#c94040', '#888', '#4a4a6a'],
   educ:            ['#c94040', '#e07070', '#c9a227', '#4a9c5e', '#4a7cbc'],
   marst:           ['#4a7cbc', '#c9a227', '#e07070', '#888', '#4a9c5e'],
@@ -2114,7 +2114,7 @@ const DIM_LABELS = {
   work_status: 'Work', race_ethnicity: 'Race',
   kids: 'Kids', city: 'Area type', region: 'Region', metro: 'Metro', metro_area: 'Metro area', puma: 'Local area', burden: 'Cost burden', multi_job_proxy: '2nd job',
   housing: 'Housing', year: 'Year',
-  earner_count: 'Earners', breadwinner: 'Breadwinner',
+  earner_count: 'Earners', breadwinner: "Householder's share",
   passive_pct: 'Earnings share', passive_source: 'Unearned src',
 };
 

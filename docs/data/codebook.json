@@ -18732,11 +18732,11 @@
    "3": "Three or more"
   },
   "breadwinner": {
-   "0": "Sole/dominant",
-   "1": "Primary earner",
-   "2": "Co-earner",
-   "3": "Secondary earner",
-   "4": "Non-earner"
+   "0": "90%+ of earnings",
+   "1": "60–89%",
+   "2": "40–59%",
+   "3": "Under 40%",
+   "4": "No earnings"
   },
   "passive_pct": {
    "0": "≥75% earnings",

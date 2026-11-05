@@ -60,7 +60,7 @@ sums run over every member. Income items coded "not in universe" (all 9s, or 9�
 Shared definitions: `passive_pct` buckets the earnings share of income (≥75%, 50–74%, 25–49%, under 25%, none),
 where earnings are `wage_inc` (wages plus self-employment and business income, so a business owner's draw counts as
 earnings) and everything else is unearned;
-`passive_source` is the largest of the four groups, set only when earnings are under 75% of income; `breadwinner` is
+`passive_source` is the largest of the four groups, set only when earnings are under 75% of income; `breadwinner` ("Householder's share" in the UI) is
 the householder's share of household earnings; `earner_count` counts members with earnings, capped at 3;
 `work_status` takes the first match of full-time full-year wage, full-time full-year self-employed, full-time
 part-year, part-time, unemployed, retired (not in labor force, 55+, with Social Security), not working.

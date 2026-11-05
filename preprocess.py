@@ -58,8 +58,8 @@ LABELS = {
     "work_status": {"0": "FT wage", "1": "FT self-emp", "2": "FT part-year", "3": "Part-time", "4": "Unemployed",
                     "5": "Retired", "6": "Not working"},
     "earner_count": {"0": "No earners", "1": "One earner", "2": "Two earners", "3": "Three or more"},
-    "breadwinner": {"0": "Sole/dominant", "1": "Primary earner", "2": "Co-earner", "3": "Secondary earner",
-                    "4": "Non-earner"},
+    "breadwinner": {"0": "90%+ of earnings", "1": "60–89%", "2": "40–59%", "3": "Under 40%",
+                    "4": "No earnings"},
     # "Earnings" = wages + self-employment/business income. Capital gains aren't in either survey: the Census
     # Bureau's money-income definition excludes them.
     "passive_pct": {"0": "≥75% earnings", "1": "50–74% earnings", "2": "25–49% earnings", "3": "<25% earnings",
