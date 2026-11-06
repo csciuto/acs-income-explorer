@@ -27,7 +27,7 @@
     --border: #2e3350;
     --text: #e2e8f0;
     --text-dim: #8892b0;
-    --text-dimmer: #4a5580;
+    --text-dimmer: #7c87b0;
     --accent: #6c8ebf;
     --accent2: #4a7c59;
     --warn: #c9a227;
@@ -47,7 +47,7 @@
   #source-switch { margin-left: auto; display: flex; gap: 0; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; align-self: center; }
   #source-switch button { background: none; border: none; color: var(--text-dim); font-size: 12px; padding: 4px 10px; cursor: pointer; }
   #source-switch button + button { border-left: 1px solid var(--border); }
-  #source-switch button.active { background: var(--accent); color: #fff; }
+  #source-switch button.active { background: #4a6898; color: #fff; }
   #source-switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   #other-src { font-size: 11px; color: var(--text-dim); margin-top: 6px; line-height: 1.5; }
   #other-src .gap { color: var(--text); }
@@ -357,7 +357,7 @@
   <div class="msg" id="loading-msg">Loading data…</div>
 </div>
 
-<div id="header">
+<header id="header">
   <h1>American Income Explorer</h1>
   <span class="sub" id="header-sub"></span>
   <div id="source-switch" role="group" aria-label="Data source">
@@ -365,9 +365,9 @@
     <button data-src="cps" title="Current Population Survey: best for income sources">CPS</button>
   </div>
   <a id="help-link" href="help.html" target="_blank" rel="noopener" title="How to use it">Help</a>
-</div>
+</header>
 
-<div id="main">
+<main id="main">
 
   <!-- sidebar (desktop: left column; mobile: slide-up drawer) -->
   <div id="sidebar">
@@ -581,23 +581,23 @@
       <svg id="chart-svg"></svg>
     </div>
   </div>
-</div>
+</main>
 <div id="sidebar-backdrop"></div>
 
 <div id="tooltip"></div>
 <div id="pin-sheet" class="pin-view" role="dialog" aria-label="Pinned household" hidden></div>
 
-<div id="footer">
+<footer id="footer">
   <a id="ipums-link" href="https://usa.ipums.org" target="_blank">IPUMS USA</a>
   <a href="https://github.com/csciuto/acs-income-explorer" target="_blank">GitHub</a>
   <span>Questions or corrections: corey.sciuto+aie@gmail.com</span>
   <span id="version-stamp" style="color:var(--text-dimmer);font-size:10px"></span>
-</div>
+</footer>
 
 <!-- Arrow JS from CDN -->
-<script src="https://cdn.jsdelivr.net/npm/apache-arrow@latest/Arrow.es2015.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/apache-arrow@21.2.0/Arrow.es2015.min.js"></script>
 <!-- D3 v7 -->
-<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.2/dist/d3.min.js"></script>
 
 <script>
 // ============================================================

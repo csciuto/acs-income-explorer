@@ -1,6 +1,10 @@
 # American Income Explorer
 
-Static site served from `docs/` by GitHub Pages (`.github/workflows/deploy.yml`). No build step, no server.
+Static site served from `docs/` by GitHub Pages. `.github/workflows/deploy.yml` runs `pytest` (pipeline tests, browser
+tests at desktop and phone size, axe accessibility checks in `tests/test_a11y.py`) and deploys only if they pass.
+No build step, no server. Follows the app standards in
+[csciuto/app-template STANDARDS.md](https://github.com/csciuto/app-template/blob/main/STANDARDS.md); commit and push
+freely once tests pass.
 Two data sources in one app: the ACS (default) and the CPS ASEC, switchable in the header (`#src=cps`).
 
 > **Deploy gotcha:** the site fetches `docs/data/**` at runtime; the raw IPUMS extracts (ACS ~5 GB, CPS ~240 MB
