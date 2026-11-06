@@ -1073,3 +1073,11 @@ class TestPinnedHousehold:
         _click_dot(page)
         page.locator(".view-btn[data-view='bars']").click()
         expect(page.locator("#pin-card .pin-empty")).to_be_visible()
+
+
+class TestContact:
+    @pytest.mark.parametrize("path", ["/", "/help.html"])
+    def test_contact_and_projects_link(self, page: Page, static_server: str, path: str):
+        page.goto(static_server + path)
+        expect(page.get_by_text("corey.sciuto+aie@gmail.com").first).to_be_attached()
+        expect(page.locator('a[href="https://corey.sciu.to/projects/"]').first).to_be_attached()
