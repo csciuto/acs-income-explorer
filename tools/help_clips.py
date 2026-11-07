@@ -126,7 +126,7 @@ def open_app(page, hash_=""):
 
 
 def free_dot(page, fx=0.55, fy=0.45):
-    """Centre of a dot near (fx, fy) of the chart that no other dot covers, and its record's age group."""
+    """Center of a dot near (fx, fy) of the chart that no other dot covers, and its record's age group."""
     return page.evaluate("""([fx, fy]) => {
       const s = document.getElementById('chart-svg').getBoundingClientRect();
       const d = b => Math.abs(b.x - s.x - s.width * fx) + Math.abs(b.y - s.y - s.height * fy);

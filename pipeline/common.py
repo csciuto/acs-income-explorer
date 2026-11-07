@@ -81,7 +81,7 @@ def check_label(spec, var, code, words, source):
     """Stop if a code we rely on doesn't carry the label we expect (IPUMS renumbering would silently corrupt data)."""
     lab = spec[var]["labels"].get(code, "")
     if not any(w in lab.lower() for w in words):
-        sys.exit(f"{source}: {var} code {code} is labelled {lab!r}; expected it to mention {' or '.join(words)!r}. "
+        sys.exit(f"{source}: {var} code {code} is labeled {lab!r}; expected it to mention {' or '.join(words)!r}. "
                  "IPUMS may have changed its codes; update the codes in the pipeline.")
 
 
@@ -189,7 +189,7 @@ def income(p, spec, var):
 
 
 # ---------------------------------------------------------------------------
-# Derivations shared by both sources (inputs already harmonised)
+# Derivations shared by both sources (inputs already harmonized)
 # ---------------------------------------------------------------------------
 def age_bucket(age):
     return np.digitize(age, [25, 30, 35, 40, 45, 55, 65]).astype(np.uint8)  # 0=<25 ... 7=65+

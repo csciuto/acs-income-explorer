@@ -279,7 +279,7 @@ def test_cps_education_codes_put_graduates_in_hs_diploma(make):
 def test_cps_dollars_income_year_and_weights(make):
     d, meta, _ = run(make, "cps", [({"YEAR": 2021, "HHINCOME": 100_000}, [{"INCWAGE": 100_000}]),
                                    ({"YEAR": 2025, "HHINCOME": 100_000}, [{"INCWAGE": 100_000}])])
-    assert meta["years"] == [2020, 2024]                  # labelled by income year
+    assert meta["years"] == [2020, 2024]                  # labeled by income year
     assert d["inc"].tolist() == [round(100_000 * CPI[2020] / CPI[2024]), 100_000]
     assert d["weight"].tolist() == [500.0, 500.0]         # ASECWTH / 2 pooled years
     assert d["year"].tolist() == [0, 1]

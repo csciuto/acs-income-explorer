@@ -325,7 +325,7 @@
     .legend-item { padding: 5px 6px; margin: -5px -6px; }
     .chip { padding: 5px 10px; font-size: 12px; }
 
-    /* Tooltip at top-centre on mobile */
+    /* Tooltip at top-center on mobile */
     #tooltip {
       top: 56px !important; left: 50% !important;
       transform: translateX(-50%) !important;
@@ -2002,10 +2002,10 @@ function renderLegend() {
   const lb = codebook?.labels?.[colorMode] || {};
 
   if (palette) {
-    const labelled = Object.keys(lb).length > 0;
+    const labeled = Object.keys(lb).length > 0;
     palette.forEach((color, i) => {
       if (color == null) return;
-      if (labelled && lb[String(i)] == null) return;  // palette longer than the codes in this data
+      if (labeled && lb[String(i)] == null) return;  // palette longer than the codes in this data
       const lbl = lb[String(i)] ?? String(i);
       const item = document.createElement('div');
       item.className = 'legend-item';
@@ -2079,7 +2079,7 @@ function showTooltip(event, i) {
 }
 
 function moveTooltip(event) {
-  if (isMobile()) return; // CSS pins tooltip to top-centre on mobile
+  if (isMobile()) return; // CSS pins tooltip to top-center on mobile
   const tt = document.getElementById('tooltip');
   const x = event.clientX + 14;
   const y = event.clientY - 10;
