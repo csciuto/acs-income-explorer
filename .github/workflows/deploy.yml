@@ -1,8 +1,7 @@
 name: Test and deploy
 
-# Every push to main runs the pipeline and browser tests (desktop and phone, with accessibility
-# checks), then publishes docs/ with an auto-incremented version (v1.<number of commits>)
-# written to docs/version.json, which the footer shows.
+# Tests, then publishes to GitHub Pages stamped v1.<number of commits>.
+# The steps live in csciuto/app-template/.github/workflows/app.yml.
 on:
   push:
     branches: [main]
@@ -15,42 +14,14 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-          cache: pip
-          cache-dependency-path: requirements-test.txt
-      - run: pip install -r requirements-test.txt
-      - run: python -m playwright install --with-deps chromium
-      - run: python -m pytest -q
-
-  deploy:
-    needs: test
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Stamp version
-        run: |
-          VERSION="v1.$(git rev-list --count HEAD)"
-          printf '{"version":"%s","commit":"%s","date":"%s"}\n' "$VERSION" "$(git rev-parse --short HEAD)" "$(git log -1 --format=%cs)" > docs/version.json
-          cat docs/version.json
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: docs
-      - id: deployment
-        uses: actions/deploy-pages@v4
+  app:
+    uses: csciuto/app-template/.github/workflows/app.yml@v1
+    with:
+      site: docs
+      stamp: ''
+      python-test: python -m playwright install --with-deps chromium && python -m pytest -q
+      browser-test: ''
