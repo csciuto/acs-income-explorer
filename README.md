@@ -7,6 +7,8 @@ bars or a 100% view, with standard errors and reliability warnings.
 
 **Live:** [corey.sciu.to/acs-income-explorer](https://corey.sciu.to/acs-income-explorer/)
 
+Built with [Claude Code](https://claude.com/claude-code).
+
 ## Two surveys, one tool
 
 | | ACS (default) | CPS |
