@@ -78,4 +78,4 @@ Pushing to `main` deploys `docs/` through `.github/workflows/deploy.yml`, which 
 
 ## License
 
-MIT, see [LICENCE](LICENCE).
+MIT, see [LICENSE](LICENSE).
