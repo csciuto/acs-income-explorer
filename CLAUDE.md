@@ -10,7 +10,7 @@ Two data sources in one app: the ACS (default) and the CPS ASEC, switchable in t
 > **Deploy gotcha:** the site fetches `docs/data/**` at runtime; the raw IPUMS extracts (ACS ~5 GB, CPS ~240 MB
 > gzipped) can't be processed in CI, so the generated data is committed.
 
-Docs: [EXTRACT.md](EXTRACT.md) (what to request), [METHODOLOGY.md](METHODOLOGY.md) (definitions, statistics; keep
+Docs: [ARCHITECTURE.md](ARCHITECTURE.md) (how it's built; keep current), [EXTRACT.md](EXTRACT.md) (what to request), [METHODOLOGY.md](METHODOLOGY.md) (definitions, statistics; keep
 in sync with `pipeline/`). Successor to an earlier CPS-only app (deleted; corey.sciu.to/am-inc-exp/ redirects here from the csciuto.github.io repo).
 
 ## Files
