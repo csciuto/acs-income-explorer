@@ -105,7 +105,15 @@ The page also shows the other survey's median whenever the same key exists in bo
 
 Each source's `national.arrow` holds 300,000 households drawn within year × state strata, weights scaled so each
 stratum keeps its total. Each state's local file holds up to 300 households per local area. These drive the dots
-and the statistics for views that aren't precomputed (shown without standard errors).
+and the statistics for views that aren't precomputed.
+
+Those live views show an approximate standard error for the median, marked ≈. It comes from the sample alone
+(Woodruff's method): the share of households below the median has standard error √(0.25 / n_eff), where n_eff is
+Kish's effective sample size, (Σw)² / Σw²; the weighted quantiles one standard error either side of 50% bracket
+the median, and half the distance between them is its standard error. It is rougher than the replicate-weight
+errors of the precomputed views in two ways: it accounts for unequal weights but not for the surveys'
+clustering, and it measures the 300,000-household sample the chart draws from, so it is wider than the full
+survey's would be. A unit test checks it against the spread of the median over 300 independent samples.
 
 ## Checks
 

@@ -31,7 +31,12 @@ pipeline/
   acs.py, cps.py       per-survey variables, code checks against the DDI labels, derived columns
 geo/                   PUMA (local-area) names from Census TIGER/Line; metro names
 docs/                  the site (GitHub Pages serves this folder)
-  index.html           the whole frontend: ~2,500 lines of HTML, CSS and JavaScript
+  index.html           the page: markup and styles (about 600 lines)
+  js/lib.js            the pure pieces: formatting, table keys, weighted quantiles, the approximate standard
+                       error, sampling. Unit-tested in Node (tests/js)
+  js/*.js              the rest, one file per concern, as plain scripts sharing globals and loaded in order:
+                       state, load, place, filters, dots, stats, url, chart, bars, breakdown, tooltip,
+                       controls, main
   help.html, help/     the guide and its animated WebP clips (tools/help_clips.py)
   data/codebook.json   labels, states, per-survey years, columns, dimensions, notes, metros, local areas
   data/<src>/          national.arrow (300,000-household sample), stats.json (precomputed cells)
@@ -93,9 +98,23 @@ flowchart LR
   published to GitHub Pages. The pipeline itself doesn't run in CI: the raw extracts are too big, which is why
   the generated data is committed.
 
+## Loading order
+
+A first visit needs about 6 MB (compressed): 1.3 MB of codebook and precomputed statistics, 4.8 MB of
+households for the dots. `init()` starts the households' download but doesn't wait for it: as soon as the
+small files arrive it builds the controls (the codebook lists each survey's columns), reads the address,
+and shows the place's name and its statistics from the precomputed table (`showHeadline()`), with the
+loading notice over the chart alone and the controls inert. When the households arrive the chart draws and
+the controls come alive. A slice the table doesn't hold (several values of one filter) shows nothing early.
+
+On deploy the page is stamped with its version and every script address carries it; `js/load.js` puts the
+same version on the data addresses (`dataUrl`), so a reload after an update gets everything new.
+
 ## Known limits
 
 - ACS 5-year data, 2020–2024 in 2024 dollars; the CPS covers states and large metros only.
-- Views not precomputed come from the sample and have no standard error.
+- Views not precomputed come from the sample; their standard error is approximate (marked ≈) and is the
+  sample's, which is wider than the full survey's would be.
 - Capital gains aren't counted in either survey, so the very top is understated.
-- The frontend is one large HTML file; splitting it into modules would make it easier to test piecemeal.
+- The frontend's files share one set of globals (plain scripts, in order). Only `js/lib.js` is pure and
+  unit-tested by itself; the rest is covered through the browser tests.

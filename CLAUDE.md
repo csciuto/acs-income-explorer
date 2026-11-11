@@ -21,7 +21,9 @@ pipeline/common.py       DDI + fixed-width reading (numpy), household sums, Cell
                          replicate SEs), stratified sample, stats scopes, local-area stats
 pipeline/acs.py, cps.py  per-survey variables, code checks against DDI labels, derivations
 geo/                     PUMA names from Census TIGER/Line (fetch_puma_names.py -> puma_names_2020.json)
-docs/index.html          the whole frontend
+docs/index.html          the page: markup and styles
+docs/js/lib.js           pure helpers (formatting, weighted statistics), unit-tested in Node: tests/js
+docs/js/*.js             the rest of the frontend, one plain script per concern, sharing globals, loaded in order
 docs/data/codebook.json  labels, states, sources{acs,cps}: years, columns, dims, notes, metros, local_areas
 docs/data/<src>/         national.arrow (300k sample), stats.json
 docs/data/acs/local/     <state>.json local-area stats, <state>.arrow up to 300 households per area

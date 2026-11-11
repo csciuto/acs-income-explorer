@@ -19,9 +19,10 @@ concurrency:
 
 jobs:
   app:
-    uses: csciuto/app-template/.github/workflows/app.yml@v1
+    uses: csciuto/app-template/.github/workflows/app.yml@v3
     with:
       site: docs
-      stamp: ''
-      python-test: python -m playwright install --with-deps chromium && python -m pytest -q
+      stamp: index.html
+      # apt (--with-deps) sometimes hangs on a slow mirror: four minutes, then the browser alone
+      python-test: (timeout 240 python -m playwright install --with-deps chromium || python -m playwright install chromium) && python -m pytest -q
       browser-test: ''

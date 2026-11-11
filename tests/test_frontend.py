@@ -1081,3 +1081,104 @@ class TestContact:
         page.goto(static_server + path)
         expect(page.get_by_text("corey.sciuto+aie@gmail.com").first).to_be_attached()
         expect(page.locator('a[href="https://corey.sciu.to/projects/"]').first).to_be_attached()
+
+
+# ── The headline before the households ────────────────────────────────────────
+
+class TestHeadlineFirst:
+    """The statistics show as soon as the small files arrive; only the chart waits for the households."""
+
+    def _open_holding_households(self, page, static_server, hash_=""):
+        held = {}
+
+        def hold(route):
+            held["route"] = route          # the 4.8 MB download: not answered until the test lets it go
+
+        page.route("**/national.arrow*", hold)
+        page.goto("about:blank")           # the fixture already opened the app: leave it, so this is a fresh load
+        page.goto(static_server + hash_)
+        page.wait_for_selector("#loading.over-chart", timeout=LOAD_TIMEOUT)
+        return held
+
+    def test_headline_numbers_show_while_households_load(self, page, static_server):
+        held = self._open_holding_households(page, static_server)
+        # the answer is on screen
+        assert page.inner_text("#place-title").startswith("United States")
+        median = page.inner_text("#s-med")
+        assert median.startswith("$") and "SE" in median
+        assert page.inner_text("#s-mean").startswith("$")
+        assert "surveyed" in page.inner_text("#n-info")
+        # the chart is the only thing waiting, and says so
+        assert page.is_visible("#loading")
+        assert page.inner_text("#loading-msg") == "Loading households…"
+        assert page.evaluate("document.getElementById('loading').parentElement.id") == "chart-wrap"
+        # controls are off until there is data for them to act on
+        for el in ("sidebar-body", "toolbar", "source-switch", "stats-tab-bar"):
+            assert page.evaluate(f"document.getElementById('{el}').inert") is True, el
+        # then the households arrive and everything comes alive, with the same numbers
+        held["route"].continue_()
+        page.wait_for_selector("#loading", state="hidden", timeout=LOAD_TIMEOUT)
+        assert page.inner_text("#s-med") == median
+        for el in ("sidebar-body", "toolbar", "source-switch", "stats-tab-bar"):
+            assert page.evaluate(f"document.getElementById('{el}').inert") is False, el
+        assert page.locator("#chart-wrap svg circle").count() > 100
+
+    def test_headline_follows_the_link(self, page, static_server):
+        # a state and one filter: still a precomputed slice, so its numbers show early too
+        held = self._open_holding_households(page, static_server, "#states=25&educ=4")
+        assert page.inner_text("#place-title").startswith("Massachusetts")
+        early = page.inner_text("#s-med")
+        assert early.startswith("$")
+        held["route"].continue_()
+        page.wait_for_selector("#loading", state="hidden", timeout=LOAD_TIMEOUT)
+        assert page.inner_text("#s-med") == early
+
+    def test_a_slice_with_no_precomputed_numbers_waits(self, page, static_server):
+        # two values of one filter: computed from the households, so nothing is shown before they arrive
+        held = self._open_holding_households(page, static_server, "#educ=3,4")
+        assert page.inner_text("#s-med").strip() in ("", "—")
+        held["route"].continue_()
+        page.wait_for_selector("#loading", state="hidden", timeout=LOAD_TIMEOUT)
+        assert page.inner_text("#s-med").startswith("$")
+
+    def test_no_errors_while_waiting(self, page, static_server):
+        errors = []
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        held = self._open_holding_households(page, static_server)
+        page.set_viewport_size({"width": 900, "height": 700})      # a resize while waiting must not draw
+        page.wait_for_timeout(300)
+        held["route"].continue_()
+        page.wait_for_selector("#loading", state="hidden", timeout=LOAD_TIMEOUT)
+        assert errors == []
+
+
+# ── Error bars on live views ──────────────────────────────────────────────────
+
+class TestApproximateStandardError:
+    """A view the precomputed table doesn't have still gets an error bar, marked as approximate."""
+
+    def test_precomputed_view_shows_the_survey_standard_error(self, page):
+        text = page.inner_text("#s-med")
+        assert "±" in text and "SE" in text
+        assert "≈" not in text
+
+    def test_live_view_shows_an_approximate_one(self, page, static_server):
+        page.goto("about:blank")
+        page.goto(static_server + "#educ=3,4")            # two values of a filter: worked out from the sample
+        page.wait_for_selector("#loading", state="hidden", timeout=LOAD_TIMEOUT)
+        text = page.inner_text("#s-med")
+        assert re.match(r"^\$[\d,]+ ≈±\$[\d,]+ SE$", text), text
+        se = int(re.search(r"≈±\$([\d,]+)", text).group(1).replace(",", ""))
+        median = int(re.match(r"\$([\d,]+)", text).group(1).replace(",", ""))
+        assert 0 < se < median * 0.05                     # tens of thousands of households: well under 5%
+        assert "Approximate" in page.locator("#s-med [title]").get_attribute("title")
+
+    def test_a_smaller_group_has_a_wider_one(self, page, static_server):
+        def se(hash_):
+            page.goto("about:blank")
+            page.goto(static_server + hash_)
+            page.wait_for_selector("#loading", state="hidden", timeout=LOAD_TIMEOUT)
+            m = re.search(r"≈±\$([\d,]+)", page.inner_text("#s-med"))
+            assert m, page.inner_text("#s-med")
+            return int(m.group(1).replace(",", ""))
+        assert se("#states=56,50&educ=3,4") > se("#educ=3,4")     # Wyoming and Vermont against the whole country
