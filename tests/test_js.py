@@ -10,5 +10,8 @@ ROOT = Path(__file__).parent.parent
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 def test_javascript_unit_tests():
-    result = subprocess.run(["node", "--test", "tests/js/"], cwd=ROOT, capture_output=True, text=True)
+    files = sorted(str(f.relative_to(ROOT)) for f in (ROOT / "tests" / "js").glob("*.test.js"))
+    assert files, "no JavaScript tests found"
+    # the files by name: older Node versions take a folder here as a module to run
+    result = subprocess.run(["node", "--test", *files], cwd=ROOT, capture_output=True, text=True)
     assert result.returncode == 0, result.stdout[-4000:] + result.stderr[-2000:]
