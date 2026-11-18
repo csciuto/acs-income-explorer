@@ -89,7 +89,15 @@ Precomputed cells use every household.
 
 - **Median:** linear interpolation within the $2,500 interval that holds it, as the Census Bureau does; otherwise
   respondents' round numbers pin the median and its replicates to one value and the standard error collapses.
-- **Standard errors:** SE = √(4/R × Σ(θᵣ − θ)²) with R = 80 (ACS) or 160 (CPS), for the median and the mean.
+- **Percentiles** (P25/P75 in the stats box, P1–P99 in the Percentiles view): the same interpolation, with exactly
+  $0 treated as a point of its own (for the median too) so the many households with no income aren't spread across $0–$2,500. P50 is
+  the median. A percentile with fewer than 10 sample households below it or at and above it is left blank.
+- **Standard errors:** SE = √(4/R × Σ(θᵣ − θ)²) with R = 80 (ACS) or 160 (CPS), for the median, the mean and each
+  percentile.
+- **Topcoding (ACS):** a percentile is marked † from the first one where most households at or above it (by
+  weight) are topcoded: from there up, capped incomes decide where the percentile falls, and the standard error
+  doesn't capture that. Many topcoded households are capped on a small item (Social Security, say), so their
+  mere presence isn't the test. The CPS swaps top values instead of capping them, so it marks nothing.
 - **Suppression:** fewer than 50 sample households, no statistics; 50–199 low, 200–499 moderate reliability.
 
 | Scope | Cells |
@@ -99,6 +107,9 @@ Precomputed cells use every household.
 | `metro=CBSA` | overall; each dimension value for metros with 2,000+ households (CPS: listed only with 1,000+) |
 | `puma=CODE` (ACS, one file per state) | overall and each value of age, work, housing, cost burden, kids, education, race, earners, income mix |
 
+Percentiles (`<src>/pct/`) exist for every cell above except local areas with a filter, which have them for the
+area as a whole only; one file for the nation, one per state (with its local areas), one per metro.
+
 The page also shows the other survey's median whenever the same key exists in both.
 
 ## Browser samples
@@ -107,8 +118,9 @@ Each source's `national.arrow` holds 300,000 households drawn within year × sta
 stratum keeps its total. Each state's local file holds up to 300 households per local area. These drive the dots
 and the statistics for views that aren't precomputed.
 
-Those live views show an approximate standard error for the median, marked ≈. It comes from the sample alone
-(Woodruff's method): the share of households below the median has standard error √(0.25 / n_eff), where n_eff is
+Those live views use the same interpolated quantiles and show approximate standard errors for the median and the
+percentiles, marked ≈. They come from the sample alone (Woodruff's method): for the median, the share of
+households below it has standard error √(0.25 / n_eff) (√(q(1−q) / n_eff) for quantile q), where n_eff is
 Kish's effective sample size, (Σw)² / Σw²; the weighted quantiles one standard error either side of 50% bracket
 the median, and half the distance between them is its standard error. It is rougher than the replicate-weight
 errors of the precomputed views in two ways: it accounts for unequal weights but not for the surveys'

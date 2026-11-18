@@ -6,6 +6,7 @@
 // Stacked bars view
 // ============================================================
 function renderStackedBars() {
+  showPctView(false);
   const svg = document.getElementById('chart-svg');
   const W = svg.clientWidth || svg.parentElement.clientWidth;
   const H = svg.clientHeight || svg.parentElement.clientHeight;

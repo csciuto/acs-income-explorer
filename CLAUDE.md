@@ -26,6 +26,7 @@ docs/js/lib.js           pure helpers (formatting, weighted statistics), unit-te
 docs/js/*.js             the rest of the frontend, one plain script per concern, sharing globals, loaded in order
 docs/data/codebook.json  labels, states, sources{acs,cps}: years, columns, dims, notes, metros, local_areas
 docs/data/<src>/         national.arrow (300k sample), stats.json
+docs/data/<src>/pct/     P1-P99 + SEs per cell: national.json, state-FIPS.json (+ its local areas), metro-CBSA.json
 docs/data/acs/local/     <state>.json local-area stats, <state>.arrow up to 300 households per area
 ```
 
@@ -63,12 +64,14 @@ race_ethnicity housing topcoded has_roommate hh_size`. ACS adds `city metro_area
 `scope|dim=val|…`, dims sorted. Scopes `national`, `state=FIPS`, `metro=CBSA` (both; CPS names from `geo/metro_names_2013.json`), `puma=CODE` (ACS, in
 `acs/local/<state>.json`). Dims: `age sex marst educ region city work kids race house earners bread ppct psrc year`
 plus `burden` (ACS) and `mjob` (CPS). Cells `{n, n_rep, med, mean, p25, p75, rel, se_med, …}`; under 50 absent.
+Percentile cells `{v: [99], se: [99], tc?}` (null where under 10 households lie beyond; `tc` = first P near the cap),
+same keys, plus `puma=CODE` overall; local areas with filters have none (the view falls back to the sample).
 
 ## Frontend
 
 Globals: `source`, `srcInfo`, `filters` (dim → Set), `selectedFips`, `nationalTable`, `precomputed`,
 `otherPrecomputed` (other survey, for the comparison line), `localStats`/`localTables` (per state, loaded on
-demand). `currentCols()` returns the local table when a local area is selected. `getStats()` picks scope
+demand), `pctFiles` (percentile files, loaded by the Percentiles view, `viewMode` `ptile`; `js/percentiles.js`). `currentCols()` returns the local table when a local area is selected. `getStats()` picks scope
 `state=` (one state) > `puma=` > `metro=` > `national`, builds the key via `DIM_TO_KEY`, falls back to live stats.
 UI elements for columns a source lacks are removed at load. Place tab: one place at a time (US, region, state, metro, local area), stored
 in the old selections so links work (`states=`, `region=`, `metro_area=`, `puma=`). `currentPlace()`, `setPlace()`,

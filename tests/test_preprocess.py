@@ -365,6 +365,17 @@ def test_cell_stats_match_a_brute_force_replicate_calculation(n_rep):
     assert c["se_mean"] == round(np.sqrt(4 / n_rep * ((rmean - mean) ** 2).sum()))
 
 
+def test_median_of_a_group_mostly_without_income_is_zero():
+    inc = np.concatenate([np.zeros(60), np.full(40, 30_000.0)])
+    cs = C.CellStats(inc, np.ones(100), np.ones((100, 80), np.float32))
+    c = cs.cell(cs.sorted_mask(np.ones(100, bool)), pct=True)
+    assert c["med"] == 0 and c["pct"]["v"][49] == 0 and c["pct"]["v"][50] == 0
+    inc = np.concatenate([np.zeros(40), np.full(30, 1_000.0), np.full(30, 40_000.0)])   # median in $1-$2,500
+    cs = C.CellStats(inc, np.ones(100), np.ones((100, 80), np.float32))
+    c = cs.cell(cs.sorted_mask(np.ones(100, bool)), pct=True)
+    assert c["pct"]["v"][48] <= c["med"] <= c["pct"]["v"][50]
+
+
 def test_median_is_not_pinned_by_heaped_round_numbers():
     rng = np.random.default_rng(11)
     n = 4_000
@@ -374,6 +385,60 @@ def test_median_is_not_pinned_by_heaped_round_numbers():
     c = cs.cell(cs.sorted_mask(np.ones(n, bool)))
     assert all(naive(inc, rep[:, r].astype(float), 0.5) == 80_000 for r in range(80))
     assert c["se_med"] > 0 and c["med"] != 80_000
+
+
+def naive_binned_quantile(v, w, q, width=2_500):
+    """Brute force: the $2,500 interval (exact $0 its own point) where the running weight reaches q, interpolated."""
+    x = naive(v, w, q)
+    if x == 0:
+        return 0.0
+    lo = np.floor(x / width) * width
+    below, inside = w[v < lo].sum(), w[(v >= lo) & (v < lo + width) & (v > 0)].sum()
+    return lo + width * min(1.0, max(0.0, (q * w.sum() - below) / inside))
+
+
+@pytest.mark.parametrize("n_rep", [80, 160])
+def test_percentiles_match_a_brute_force_replicate_calculation(n_rep):
+    rng = np.random.default_rng(9)
+    n = 3_000
+    inc = np.where(rng.random(n) < 0.05, 0, np.round(rng.lognormal(11, 0.8, n), -2))   # some $0, heaped values
+    w = rng.uniform(20, 200, n)
+    rep = (w[:, None] * rng.uniform(0.3, 1.7, (n, n_rep))).astype(np.float32)
+    cs = C.CellStats(inc, w, rep)
+    mask = rng.random(n) < 0.6
+    c = cs.cell(cs.sorted_mask(mask), pct=True)
+    v, ww, R = inc[mask], w[mask], rep[mask].astype(np.float64)
+    for k in (2, 10, 25, 50, 75, 90, 99):   # P2 lands in the $0 households
+        q = k / 100
+        est = naive_binned_quantile(v, ww, q)
+        reps = np.array([naive_binned_quantile(v, R[:, r], q) for r in range(n_rep)])
+        assert abs(c["pct"]["v"][k - 1] - est) <= 1, k
+        assert abs(c["pct"]["se"][k - 1] - np.sqrt(4 / n_rep * ((reps - est) ** 2).sum())) <= 1, k
+    assert c["pct"]["v"][1] == 0
+    assert c["pct"]["v"][49] == c["med"]
+    assert abs(c["p25"] - c["pct"]["v"][24]) <= 1 and abs(c["p75"] - c["pct"]["v"][74]) <= 1
+
+
+def test_percentiles_blank_thin_tails_and_mark_topcoded_territory():
+    n = 200
+    inc = np.arange(n, dtype=float) * 5_000
+    top = inc >= 180 * 5_000                       # the 20 richest households are topcoded
+    cs = C.CellStats(inc, np.ones(n), np.ones((n, 80), np.float32), topcoded=top)
+    p = cs.cell(cs.sorted_mask(np.ones(n, bool)), pct=True)["pct"]
+    assert p["v"][4] is None and p["v"][5] is not None      # P5 has 9 households below it, P6 has 11
+    assert p["v"][94] is not None and p["v"][95] is None    # P95 has 11 at or above it, P96 has 9
+    assert p["tc"] == 81                                    # P81: 39 households at or above, 20 topcoded
+    assert "tc" not in C.CellStats(inc, np.ones(n), np.ones((n, 80), np.float32)).cell(
+        cs.sorted_mask(np.ones(n, bool)), pct=True)["pct"]
+
+
+def test_percentile_files_by_scope():
+    assert C.pct_file("national|age=1") == "national"
+    assert C.pct_file("state=6|educ=2") == "state-06"
+    assert C.pct_file("puma=2500609") == "state-25"
+    assert C.pct_file("metro=14460|kids=1") == "metro-14460"
+    t = {"national": {"n": 1, "pct": {"v": []}}, "state=25": {"n": 2}}
+    assert C.split_percentiles(t) == {"national": {"national": {"v": []}}} and "pct" not in t["national"]
 
 
 def test_small_cells_are_suppressed_and_reliability_tiers():
@@ -453,6 +518,12 @@ def test_main_writes_both_sources(make, tmp_path, monkeypatch):
     assert json.loads((out / "acs" / "stats.json").read_text())["national"]["n"] == 400
     assert json.loads((out / "cps" / "stats.json").read_text())["national"]["n"] == 400
     assert (out / "acs" / "local" / "25.json").exists() and (out / "acs" / "local" / "25.arrow").exists()
+    pa_ = json.loads((out / "acs" / "pct" / "national.json").read_text())["national"]
+    assert len(pa_["v"]) == 99 and pa_["v"][49] == json.loads((out / "acs" / "stats.json").read_text())["national"]["med"]
+    assert "puma=2500609" in json.loads((out / "acs" / "pct" / "state-25.json").read_text())
+    assert (out / "cps" / "pct" / "national.json").exists()
+    assert "pct" not in json.loads((out / "acs" / "stats.json").read_text())["national"]
+    assert "pct" not in json.loads((out / "acs" / "local" / "25.json").read_text())["puma=2500609"]
 
 
 def test_five_year_extract_with_overlapping_samples_keeps_only_the_latest(make):

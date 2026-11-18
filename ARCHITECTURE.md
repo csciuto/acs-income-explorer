@@ -77,7 +77,11 @@ flowchart LR
 - **Precompute what's asked often, compute the rest live.** Cells are keyed `scope|dim=val|…` (dims sorted)
   for the nation, states, metros and local areas, each with single dimensions and (nationally) pairs. The
   frontend builds the key for the current filters (`buildKey`, `getStats`); if it's not precomputed, it computes
-  weighted percentiles from the sample (`wPercentile`) and shows them without a standard error.
+  interpolated percentiles from the sample (`binnedQuantiles`) with approximate errors (≈).
+- **Percentiles on demand.** P1–P99 with standard errors for every cell are too big for `stats.json` (about
+  1 KB a cell), so they go in `<src>/pct/` split by place (`national`, `state-FIPS` with its local areas,
+  `metro-CBSA`; `pct_file` in the pipeline, `pctFileFor` in `js/percentiles.js`). The Percentiles view fetches
+  one file the first time it needs it; anything not precomputed comes from the sample (`percentileTable`).
 - **Samples that load fast.** Each survey ships a 300,000-household stratified sample (year × state, weights
   rescaled so each stratum keeps its total) as an Arrow file; local areas load per state on demand.
 - **Dots.** Incomes go on a log axis in 8-pixel bins; each bin stacks its households alternately above and below
@@ -90,7 +94,7 @@ flowchart LR
 ## Testing and deploy
 
 - `pytest tests/test_preprocess.py`: the pipeline on small fake extracts (under a second): parsing, derived
-  columns, medians and standard errors, suppression, the checks that should stop a bad run.
+  columns, medians, percentiles and standard errors, suppression, the checks that should stop a bad run.
 - `pytest` (all): plus Playwright at desktop and phone size against the real page and data, and axe
   accessibility checks.
 - Pushing to `main` runs the full suite in GitHub Actions (the shared workflow in

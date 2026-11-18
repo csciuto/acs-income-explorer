@@ -509,12 +509,12 @@ class TestBrushRange:
 
 
 # ---------------------------------------------------------------------------
-# View toggle (Dots / Bars / 100%)
+# View toggle (Dots / Bars / 100% / Percentiles)
 # ---------------------------------------------------------------------------
 
 class TestViewToggle:
-    def test_three_view_buttons_exist(self, page: Page):
-        assert page.locator(".view-btn").count() == 3
+    def test_four_view_buttons_exist(self, page: Page):
+        assert page.locator(".view-btn").count() == 4
 
     def test_dots_button_active_by_default(self, page: Page):
         expect(page.locator(".view-btn[data-view='dots']")).to_have_class(re.compile(r"\bactive\b"))
@@ -586,6 +586,81 @@ class TestViewToggle:
         page.wait_for_timeout(300)
         text = page.locator("#chart-svg").text_content()
         assert "%" in text
+
+
+# ---------------------------------------------------------------------------
+# Percentiles view
+# ---------------------------------------------------------------------------
+
+def open_percentiles(page: Page):
+    page.locator(".view-btn[data-view='ptile']").click()
+    expect(page.locator(".pct-table")).to_be_visible()
+
+
+def pct_row(page: Page, k: int):
+    return page.locator(".pct-table tbody tr", has=page.locator("th", has_text=re.compile(rf"^P{k}\b")))
+
+
+class TestPercentiles:
+    def test_table_from_the_full_survey(self, page: Page):
+        open_percentiles(page)
+        expect(page.locator("#chart-svg")).to_be_hidden()
+        assert page.locator(".pct-table tbody tr").count() == 7
+        median = page.locator("#s-med").text_content().split("±")[0].strip()
+        expect(pct_row(page, 50)).to_contain_text(median)          # P50 is the stats box's median
+        expect(pct_row(page, 90)).to_contain_text("±$")
+        expect(page.locator("#pct-view")).not_to_contain_text("≈")
+        assert "v=ptile" in page.url
+
+    def test_all_99_and_back(self, page: Page):
+        open_percentiles(page)
+        page.locator("#pct-all").click()
+        assert page.locator(".pct-table tbody tr").count() == 99
+        page.locator("#pct-all").click()
+        assert page.locator(".pct-table tbody tr").count() == 7
+
+    def test_follows_filters_and_place(self, page: Page):
+        open_percentiles(page)
+        before = pct_row(page, 50).text_content()
+        page.locator(".tab-btn[data-tab='demo']").click()
+        page.locator('#f-educ .f-btn[data-val="4"]').click()
+        expect(pct_row(page, 50)).not_to_have_text(before)
+        expect(page.locator("#pct-view")).not_to_contain_text("≈")      # one value of a filter: precomputed
+        pick_place(page, "boston", "Boston-Cambridge")
+        expect(page.locator("#pct-view")).not_to_contain_text("≈")
+
+    def test_falls_back_to_the_sample_for_combinations_not_precomputed(self, page: Page):
+        open_percentiles(page)
+        page.locator(".tab-btn[data-tab='demo']").click()
+        page.locator('#f-educ .f-btn[data-val="3"]').click()
+        page.locator('#f-educ .f-btn[data-val="4"]').click()            # two values of one filter: live
+        expect(page.locator(".pct-note").first).to_contain_text("chart's sample")
+        expect(pct_row(page, 50)).to_contain_text("≈±$")
+
+    def test_local_area_as_a_whole_is_precomputed(self, page: Page):
+        pick_place(page, "malden", "Malden & Medford")
+        open_percentiles(page)
+        expect(page.locator("#pct-view")).not_to_contain_text("≈")
+
+    def test_csv_download(self, page: Page):
+        open_percentiles(page)
+        with page.expect_download() as dl:
+            page.locator("#pct-csv").click()
+        assert dl.value.suggested_filename == "income-percentiles-acs-united-states.csv"
+        lines = open(dl.value.path()).read().splitlines()
+        assert lines[0] == "percentile,income,se,approximate,near_cap" and len(lines) == 100
+
+    def test_back_to_dots(self, page: Page):
+        open_percentiles(page)
+        page.locator(".view-btn[data-view='dots']").click()
+        expect(page.locator("#pct-view")).to_be_hidden()
+        assert page.locator("#chart-svg circle").count() > 100
+
+    def test_restored_from_url_and_cps(self, page: Page, static_server: str):
+        page.goto(static_server + "#src=cps&v=ptile")
+        page.wait_for_selector("#loading", state="hidden", timeout=LOAD_TIMEOUT)
+        expect(page.locator(".pct-table")).to_be_visible()
+        expect(page.locator("#pct-view")).not_to_contain_text("≈")
 
 
 # ---------------------------------------------------------------------------
@@ -694,6 +769,13 @@ class TestMobile:
 
     def test_mobile_stats_shows_household_count(self, mobile_page: Page):
         expect(mobile_page.locator("#mobile-stats")).to_contain_text("HH")
+
+    def test_percentiles_on_mobile(self, mobile_page: Page):
+        mobile_page.locator(".view-btn[data-view='ptile']").tap()
+        expect(mobile_page.locator(".pct-table")).to_be_visible()
+        mobile_page.locator("#pct-all").tap()
+        assert mobile_page.locator(".pct-table tbody tr").count() == 99
+        assert mobile_page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
 
     def test_dots_render_on_mobile(self, mobile_page: Page):
         circles = mobile_page.locator("#chart-svg circle")

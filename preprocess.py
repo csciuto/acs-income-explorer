@@ -11,6 +11,8 @@ Either source can be rebuilt on its own; the other's files and codebook entry ar
     codebook.json                 labels, states, and per source: years, columns, metros, local areas, notes
     <source>/national.arrow       stratified sample of households (by year x state) for the chart
     <source>/stats.json           exact statistics from ALL households, with replicate-weight standard errors
+    <source>/pct/<file>.json      P1-P99 with standard errors for the same cells (and ACS local areas as a whole):
+                                  national, state-FIPS (with its local areas), metro-CBSA; loaded by the Percentiles view
     acs/local/<state>.json        local-area (PUMA) statistics, loaded when an area is picked
     acs/local/<state>.arrow       up to 300 households per local area in that state, for its chart
 """
@@ -210,15 +212,28 @@ def run_source(name, dat, ddi, out, args, codebook):
     if not args.skip_stats:
         step(f"{name.upper()}: statistics from all households")
         stats = C.compute_stats(d, rep, dims)
-        (sd / "stats.json").write_text(json.dumps(stats, separators=(",", ":")))
-        print(f"  {len(stats):,} cells, {(sd / 'stats.json').stat().st_size / 1e6:.1f}MB")
+        pct_tables = [stats]
+        local = None
         if name == "acs" and (d["puma"] > 0).any():
             step("ACS: local-area statistics")
-            ld = sd / "local"
-            ld.mkdir(exist_ok=True)
             # the filters people most often combine with a place; others fall back to the area's household sample
             local_dims = {k: dims[k] for k in ("age", "work", "house", "burden", "kids", "educ", "race", "earners", "ppct")}
             local = C.compute_local_stats(d, rep, local_dims)
+            pct_tables += list(local.values())
+        pct = C.split_percentiles(*pct_tables)
+        (sd / "stats.json").write_text(json.dumps(stats, separators=(",", ":")))
+        print(f"  {len(stats):,} cells, {(sd / 'stats.json').stat().st_size / 1e6:.1f}MB")
+        pd_ = sd / "pct"
+        pd_.mkdir(exist_ok=True)
+        for f in pd_.glob("*.json"):
+            f.unlink()
+        for fname, cells in pct.items():
+            (pd_ / f"{fname}.json").write_text(json.dumps(cells, separators=(",", ":")))
+        total = sum(f.stat().st_size for f in pd_.iterdir())
+        print(f"  percentiles: {sum(len(v) for v in pct.values()):,} cells in {len(pct)} files, {total / 1e6:.1f}MB")
+        if local is not None:
+            ld = sd / "local"
+            ld.mkdir(exist_ok=True)
             for st, cells in local.items():
                 (ld / f"{st:02d}.json").write_text(json.dumps(cells, separators=(",", ":")))
                 sub = d[d["state"] == st]

@@ -33,7 +33,7 @@ function getStats() {
   const w = rows.map(i => cols.weight[i]);
   const wTotal = w.reduce((a,b) => a+b, 0);
 
-  const [p25, wMed, p75] = wQuantiles(inc, w, [0.25, 0.5, 0.75]);
+  const [p25, wMed, p75] = binnedQuantiles(inc, w, [0.25, 0.5, 0.75]);
   const seApprox = approxQuantileSE(inc, w, 0.5);   // from this sample alone: rougher than the precomputed errors
 
   return {

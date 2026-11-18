@@ -117,6 +117,21 @@
   /* ---- canvas + axes ---- */
   #chart-wrap { flex: 1; position: relative; overflow: hidden; }
   #chart-svg { width: 100%; height: 100%; }
+  #pct-view { position: absolute; inset: 0; overflow-y: auto; padding: 12px 16px; }
+  #pct-view[hidden] { display: none; }
+  .pct-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .pct-head .panel-title { margin: 0 auto 0 0; }
+  .pct-head button { font-size: 11px; color: var(--text-dim); background: none; border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+  .pct-head button:hover:not(:disabled) { color: var(--text); border-color: var(--text-dim); }
+  .pct-head button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .pct-table { border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 13px; width: 100%; max-width: 420px; }
+  .pct-table th, .pct-table td { padding: 4px 10px 4px 0; text-align: right; border-bottom: 1px solid var(--border); }
+  .pct-table th:first-child { text-align: left; font-weight: 400; color: var(--text-dim); }
+  .pct-table thead th { font-size: 11px; font-weight: 600; color: var(--text-dim); }
+  .pct-table tr.pct-key th, .pct-table tr.pct-key td { color: var(--text); font-weight: 600; }
+  .pct-se { color: var(--text-dim); font-size: 11px; }
+  .pct-cap { color: var(--warn); }
+  .pct-note, .pct-msg { font-size: 11px; color: var(--text-dim); margin-top: 8px; }
 
   /* ---- stats panel ---- */
   .panel-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 6px; }
@@ -322,6 +337,8 @@
     .cm-btn   { padding: 9px 10px; min-height: 36px; }
     .view-btn, .dots-btn, .sample-btn { padding: 7px 12px; }
     #btn-brush, #btn-clear, #btn-filters { padding: 7px 12px; min-height: 36px; font-size: 11px; }
+    .pct-head button { padding: 7px 12px; min-height: 36px; }
+    #pct-view { padding: 10px 12px; }
     .stats-tab-btn  { padding: 9px 6px; min-height: 36px; }
     .state-check-label { padding: 7px 4px; min-height: 36px; }
     .expand-bar { padding: 9px 0; }
@@ -549,6 +566,7 @@
         <button class="view-btn active" data-view="dots">Dots</button>
         <button class="view-btn" data-view="bars">Bars</button>
         <button class="view-btn" data-view="pct">100%</button>
+        <button class="view-btn" data-view="ptile">Percentiles</button>
       </div>
       <div id="dots-toggle">
         <button class="dots-btn" data-maxdots="1000">1K</button>
@@ -573,6 +591,7 @@
           <dt>Across</dt><dd>Household income, log scale. Drag to pick a range.</dd>
           <dt>Up and down</dt><dd>No scale: the swarm is taller where more households earn that much.</dd>
           <dt>Colors</dt><dd>Set in the Group tab. Click a legend item to filter.</dd>
+          <dt>Percentiles</dt><dd>Income at each 1% of households, lowest to highest.</dd>
           <dt>1K / 3K / 5K</dt><dd>Most dots drawn.</dd>
           <dt>Dim others / Matches only</dt><dd>Fade non-matching households, or hide them.</dd>
           <dt>Data</dt><dd id="about-data">—</dd>
@@ -582,6 +601,7 @@
     <div id="mobile-stats"></div>
     <div id="chart-wrap">
       <svg id="chart-svg"></svg>
+      <div id="pct-view" hidden></div>
     </div>
   </div>
 </main>
@@ -614,6 +634,7 @@
 <script src="js/url.js"></script>
 <script src="js/chart.js"></script>
 <script src="js/bars.js"></script>
+<script src="js/percentiles.js"></script>
 <script src="js/breakdown.js"></script>
 <script src="js/tooltip.js"></script>
 <script src="js/controls.js"></script>

@@ -52,13 +52,19 @@ function placeChain(p) {
 }
 
 // The precomputed cell for a place and a set of single-valued filters, or null.
+// The stats key for a place and single-valued household filters.
+function placeKey(p, dimFilter) {
+  if (p.level === 'puma') return buildKey(`puma=${p.code}`, dimFilter);
+  if (p.level === 'metro') return buildKey(`metro=${p.code}`, dimFilter);
+  if (p.level === 'state') return buildKey(`state=${p.code}`, dimFilter);
+  if (p.level === 'region') return buildKey('national', { ...dimFilter, region: p.code });
+  return buildKey('national', dimFilter);
+}
+
 function placeCell(p, dimFilter, table = precomputed, locals = localStats) {
   if (!table) return null;
-  if (p.level === 'puma') return (locals[Math.floor(p.code / 100000)] || {})[buildKey(`puma=${p.code}`, dimFilter)] ?? null;
-  if (p.level === 'metro') return table[buildKey(`metro=${p.code}`, dimFilter)] ?? null;
-  if (p.level === 'state') return table[buildKey(`state=${p.code}`, dimFilter)] ?? null;
-  if (p.level === 'region') return table[buildKey('national', { ...dimFilter, region: p.code })] ?? null;
-  return table[buildKey('national', dimFilter)] ?? null;
+  if (p.level === 'puma') return (locals[Math.floor(p.code / 100000)] || {})[placeKey(p, dimFilter)] ?? null;
+  return table[placeKey(p, dimFilter)] ?? null;
 }
 
 const GEO_FILTERS = new Set(['metro_area', 'puma', 'region']);

@@ -305,15 +305,46 @@ def w_quantile_sorted(v, cw, q):
 def binned_median(v, cum, total, j):
     """Median by linear interpolation within the $2,500 interval holding v[j], the first value whose cumulative
     weight reaches half. cum(k) = total weight of rows [:k]. Without this, respondents' round numbers (many
-    households at exactly $80,000) pin the median, and its replicate estimates, to a single value."""
+    households at exactly $80,000) pin the median, and its replicate estimates, to a single value. Exactly $0 is a
+    point of its own, as in income_bins: a group where most households have no income has a median of $0."""
     x = v[min(j, len(v) - 1)]
+    if x == 0:
+        return 0.0
     edge = np.floor(x / MEDIAN_BIN) * MEDIAN_BIN
-    k0 = int(np.searchsorted(v, edge, "left"))
+    k0 = int(np.searchsorted(v, edge, "right" if edge == 0 else "left"))   # the $0 point sits below $0-$2,500
     k1 = int(np.searchsorted(v, edge + MEDIAN_BIN, "left"))
     below, upto = cum(k0), cum(k1)
     if upto <= below:
         return float(x)
     return float(edge + MEDIAN_BIN * min(1.0, max(0.0, (total / 2 - below) / (upto - below))))
+
+
+PCT_QS = np.arange(1, 100) / 100   # P1-P99
+PCT_MIN_TAIL = 10                   # a percentile needs this many sample households on each side of it
+TOPCODE_SHARE = 0.5                 # marked from where most households at or above a percentile are topcoded
+
+
+def income_bins(v):
+    """v sorted ascending, >= 0: the $2,500 intervals the percentiles interpolate in, as (row starts, lower edges,
+    widths). Exactly $0 is its own point interval, so the many households with no income aren't spread over $0-$2,500."""
+    b = np.where(v == 0, -1, np.floor(v / MEDIAN_BIN)).astype(np.int64)
+    starts = np.concatenate([[0], np.flatnonzero(np.diff(b)) + 1])
+    bb = b[starts]
+    lo = np.where(bb < 0, 0.0, bb * float(MEDIAN_BIN))
+    width = np.where(bb < 0, 0.0, float(MEDIAN_BIN))
+    return starts, lo, width
+
+
+def binned_quantiles(bw, lo, width, qs):
+    """Quantiles from per-interval weights bw (intervals in income order): the interval where the running weight
+    reaches q of the total, then linear interpolation inside it. For q = 0.5 this is binned_median."""
+    cb = np.cumsum(bw)
+    target = np.asarray(qs) * cb[-1]
+    k = np.minimum(np.searchsorted(cb, target), len(cb) - 1)
+    inside = bw[k]
+    below = cb[k] - inside
+    frac = np.where(inside > 0, (target - below) / np.where(inside > 0, inside, 1), 0.0)
+    return lo[k] + width[k] * np.clip(frac, 0.0, 1.0)
 
 
 def _chunked_dot(v, R, chunk=500_000):
@@ -328,7 +359,7 @@ class CellStats:
     Replicate variance: factor * sum((theta_r - theta)^2), with factor 4/R for both the ACS's successive difference
     replication (R=80) and the CPS's Fay-adjusted BRR (R=160, Fay coefficient 0.5)."""
 
-    def __init__(self, inc, weight, rep, extra=None):
+    def __init__(self, inc, weight, rep, extra=None, topcoded=None):
         order = np.argsort(inc, kind="stable")
         self.order = order
         self.v = inc[order].astype(np.float64)
@@ -337,11 +368,13 @@ class CellStats:
         self.n_rep = rep.shape[1]
         self.factor = 4 / self.n_rep
         self.extra = extra   # fn(sorted idx, weights, total) -> dict of extra fields
+        self.topcoded = None if topcoded is None else np.asarray(topcoded)[order].astype(bool)
 
     def sorted_mask(self, mask):
         return mask[self.order]
 
-    def cell(self, smask, with_se=True):
+    def cell(self, smask, with_se=True, pct=False):
+        """Stats for the households in smask (sorted order). pct=True adds "pct": P1-P99 with standard errors."""
         idx = np.flatnonzero(smask)
         n = len(idx)
         if n < MIN_N:
@@ -352,7 +385,9 @@ class CellStats:
         full_cum = lambda k: float(cw[k - 1]) if k > 0 else 0.0  # noqa: E731
         med = binned_median(v, full_cum, tot, int(np.searchsorted(cw, tot / 2)))
         mean = float(v @ w / tot)
-        p25, p75 = w_quantile_sorted(v, cw, 0.25), w_quantile_sorted(v, cw, 0.75)
+        starts, lo, width = income_bins(v)
+        bw = np.add.reduceat(w, starts)
+        p25, p75 = binned_quantiles(bw, lo, width, [0.25, 0.75])
         sd = float(np.sqrt(max(0.0, (v * v) @ w / tot - mean * mean)))
         c = {"n": int(n), "n_rep": round(float(tot)), "med": round(med), "mean": round(mean),
              "p25": round(p25), "p75": round(p75), "iqr": round(p75 - p25), "sd": round(sd),
@@ -362,6 +397,8 @@ class CellStats:
         if not with_se:
             return c
         R = self.rep[idx]
+        if pct:
+            c["pct"] = self._percentiles(idx, v, cw, starts, lo, width, bw, R, med)
         rt = R.sum(axis=0, dtype=np.float64)
         rmean = (v @ R.astype(np.float64)) / rt if n < 200_000 else _chunked_dot(v, R) / rt
         # replicate medians: only rows near the full-sample median can hold them, so cumulate a window
@@ -392,6 +429,57 @@ class CellStats:
                   "ci_lo": round(mean - 1.96 * se_mean), "ci_hi": round(mean + 1.96 * se_mean)})
         return c
 
+    def _percentiles(self, idx, v, cw, starts, lo, width, bw, R, med):
+        """P1-P99 interpolated in $2,500 intervals, each with a replicate-weight standard error. A percentile with
+        fewer than PCT_MIN_TAIL sample households on either side is null. "tc": the first percentile where most
+        households (by weight) at or above it are topcoded (ACS), when there is one."""
+        n = len(idx)
+        vals = binned_quantiles(bw, lo, width, PCT_QS)
+        # replicate interval weights in one pass; then each replicate's quantiles
+        rb = np.add.reduceat(R, starts, axis=0, dtype=np.float64)
+        reps = np.stack([binned_quantiles(rb[:, r], lo, width, PCT_QS) for r in range(self.n_rep)])
+        se = np.sqrt(self.factor * ((reps - vals) ** 2).sum(axis=0))
+        j = np.searchsorted(cw, PCT_QS * cw[-1])          # rows below each percentile
+        ok = (j >= PCT_MIN_TAIL) & (n - j >= PCT_MIN_TAIL)
+        out_v = [round(float(x)) if k else None for x, k in zip(vals, ok)]
+        out_se = [round(float(s)) if k else None for s, k in zip(se, ok)]
+        out_v[49] = round(med)   # P50 is the median: same number, so the page shows one value
+        out = {"v": out_v, "se": out_se}
+        if self.topcoded is not None:
+            tc = self.topcoded[idx]
+            if tc.any():
+                w = self.w[idx]
+                above = np.cumsum(w[::-1])[::-1]                       # weight of rows [j:]
+                above_tc = np.cumsum(np.where(tc, w, 0)[::-1])[::-1]
+                jj = np.minimum(j, n - 1)
+                hit = np.flatnonzero(above_tc[jj] >= TOPCODE_SHARE * above[jj])
+                if len(hit):
+                    out["tc"] = int(hit[0]) + 1
+        return out
+
+
+def pct_file(key):
+    """Which percentile file a stats key's percentiles go in: national, state-FIPS (the state and its local areas),
+    or metro-CBSA."""
+    scope, _, code = key.split("|")[0].partition("=")
+    if scope == "national":
+        return "national"
+    if scope == "metro":
+        return f"metro-{code}"
+    st = int(code) // 100_000 if scope == "puma" else int(code)
+    return f"state-{st:02d}"
+
+
+def split_percentiles(*tables):
+    """Pull "pct" out of every cell, grouped by file: {file: {key: pct}}."""
+    files = {}
+    for table in tables:
+        for key, c in table.items():
+            p = c.pop("pct", None)
+            if p is not None:
+                files.setdefault(pct_file(key), {})[key] = p
+    return files
+
 
 def build_key(scope, filt):
     return "|".join(([scope] if scope else []) + [f"{k}={v}" for k, v in sorted(filt.items())])
@@ -402,15 +490,19 @@ def wage_share_extra(d, order):
     return lambda idx, w, tot: {"wage_pct": round(float(w[wage0[idx]].sum() / tot), 4)}
 
 
+def topcoded_col(d):
+    return d["topcoded"].values if "topcoded" in d else None
+
+
 def compute_stats(d, rep, dims, metro_min_n=2000, log=True):
     """National 1-D and 2-D, state 1-D, metro overall (+1-D for big metros). dims: {short: (column, values)}."""
-    cs = CellStats(d["inc"].values, d["weight"].values, rep)
+    cs = CellStats(d["inc"].values, d["weight"].values, rep, topcoded=topcoded_col(d))
     cs.extra = wage_share_extra(d, cs.order)
     col = lambda c: d[c].values[cs.order]  # noqa: E731
     stats, t = {}, time.time()
 
     def add(key, mask):
-        c = cs.cell(mask)
+        c = cs.cell(mask, pct=True)
         if c:
             stats[key] = c
 
@@ -467,16 +559,16 @@ def compute_local_stats(d, rep, dims, by="puma", group="state"):
     for code in sorted(d[group].unique()):
         sel = (d[group] == code).values
         sd = d.loc[sel].reset_index(drop=True)
-        cs = CellStats(sd["inc"].values, sd["weight"].values, rep[sel])
+        cs = CellStats(sd["inc"].values, sd["weight"].values, rep[sel], topcoded=topcoded_col(sd))
         cs.extra = wage_share_extra(sd, cs.order)
         loc = sd[by].values[cs.order]
         stats = {}
         for area in np.unique(loc):
             am = loc == area
-            c = cs.cell(am)
+            c = cs.cell(am, pct=True)   # percentiles for the area as a whole only
             if not c:
                 continue
-            stats[f"{by}={int(area)}"] = trim(c)
+            stats[f"{by}={int(area)}"] = {**trim(c), "pct": c["pct"]}
             for dn, (colname, vals) in dims.items():
                 if dn in ("region", "city"):
                     continue

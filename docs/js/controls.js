@@ -147,7 +147,7 @@ document.querySelectorAll('.cm-btn').forEach(btn => {
     colorMode = btn.dataset.mode;
     _legendColorMode = null;  // force full legend rebuild
     if (viewMode === 'bars' || viewMode === 'pct') renderStackedBars();
-    else updateDotColors();
+    else if (viewMode !== 'ptile') updateDotColors();
     renderLegend();
     renderGroupBreakdown();
     renderBrushInfo();
@@ -228,7 +228,7 @@ document.getElementById('btn-clear').addEventListener('click', () => {
   render();
 });
 
-// View toggle (Dots / Bars / 100%)
+// View toggle (Dots / Bars / 100% / Percentiles)
 document.querySelectorAll('.view-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     viewMode = btn.dataset.view;

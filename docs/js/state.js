@@ -30,7 +30,7 @@ let brushRange = null;   // {lo, hi} income values, or null
 let brushLayer = null;   // D3 selection of brush <g>
 let d3brush = null;      // D3 brush object
 let brushModeActive = false;
-let viewMode = 'dots';   // 'dots' | 'bars'
+let viewMode = 'dots';   // 'dots' | 'bars' | 'pct' (100%) | 'ptile' (Percentiles)
 let sampleMode = true;   // true=static (sample all rows, dim non-matching); false=all (only matching rows)
 let maxDots = 3000;      // dot cap: 1000 | 3000 | 5000
 let lastPoolSize = 0;    // households the chart could draw from, to grey out caps that change nothing

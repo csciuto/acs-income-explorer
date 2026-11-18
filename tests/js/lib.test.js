@@ -59,6 +59,33 @@ test('weighted quantiles agree with the earlier implementation on thousands of h
   assert.deepEqual(L.wQuantiles(inc, w, [0.25, 0.5, 0.75]), [0.25, 0.5, 0.75].map(q => oldPercentile(inc, w, q)));
 });
 
+test('binned quantiles: interpolated within $2,500 intervals, $0 a point of its own', () => {
+  // four households at $81,000 and four at $83,000: half the weight is reached inside $80,000-$82,500
+  assert.equal(L.binnedQuantiles([81000, 81000, 81000, 81000, 83000, 83000, 83000, 83000], Array(8).fill(1), [0.25])[0], 81250);
+  // heaped at exactly $80,000: the median moves with the weights instead of sticking to $80,000
+  const heap = [79000, 80000, 80000, 80000, 81000];
+  assert.notEqual(L.binnedQuantiles(heap, [1, 1, 1, 1, 1], [0.5])[0], L.binnedQuantiles(heap, [1, 1, 1, 1, 3], [0.5])[0]);
+  assert.equal(L.binnedQuantiles([0, 0, 0, 50000], [1, 1, 1, 1], [0.5])[0], 0);
+  assert.deepEqual(L.binnedQuantiles([], [], [0.5]), [undefined]);
+});
+
+test('percentile table: 99 rows, thin tails blank, topcoded territory marked', () => {
+  const n = 200, inc = Array.from({ length: n }, (_, i) => i * 5000), w = Array(n).fill(1);
+  const top = inc.map(v => (v >= 900000 ? 1 : 0));
+  const t = L.percentileTable(inc, w, top);
+  assert.equal(t.v.length, 99);
+  assert.equal(t.v[4], null); assert.notEqual(t.v[5], null);       // P5 has 9 households below, P6 has 11
+  assert.notEqual(t.v[94], null); assert.equal(t.v[95], null);     // the same as the pipeline
+  assert.equal(t.tc, 81);                                          // P81: 39 at or above, 20 topcoded
+  assert.equal(L.percentileTable(inc, w, null).tc, undefined);
+  assert.equal(L.percentileTable(inc.slice(0, 49), w.slice(0, 49), null), null);
+  const { inc: si, w: sw } = sample(4000, 3);
+  const s = L.percentileTable(si, sw, null);
+  assert.equal(s.v[49], Math.round(L.binnedQuantiles(si, sw, [0.5])[0]));
+  assert.ok(s.v.every((v, i) => i === 0 || v >= s.v[i - 1]));      // rising
+  assert.ok(s.se[49] > 0 && s.se[89] > s.se[49]);                  // wider in the upper tail
+});
+
 test("Kish's effective sample size: n for equal weights, fewer for unequal ones", () => {
   assert.equal(L.kishN([2, 2, 2, 2]), 4);
   assert.equal(L.kishN([1, 1, 1, 9]), 144 / 84);

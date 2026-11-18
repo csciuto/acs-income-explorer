@@ -53,6 +53,47 @@ function wMean(values, weights) {
   return s / w;
 }
 
+// Binned quantiles, the way the precomputed statistics are worked out (pipeline/common.py): find the $2,500
+// interval where the running weight reaches q of the total, then interpolate inside it. Exactly $0 is its own
+// point. Without this, round numbers (many households at exactly $80,000) pin a quantile to one value.
+const QUANTILE_BIN = 2500;
+function sortByValue(values, weights, extra) {
+  const n = values.length;
+  const order = Array.from({ length: n }, (_, i) => i).sort((a, b) => values[a] - values[b]);
+  const v = new Float64Array(n), w = new Float64Array(n), x = extra ? new Uint8Array(n) : null;
+  for (let k = 0; k < n; k++) { v[k] = values[order[k]]; w[k] = weights[order[k]]; if (x) x[k] = extra[order[k]]; }
+  return { v, w, x };
+}
+function incomeBins(v, w) {   // v sorted ascending
+  const lo = [], wd = [], bw = [];
+  let prev = null;
+  for (let k = 0; k < v.length; k++) {
+    const key = v[k] === 0 ? -1 : Math.floor(v[k] / QUANTILE_BIN);
+    if (key !== prev) { lo.push(key < 0 ? 0 : key * QUANTILE_BIN); wd.push(key < 0 ? 0 : QUANTILE_BIN); bw.push(0); prev = key; }
+    bw[bw.length - 1] += w[k];
+  }
+  const cb = new Float64Array(bw.length);
+  let run = 0;
+  for (let b = 0; b < bw.length; b++) { run += bw[b]; cb[b] = run; }
+  return { lo, wd, bw, cb };
+}
+function quantilesFromBins({ lo, wd, bw, cb }, qs) {
+  const last = cb.length - 1, tot = cb[last];
+  return qs.map(q => {
+    const target = q * tot;
+    let a = 0, b = last;                         // first bin whose running weight reaches the target
+    while (a < b) { const m = (a + b) >> 1; if (cb[m] >= target) b = m; else a = m + 1; }
+    const inside = bw[a], below = cb[a] - inside;
+    const frac = inside > 0 ? Math.min(1, Math.max(0, (target - below) / inside)) : 0;
+    return lo[a] + wd[a] * frac;
+  });
+}
+function binnedQuantiles(values, weights, qs) {
+  if (!values.length) return qs.map(() => undefined);
+  const { v, w } = sortByValue(values, weights);
+  return quantilesFromBins(incomeBins(v, w), qs);
+}
+
 // Kish's effective sample size: how many equally weighted households the weighted sample is worth.
 function kishN(weights) {
   let s = 0, s2 = 0;
@@ -69,8 +110,39 @@ function approxQuantileSE(values, weights, q) {
   const nEff = kishN(weights);
   if (!(nEff > 1)) return null;
   const sp = Math.sqrt(q * (1 - q) / nEff);
-  const [lo, hi] = wQuantiles(values, weights, [Math.max(0, q - sp), Math.min(1, q + sp)]);
+  const [lo, hi] = binnedQuantiles(values, weights, [Math.max(0, q - sp), Math.min(1, q + sp)]);
   return (hi - lo) / 2;
+}
+
+// P1-P99 from a sample, the way the Percentiles view shows them: {v, se, tc}, or null under 50 households.
+// v and se are null where fewer than 10 sample households lie on either side; se is approxQuantileSE's;
+// tc is the first percentile where most households (by weight) at or above it are topcoded, as the pipeline does.
+const PCT_QS = Array.from({ length: 99 }, (_, i) => (i + 1) / 100);
+function percentileTable(values, weights, topcoded) {
+  const n = values.length;
+  if (n < 50) return null;
+  const { v, w, x } = sortByValue(values, weights, topcoded);
+  const bins = incomeBins(v, w);
+  const vals = quantilesFromBins(bins, PCT_QS);
+  const nEff = kishN(w);
+  const sps = PCT_QS.map(q => Math.sqrt(q * (1 - q) / nEff));
+  const lo = quantilesFromBins(bins, PCT_QS.map((q, i) => Math.max(0, q - sps[i])));
+  const hi = quantilesFromBins(bins, PCT_QS.map((q, i) => Math.min(1, q + sps[i])));
+  const cw = new Float64Array(n);
+  let run = 0;
+  for (let k = 0; k < n; k++) { run += w[k]; cw[k] = run; }
+  const below = q => { let a = 0, b = n - 1; while (a < b) { const m = (a + b) >> 1; if (cw[m] >= q * run) b = m; else a = m + 1; } return a; };
+  // weight at and above each row, all and topcoded only
+  const above = new Float64Array(n + 1), aboveTc = new Float64Array(n + 1);
+  for (let k = n - 1; k >= 0; k--) { above[k] = above[k + 1] + w[k]; aboveTc[k] = aboveTc[k + 1] + (x && x[k] ? w[k] : 0); }
+  const out = { v: [], se: [] };
+  PCT_QS.forEach((q, i) => {
+    const j = below(q), ok = j >= 10 && n - j >= 10;
+    out.v.push(ok ? Math.round(vals[i]) : null);
+    out.se.push(ok ? Math.round((hi[i] - lo[i]) / 2) : null);
+    if (x && out.tc == null && aboveTc[j] > 0 && aboveTc[j] >= 0.5 * above[j]) out.tc = i + 1;
+  });
+  return out;
 }
 
 // ---------- sampling ----------
@@ -86,4 +158,4 @@ function subsample(rows, limit, random = Math.random) {
   return arr.slice(0, limit);
 }
 
-if (typeof module !== 'undefined') module.exports = { fmtHH, fmt$, fmtPct, buildKey, wQuantiles, wPercentile, wMean, kishN, approxQuantileSE, subsample };
+if (typeof module !== 'undefined') module.exports = { fmtHH, fmt$, fmtPct, buildKey, wQuantiles, wPercentile, binnedQuantiles, wMean, kishN, approxQuantileSE, percentileTable, subsample };
