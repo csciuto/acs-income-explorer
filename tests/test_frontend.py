@@ -650,6 +650,11 @@ class TestPercentiles:
         lines = open(dl.value.path()).read().splitlines()
         assert lines[0] == "percentile,income,se,approximate,near_cap" and len(lines) == 100
 
+    def test_no_dot_count_or_caption(self, page: Page):
+        open_percentiles(page)
+        expect(page.locator("#chart-caption")).to_be_hidden()
+        expect(page.locator("#dot-count")).to_have_text("")
+
     def test_back_to_dots(self, page: Page):
         open_percentiles(page)
         page.locator(".view-btn[data-view='dots']").click()

@@ -34,6 +34,7 @@ function render() {
   } else {
     updateDotOpacity();
   }
+  updateDotCountDisplay();   // the dot count and caption belong to the dots view only
   syncPin();
   syncFilterButtons();
   syncPlace();
