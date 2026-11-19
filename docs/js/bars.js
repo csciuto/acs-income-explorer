@@ -121,6 +121,7 @@ function renderStackedBars() {
         .attr('width', barW)
         .attr('height', segH)
         .attr('fill', color)
+        .attr('data-g', key)
         .attr('opacity', 0.85)
         .style('cursor', 'pointer')
         .on('mouseover', (event) => {

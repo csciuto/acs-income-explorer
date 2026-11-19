@@ -124,7 +124,7 @@ function pctSeries() {
   for (const g of [...byGroup.keys()].sort((a, b) => a - b)) {
     const name = colName === 'state' ? (codebook?.states?.[String(g)]?.name ?? `State ${g}`) : label(colName, g);
     const t = pctFor(p, groupDimFilter(colName, g), byGroup.get(g));
-    if (t.loading || t.v) lines.push({ key: `g${g}`, name, color: groupColor(g), t });
+    if (t.loading || t.v) lines.push({ key: `g${g}`, g, name, color: groupColor(g), t });
     else small.push(name);
   }
   // every group of the dimension, unfiltered, in its own color (not for states: the place picks those)
@@ -136,7 +136,7 @@ function pctSeries() {
       let t = pctFor(p, { [kd]: g }, null);
       if (!t.loading && !t.v) t = pctFor(p, { [kd]: g }, (rows ??= placeRowsByGroup(colName)).get(g) || []);
       if (t.loading || t.v) {
-        faint.push({ key: `f${g}`, name: label(colName, g), color: groupColor(g), t, shadow: byGroup.has(g) });
+        faint.push({ key: `f${g}`, g, name: label(colName, g), color: groupColor(g), t, shadow: byGroup.has(g) });
       }
     }
   }
@@ -273,7 +273,8 @@ function drawPctChart(lines, faint) {
     for (const [a, b, cls] of parts) {
       const path = g.append('path')
         .attr('class', `pct-line${cls}${l.gray ? ' pct-ref' : l.ref ? ' pct-faint' : ''}`)
-        .style('stroke', l.gray ? null : l.color);
+        .style('stroke', l.gray ? null : l.color)
+        .attr('data-g', l.g ?? null);
       paths.push({ path, l, a, b });
     }
   }

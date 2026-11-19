@@ -149,6 +149,8 @@ function renderLegend() {
         toggleFilter(colorMode, i);
         syncFilterButtons();
       });
+      item.addEventListener('mouseenter', () => highlightGroup(i));
+      item.addEventListener('mouseleave', () => highlightGroup(null));
       const dot = document.createElement('div');
       dot.className = 'legend-dot';
       dot.style.background = color;
@@ -163,6 +165,20 @@ function renderLegend() {
   container.append(tc);
 
   syncLegendActive();
+}
+
+// Pointing at a legend item fades every other group's dots, bar segments or lines; null restores them.
+function highlightGroup(g) {
+  const fade = 0.06;
+  const cols = currentCols();
+  const col = cols[colorMode];
+  if (col) {
+    d3.select('#chart-svg').selectAll('circle:not(.pin-ring)')
+      .style('opacity', g == null ? null : d => (d && col[d.i] === g ? null : fade));
+  }
+  d3.selectAll('#chart-svg rect[data-g], #pct-chart path[data-g]').each(function () {
+    this.style.opacity = g == null || Number(this.dataset.g) === g ? '' : fade * 2;
+  });
 }
 
 function syncLegendActive() {

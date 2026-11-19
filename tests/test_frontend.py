@@ -184,6 +184,26 @@ class TestColorMode:
         page.select_option("#group-select", "educ")
         assert page.locator("#legend .legend-item").count() >= 5
 
+    def test_pointing_at_a_legend_item_fades_the_other_groups(self, page: Page):
+        item = page.locator("#legend .legend-item[data-val='0']")
+        faded = lambda sel: page.evaluate(f"""[...document.querySelectorAll("{sel}")]
+            .filter(e => getComputedStyle(e).opacity < 0.2 && e.style.opacity).length""")
+        item.hover()
+        assert faded("#chart-svg circle") > 0
+        page.mouse.move(5, 5)
+        assert faded("#chart-svg circle") == 0
+        page.locator(".view-btn[data-view='bars']").click()
+        item.hover()
+        assert faded("#chart-svg rect[data-g]") > 0
+        assert faded("#chart-svg rect[data-g='0']") == 0
+        page.mouse.move(5, 5)
+        page.locator(".view-btn[data-view='ptile']").click()
+        page.locator(".ps-btn[data-ps='group']").click()
+        expect(page.locator("#pct-chart path[data-g='0']").first).to_be_visible()
+        item.hover()
+        assert faded("#pct-chart path[data-g]") > 0
+        assert faded("#pct-chart path[data-g='0']") == 0
+
     def test_legend_always_has_topcode_entry(self, page: Page):
         expect(page.locator("#legend")).to_contain_text("Topcoded")
 
