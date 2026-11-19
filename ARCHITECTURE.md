@@ -85,8 +85,10 @@ flowchart LR
   shows them as a D3 line chart (`drawPctChart`, the default) or a table (`#pt=table`), as one line or one per
   group of the Group tab (`#ps=group`; each group's precomputed cell when the other filters are single-valued).
   Its income axis is the same fixed log scale as Dots and Bars ($1k–$2.5M), so filters move the lines, not the axis.
-  With Dim others, the place's unfiltered percentiles are drawn in gray behind; when filters change, the lines slide
-  from their old values (`pctPrev`). The toolbar's second row (`#view-controls`) holds only the chosen chart's
+  With Dim others, the same lines with no household filters are drawn faint behind (one gray line Combined, one
+  per group in its color By group, so a group filtered out stays faint); when filters change, the lines slide from
+  where they are on screen (`pctPrev`), and the notes under the chart sit in a box of fixed height so the chart
+  never resizes. The toolbar's second row (`#view-controls`) holds only the chosen chart's
   controls (`data-for`, `syncViewControls`); 100% is a Bars option, still `viewMode` `pct` and `#v=pct`.
 - **Samples that load fast.** Each survey ships a 300,000-household stratified sample (year × state, weights
   rescaled so each stratum keeps its total) as an Arrow file; local areas load per state on demand.

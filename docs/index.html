@@ -89,7 +89,7 @@
 
   /* ---- toolbar ---- */
   #toolbar { padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  #active-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+  #active-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-height: 23px; }  /* a chip's height: the first one mustn't nudge the chart */
   .chip { display: inline-flex; align-items: center; gap: 4px; background: var(--chip-active); border: 1px solid var(--accent); border-radius: 4px; padding: 3px 8px; font-size: 12px; cursor: pointer; }
   .chip:hover { background: var(--border); }
   .chip .x { color: var(--text-dim); font-size: 11px; margin-left: 2px; }
@@ -133,6 +133,10 @@
   .pct-line { fill: none; stroke: var(--accent); stroke-width: 2; }
   .pct-line-cap { stroke-dasharray: 4 3; }
   .pct-ref { stroke: #5d6584; stroke-width: 1.5; }
+  .pct-faint { stroke-width: 1.5; stroke-opacity: 0.35; }
+  /* fixed height: a note coming or going mustn't resize the chart */
+  .pct-notes { height: 34px; overflow: hidden; margin-top: 6px; font-size: 11px; line-height: 17px; color: var(--text-dim); }
+  .pct-notes .pct-note { margin: 0 14px 0 0; display: inline-block; }
   #pct-chart .axis .domain { display: none; }
   #pct-chart .axis .tick line { stroke: var(--border); }
   #pct-chart .axis .tick text { fill: var(--text-dim); font-size: 10px; }
@@ -625,7 +629,7 @@
           <dt>Colors</dt><dd>Set in the Group tab. Click a legend item to filter.</dd>
           <dt>Percentiles</dt><dd>Income at each 1% of households, lowest to highest. By group: one line per group.</dd>
           <dt>1K / 3K / 5K</dt><dd>Most dots drawn.</dd>
-          <dt>Dim others / Matches only</dt><dd>Fade non-matching households, or hide them. In Percentiles, a gray line for all households, or none.</dd>
+          <dt>Dim others / Matches only</dt><dd>Fade non-matching households, or hide them. In Percentiles, faint lines with no filters, or none.</dd>
           <dt>Data</dt><dd id="about-data">—</dd>
         </dl>
       </div>

@@ -44,7 +44,7 @@ const STATE_PALETTE = ['#4a7cbc', '#e07070', '#4a9c5e', '#c9a227', '#a97cc4', '#
 
 const PALETTES = {
   region:          ['#888', '#4a7cbc', '#4a9c5e', '#c9a227', '#c94040'],
-  passive_pct:     ['#4a9c5e', '#7ab87a', '#c9a227', '#bc7040', '#c94040'],
+  passive_pct:     ['#4a9c5e', '#3fa7c4', '#c9a227', '#bc7040', '#c94040'],
   passive_source:  ['#4a7cbc', '#8892b0', '#c9a227', '#c94040', '#4a9c5e'],
   earner_count:    ['#c94040', '#4a7cbc', '#4a9c5e', '#c9a227'],
   breadwinner:     ['#4a7cbc', '#4a9c9a', '#c9a227', '#e07070', '#a97cc4'],

@@ -653,12 +653,12 @@ class TestPercentiles:
         page.goto(static_server + "#v=ptile&ps=group&cm=age_bucket&age_bucket=2,6")
         page.reload()
         page.wait_for_selector("#loading", state="hidden", timeout=LOAD_TIMEOUT)
-        solid = page.locator("#pct-chart .pct-line:not(.pct-ref):not(.pct-line-cap)")
+        solid = page.locator("#pct-chart .pct-line:not(.pct-ref):not(.pct-faint):not(.pct-line-cap)")
         expect(solid).to_have_count(2)
         expect(page.locator("#legend")).to_be_visible()
         expect(page.locator("#pct-view")).not_to_contain_text("≈")      # each age range is precomputed
         page.locator(".pt-btn[data-pt='table']").click()
-        expect(page.locator(".pct-table thead th")).to_have_count(4)    # percentile, two ages, all households
+        expect(page.locator(".pct-table thead th")).to_have_count(3)    # percentile, two ages
         page.locator(".ps-btn[data-ps='all']").click()
         expect(page.locator("#pct-view")).to_contain_text("≈")          # two ages pooled: from the sample
 
@@ -671,6 +671,23 @@ class TestPercentiles:
         expect(page.locator("#pct-chart .pct-ref").first).to_be_visible()
         page.locator("#btn-showall").click()
         expect(page.locator("#pct-chart .pct-ref")).to_have_count(0)
+
+    def test_by_group_dim_others_keeps_every_group_faint(self, page: Page, static_server: str):
+        page.goto(static_server + "#v=ptile&ps=group&cm=passive_pct")
+        page.reload()
+        page.wait_for_selector("#loading", state="hidden", timeout=LOAD_TIMEOUT)
+        expect(page.locator("#pct-chart .pct-line").first).to_be_visible()
+        expect(page.locator("#pct-chart .pct-faint")).to_have_count(0)    # no filters: nothing to compare
+        h = page.locator("#pct-chart").bounding_box()["height"]
+        page.locator(".tab-btn[data-tab='work']").click()
+        page.locator('#f-passive_pct .f-btn[data-val="0"]').click()
+        expect(page.locator("#pct-chart .pct-ref")).to_have_count(0)      # no gray line By group
+        n_faint = page.evaluate("pctSeries().faint.length")
+        assert n_faint == 5                                               # the four filtered out stay, faint
+        assert page.evaluate("pctSeries().lines.length") == 1
+        assert page.locator("#pct-chart").bounding_box()["height"] == h   # a new note doesn't resize the chart
+        page.locator("#btn-showall").click()
+        expect(page.locator("#pct-chart .pct-faint")).to_have_count(0)
 
     def test_table_choice_in_the_link(self, page: Page, static_server: str):
         open_percentiles(page)
@@ -1149,7 +1166,7 @@ class TestSources:
         expect(page.locator("#s-med")).to_contain_text(f"${stats['med']:,}")
         expect(page.locator("#n-info")).to_contain_text(f"{stats['n']:,} surveyed")
         assert page.locator("#chart-svg circle").count() > 100
-        page.locator(".tab-btn[data-tab='econ'], .tab-btn[data-tab='work']").first.click()
+        page.locator(".tab-btn[data-tab='work'], .tab-btn[data-tab='work']").first.click()
         page.locator('#f-housing .f-btn[data-val="2"]').click()
         renters = page.evaluate("localStats[25]['puma=2500609|house=2']")
         expect(page.locator("#s-med")).to_contain_text(f"${renters['med']:,}")

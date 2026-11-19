@@ -36,7 +36,7 @@ How to read it:
 - **Standard errors** from each survey's replicate weights for every precomputed view; live views (several values
   of a filter, a local area with a filter) are computed from the chart's sample, with rougher errors marked ≈.
 - **Percentiles:** the Percentiles view charts and lists household income at P1–P99, with standard errors, for the
-  same views; one line, or one per group to compare them, with a gray line for the place unfiltered. A dashed line
+  same views; one line, or one per group to compare them, with faint lines for the same with no filters. A dashed line
   or † marks the top ones that depend on the ACS's income caps.
 - **Reliability:** under 50 sample households, no statistics; under 200 or 500, a warning.
 - **The dots are a sample** (300,000 households per survey; up to 300 per local area).
