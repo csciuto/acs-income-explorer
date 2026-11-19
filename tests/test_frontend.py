@@ -654,14 +654,6 @@ class TestPercentiles:
         open_percentiles(page)
         expect(page.locator("#pct-view")).not_to_contain_text("≈")
 
-    def test_csv_download(self, page: Page):
-        open_percentiles(page)
-        with page.expect_download() as dl:
-            page.locator("#pct-csv").click()
-        assert dl.value.suggested_filename == "income-percentiles-acs-united-states.csv"
-        lines = open(dl.value.path()).read().splitlines()
-        assert lines[0] == "percentile,income,se,approximate,near_cap" and len(lines) == 100
-
     def test_no_dot_count_or_caption(self, page: Page):
         open_percentiles(page)
         expect(page.locator("#chart-caption")).to_be_hidden()

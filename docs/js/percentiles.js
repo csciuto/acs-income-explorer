@@ -9,7 +9,6 @@ const PCT_KEY_ROWS = [10, 20, 25, 30, 40, 50, 60, 70, 75, ...Array.from({ length
 const pctFiles = {};      // file name -> {key: {v, se, tc}}, or null when it couldn't be fetched
 const pctLoading = {};
 let pctTab = 'chart';     // 'chart' | 'table'
-let pctShown = null;      // what the table shows, for the CSV
 
 // Which file holds a key's percentiles (the pipeline's pct_file): national, state-FIPS (with its local areas), metro-CBSA.
 function pctFileFor(key) {
@@ -72,14 +71,12 @@ function renderPercentiles() {
   chartScope = null;  // force a full renderChart() on the way back to dots
   dotData = [];
   const t = getPercentiles();
-  pctShown = null;
   const table = pctTab === 'table';
   const head = `<div class="pct-head">
       <span class="panel-title">Household income percentiles</span>
       <span class="pct-tabs" role="group" aria-label="Show as">
         <button type="button" data-pt="chart" aria-pressed="${!table}">Chart</button><button type="button" data-pt="table" aria-pressed="${table}">Table</button>
       </span>
-      <button type="button" id="pct-csv"${t.v ? '' : ' disabled'}>CSV</button>
     </div>`;
   let body;
   const notes = [];
@@ -87,7 +84,6 @@ function renderPercentiles() {
   if (t.loading) body = '<p class="pct-msg">Loading…</p>';
   else if (!t.v) body = `<p class="pct-msg">⚠ Too few households (${t.n ?? 0})</p>`;
   else {
-    pctShown = t;
     const ks = table ? PCT_KEY_ROWS : Array.from({ length: 99 }, (_, i) => i + 1);
     if (t.live) notes.push(`≈ From the chart's sample (${t.n.toLocaleString()} households)`);
     if (t.tc && ks.some(k => k >= t.tc)) notes.push(table ? "† Near the survey's income cap" : "Dashed: near the survey's income cap");
@@ -112,7 +108,6 @@ function renderPercentiles() {
   el.querySelectorAll('.pct-tabs button').forEach(b => {
     b.onclick = () => { pctTab = b.dataset.pt; pushUrl(); renderPercentiles(); };
   });
-  el.querySelector('#pct-csv').onclick = downloadPctCsv;
   if (!table && t.v) drawPctChart(t);
 }
 
@@ -178,22 +173,4 @@ function drawPctChart(t) {
   g.append('rect').attr('class', 'pct-hit').attr('width', cw).attr('height', ch).attr('fill', 'transparent')
     .style('touch-action', 'pan-y')
     .on('pointermove', show).on('pointerdown', show).on('pointerleave', hide);
-}
-
-function downloadPctCsv() {
-  const t = pctShown;
-  if (!t) return;
-  const lines = ['percentile,income,se,approximate,near_cap'];
-  for (let k = 1; k <= 99; k++) {
-    const v = t.v[k - 1], se = t.se[k - 1];
-    lines.push([k, v ?? '', se ?? '', t.live ? 1 : 0, t.tc && k >= t.tc ? 1 : 0].join(','));
-  }
-  const slug = placeName(currentPlace()).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([lines.join('\n') + '\n'], { type: 'text/csv' }));
-  a.download = `income-percentiles-${source}-${slug}.csv`;
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
