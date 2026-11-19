@@ -3,7 +3,7 @@ import pytest
 from axe_playwright_python.sync_playwright import Axe
 from playwright.sync_api import Page
 
-PAGES = [("/", "#loading"), ("/#src=cps", "#loading"), ("/#v=ptile", "#loading"), ("/#v=ptile&pt=table", "#loading"), ("/help.html", None)]
+PAGES = [("/", "#loading"), ("/#src=cps", "#loading"), ("/#v=ptile", "#loading"), ("/#v=ptile&pt=table", "#loading"), ("/#v=ptile&ps=group&cm=educ", "#loading"), ("/help.html", None)]
 
 
 @pytest.mark.parametrize("path,loading", PAGES)

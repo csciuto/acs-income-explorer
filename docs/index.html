@@ -97,13 +97,15 @@
   #btn-clear:hover { color: var(--text); border-color: var(--text-dim); }
   #btn-brush { font-size: 11px; color: var(--text-dim); background: none; border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; cursor: pointer; }
   #btn-brush:hover, #btn-brush.active { color: var(--accent); border-color: var(--accent); }
-  #view-toggle, #dots-toggle, #sample-toggle { display: flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  #view-toggle, .seg { display: flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  #view-controls { padding: 6px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 39px; }
+  #view-controls [hidden] { display: none; }
   .view-btn { font-size: 11px; color: var(--text-dim); background: none; border: none; padding: 4px 10px; cursor: pointer; }
   .view-btn:hover { color: var(--text); background: var(--surface2); }
   .view-btn.active { color: var(--bg); background: var(--accent); }
-.dots-btn, .sample-btn { font-size: 11px; color: var(--text-dim); background: none; border: none; padding: 4px 10px; cursor: pointer; }
-  .dots-btn:hover, .sample-btn:hover:not(:disabled) { color: var(--text); background: var(--surface2); }
-  .dots-btn.active, .sample-btn.active { color: var(--bg); background: var(--accent); }
+.dots-btn, .sample-btn, .bars-btn, .pt-btn, .ps-btn { font-size: 11px; color: var(--text-dim); background: none; border: none; padding: 4px 10px; cursor: pointer; }
+  .dots-btn:hover, .sample-btn:hover:not(:disabled), .bars-btn:hover, .pt-btn:hover, .ps-btn:hover { color: var(--text); background: var(--surface2); }
+  .dots-btn.active, .sample-btn.active, .bars-btn.active, .pt-btn.active, .ps-btn.active { color: var(--bg); background: var(--accent); }
   .sample-btn:disabled { opacity: 0.35; cursor: not-allowed; }
   .dots-btn.idle:not(.active) { opacity: 0.35; }
   #dot-count { font-size: 11px; color: var(--text-dimmer); padding: 4px 6px; white-space: nowrap; }
@@ -121,23 +123,25 @@
   #pct-view[hidden] { display: none; }
   .pct-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
   .pct-head .panel-title { margin: 0 auto 0 0; }
-  .pct-head button { font-size: 11px; color: var(--text-dim); background: none; border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; cursor: pointer; }
-  .pct-head button:hover:not(:disabled) { color: var(--text); border-color: var(--text-dim); }
-  .pct-head button:disabled { opacity: 0.35; cursor: not-allowed; }
   .pct-table { border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 13px; width: 100%; max-width: 420px; }
   .pct-table th, .pct-table td { padding: 4px 10px 4px 0; text-align: right; border-bottom: 1px solid var(--border); }
   .pct-table th:first-child { text-align: left; font-weight: 400; color: var(--text-dim); }
   .pct-table thead th { font-size: 11px; font-weight: 600; color: var(--text-dim); }
   #pct-view.pct-chart-mode { display: flex; flex-direction: column; overflow: hidden; }
   #pct-chart { flex: 1; min-height: 200px; width: 100%; }
-  .pct-tabs { display: inline-flex; }
-  .pct-head .pct-tabs button { border-radius: 0; }
-  .pct-head .pct-tabs button:first-child { border-radius: 4px 0 0 4px; }
-  .pct-head .pct-tabs button:last-child { border-radius: 0 4px 4px 0; border-left: none; }
-  .pct-head .pct-tabs button[aria-pressed="true"] { color: var(--text); background: var(--chip-active); }
   .pct-band { fill: var(--accent); fill-opacity: 0.22; }
   .pct-line { fill: none; stroke: var(--accent); stroke-width: 2; }
   .pct-line-cap { stroke-dasharray: 4 3; }
+  .pct-ref { stroke: #5d6584; stroke-width: 1.5; }
+  #pct-chart .axis .domain { display: none; }
+  #pct-chart .axis .tick line { stroke: var(--border); }
+  #pct-chart .axis .tick text { fill: var(--text-dim); font-size: 10px; }
+  .pct-swatch { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }
+  .pct-scroll { overflow-x: auto; }
+  .pct-table.pct-multi { width: auto; max-width: none; }
+  .pct-table.pct-multi td, .pct-table.pct-multi thead th { padding-left: 12px; white-space: nowrap; }
+  .pct-table.pct-multi .pct-se { font-size: 10px; }
+  #legend.in-ptile .legend-tc { display: none; }
   .pct-mark { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
   .pct-label { fill: var(--text); font-size: 11px; font-variant-numeric: tabular-nums; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
   .pct-guide { stroke: var(--text-dim); stroke-width: 1; stroke-dasharray: 2 2; }
@@ -226,6 +230,8 @@
 
   /* ---- tooltip ---- */
   #tooltip { position: fixed; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-size: 12px; pointer-events: none; display: none; max-width: 220px; z-index: 1000; line-height: 1.6; }
+  #tooltip:has(.tt-row) { max-width: 340px; }
+  #tooltip .tt-row { white-space: nowrap; }
   #tooltip .tt-income { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
   #tooltip .tt-topcode { color: var(--text-dim); font-size: 11px; }
   #tooltip .tt-dim { color: var(--text-dim); }
@@ -347,9 +353,9 @@
     .f-btn    { padding: 8px 12px; min-height: 36px; font-size: 12px; }
     .tab-btn  { padding: 9px 8px;  min-height: 36px; }
     .cm-btn   { padding: 9px 10px; min-height: 36px; }
-    .view-btn, .dots-btn, .sample-btn { padding: 7px 12px; }
+    #view-controls { padding: 6px 10px; gap: 6px; min-height: 49px; }
+    .view-btn, .dots-btn, .sample-btn, .bars-btn, .pt-btn, .ps-btn { padding: 7px 12px; }
     #btn-brush, #btn-clear, #btn-filters { padding: 7px 12px; min-height: 36px; font-size: 11px; }
-    .pct-head button { padding: 7px 12px; min-height: 36px; }
     #pct-view { padding: 10px 12px; }
     .stats-tab-btn  { padding: 9px 6px; min-height: 36px; }
     .state-check-label { padding: 7px 4px; min-height: 36px; }
@@ -573,25 +579,39 @@
   <div id="chart-area">
     <div id="toolbar">
       <div id="active-chips"></div>
-      <button id="btn-brush">Range</button>
       <div id="view-toggle">
         <button class="view-btn active" data-view="dots">Dots</button>
         <button class="view-btn" data-view="bars">Bars</button>
-        <button class="view-btn" data-view="pct">100%</button>
         <button class="view-btn" data-view="ptile">Percentiles</button>
       </div>
-      <div id="dots-toggle">
+      <button id="btn-filters">Stats &amp; filters</button>
+      <button id="btn-clear">Clear all</button>
+    </div>
+    <!-- the chosen chart's own controls: the row stays, its contents follow the chart -->
+    <div id="view-controls">
+      <div id="bars-toggle" class="seg" data-for="bars">
+        <button class="bars-btn active" data-view="bars">Count</button>
+        <button class="bars-btn" data-view="pct">100%</button>
+      </div>
+      <div id="pt-toggle" class="seg" data-for="ptile">
+        <button class="pt-btn active" data-pt="chart">Chart</button>
+        <button class="pt-btn" data-pt="table">Table</button>
+      </div>
+      <div id="ps-toggle" class="seg" data-for="ptile">
+        <button class="ps-btn active" data-ps="all">Combined</button>
+        <button class="ps-btn" data-ps="group" title="One line per group in the Group tab">By group</button>
+      </div>
+      <div id="dots-toggle" class="seg" data-for="dots">
         <button class="dots-btn" data-maxdots="1000">1K</button>
         <button class="dots-btn active" data-maxdots="3000">3K</button>
         <button class="dots-btn" data-maxdots="5000">5K</button>
       </div>
-      <div id="sample-toggle">
-        <button id="btn-static" class="sample-btn active" title="Fade households that don't match">Dim others</button>
+      <div id="sample-toggle" class="seg" data-for="dots ptile">
+        <button id="btn-static" class="sample-btn active" title="Show households that don't match, faded">Dim others</button>
         <button id="btn-showall" class="sample-btn" title="Show only matching households">Matches only</button>
       </div>
-      <span id="dot-count"></span>
-      <button id="btn-filters">Stats &amp; filters</button>
-      <button id="btn-clear">Clear all</button>
+      <button id="btn-brush" data-for="dots bars">Range</button>
+      <span id="dot-count" data-for="dots"></span>
     </div>
     <div id="legend"></div>
     <div id="chart-about-wrap">
@@ -603,9 +623,9 @@
           <dt>Across</dt><dd>Household income, log scale. Drag to pick a range.</dd>
           <dt>Up and down</dt><dd>No scale: the swarm is taller where more households earn that much.</dd>
           <dt>Colors</dt><dd>Set in the Group tab. Click a legend item to filter.</dd>
-          <dt>Percentiles</dt><dd>Income at each 1% of households, lowest to highest.</dd>
+          <dt>Percentiles</dt><dd>Income at each 1% of households, lowest to highest. By group: one line per group.</dd>
           <dt>1K / 3K / 5K</dt><dd>Most dots drawn.</dd>
-          <dt>Dim others / Matches only</dt><dd>Fade non-matching households, or hide them.</dd>
+          <dt>Dim others / Matches only</dt><dd>Fade non-matching households, or hide them. In Percentiles, a gray line for all households, or none.</dd>
           <dt>Data</dt><dd id="about-data">—</dd>
         </dl>
       </div>

@@ -16,6 +16,7 @@ function pushUrl() {
   if (brushRange) { params.set('brush_lo', brushRange.lo); params.set('brush_hi', brushRange.hi); }
   if (viewMode !== 'dots') params.set('v', viewMode);
   if (viewMode === 'ptile' && pctTab === 'table') params.set('pt', 'table');
+  if (viewMode === 'ptile' && pctSplit === 'group') params.set('ps', 'group');
   if (maxDots !== 3000) params.set('md', maxDots);
   if (!sampleMode) params.set('sm', '0');
   const qs = params.toString();
@@ -49,10 +50,10 @@ function applyUrl() {
   const v = params.get('v');
   if (v) {
     viewMode = v;
-    document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
   }
 
   pctTab = params.get('pt') === 'table' ? 'table' : 'chart';
+  pctSplit = params.get('ps') === 'group' ? 'group' : 'all';
 
   const md = parseInt(params.get('md'));
   if ([1000, 3000, 5000].includes(md)) {
@@ -67,7 +68,7 @@ function applyUrl() {
 
   filters = {};
   for (const [key, val] of params.entries()) {
-    if (['src', 'cm', 'states', 'brush_lo', 'brush_hi', 'v', 'pt', 'md', 'sm'].includes(key)) continue;
+    if (['src', 'cm', 'states', 'brush_lo', 'brush_hi', 'v', 'pt', 'ps', 'md', 'sm'].includes(key)) continue;
     const nums = val.split(',').map(Number).filter(v => !isNaN(v));
     if (nums.length) filters[key] = new Set(nums);
   }

@@ -158,7 +158,7 @@ function renderLegend() {
   }
 
   const tc = document.createElement('div');
-  tc.className = 'legend-item';
+  tc.className = 'legend-item legend-tc';
   tc.innerHTML = '<span class="legend-topcode" aria-hidden="true"></span> Topcoded';
   container.append(tc);
 

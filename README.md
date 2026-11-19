@@ -3,7 +3,7 @@
 An interactive look at US household income from two Census Bureau surveys, in 2024 dollars. Filter millions of
 survey households down to a slice (work status, income sources, age, education, family, housing costs, state,
 metro area, or a local area like Malden & Medford, MA) and see the weighted income distribution as dots, stacked
-bars or a 100% view, with standard errors and reliability warnings.
+bars, 100% shares or percentile curves, with standard errors and reliability warnings.
 
 **Live:** [corey.sciu.to/acs-income-explorer](https://corey.sciu.to/acs-income-explorer/)
 
@@ -36,7 +36,8 @@ How to read it:
 - **Standard errors** from each survey's replicate weights for every precomputed view; live views (several values
   of a filter, a local area with a filter) are computed from the chart's sample, with rougher errors marked ≈.
 - **Percentiles:** the Percentiles view charts and lists household income at P1–P99, with standard errors, for the
-  same views; a dashed line or † marks the top ones that depend on the ACS's income caps.
+  same views; one line, or one per group to compare them, with a gray line for the place unfiltered. A dashed line
+  or † marks the top ones that depend on the ACS's income caps.
 - **Reliability:** under 50 sample households, no statistics; under 200 or 500, a warning.
 - **The dots are a sample** (300,000 households per survey; up to 300 per local area).
 

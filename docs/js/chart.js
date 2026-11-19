@@ -21,6 +21,7 @@ function renderMobileStats(stats) {
 
 function render() {
   visibleRows = computeVisibleRows();
+  syncViewControls();
   const stats = getStats();
   renderStats(stats);
   renderMobileStats(stats);

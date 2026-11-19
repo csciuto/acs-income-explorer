@@ -60,7 +60,7 @@ flowchart LR
     ST -->|getStats: key lookup| UI
     AR -->|Arrow -> typed columns| UI
     H[URL hash] <--> UI
-    UI --> CH[D3 chart: dots / bars / 100%]
+    UI --> CH[D3 chart: dots / bars / percentiles]
     UI --> FIG[median, P25/P75, ± SE<br/>larger areas, other survey]
   end
 ```
@@ -82,7 +82,11 @@ flowchart LR
   1 KB a cell), so they go in `<src>/pct/` split by place (`national`, `state-FIPS` with its local areas,
   `metro-CBSA`; `pct_file` in the pipeline, `pctFileFor` in `js/percentiles.js`). The Percentiles view fetches
   one file the first time it needs it; anything not precomputed comes from the sample (`percentileTable`). It
-  shows them as a D3 line chart (`drawPctChart`, the default) or a table (`#pt=table`).
+  shows them as a D3 line chart (`drawPctChart`, the default) or a table (`#pt=table`), as one line or one per
+  group of the Group tab (`#ps=group`; each group's precomputed cell when the other filters are single-valued).
+  With Dim others, the place's unfiltered percentiles are drawn in gray behind; when filters change, the lines slide
+  from their old values (`pctPrev`). The toolbar's second row (`#view-controls`) holds only the chosen chart's
+  controls (`data-for`, `syncViewControls`); 100% is a Bars option, still `viewMode` `pct` and `#v=pct`.
 - **Samples that load fast.** Each survey ships a 300,000-household stratified sample (year × state, weights
   rescaled so each stratum keeps its total) as an Arrow file; local areas load per state on demand.
 - **Dots.** Incomes go on a log axis in 8-pixel bins; each bin stacks its households alternately above and below

@@ -513,8 +513,32 @@ class TestBrushRange:
 # ---------------------------------------------------------------------------
 
 class TestViewToggle:
-    def test_four_view_buttons_exist(self, page: Page):
-        assert page.locator(".view-btn").count() == 4
+    def test_three_chart_types(self, page: Page):
+        assert page.locator(".view-btn").count() == 3
+
+    def test_second_row_shows_only_the_charts_controls(self, page: Page):
+        shown = lambda: {i for i in ["dots-toggle", "sample-toggle", "btn-brush", "bars-toggle", "pt-toggle", "ps-toggle"]
+                         if page.locator(f"#{i}").is_visible()}
+        assert shown() == {"dots-toggle", "sample-toggle", "btn-brush"}
+        page.locator(".view-btn[data-view='bars']").click()
+        assert shown() == {"bars-toggle", "btn-brush"}
+        page.locator(".view-btn[data-view='ptile']").click()
+        assert shown() == {"pt-toggle", "ps-toggle", "sample-toggle"}
+
+    def test_bars_remembers_100_percent(self, page: Page):
+        page.locator(".view-btn[data-view='bars']").click()
+        page.locator(".bars-btn[data-view='pct']").click()
+        page.locator(".view-btn[data-view='dots']").click()
+        page.locator(".view-btn[data-view='bars']").click()
+        expect(page.locator(".bars-btn[data-view='pct']")).to_have_class(re.compile(r"\bactive\b"))
+        assert "v=pct" in page.url
+
+    def test_old_100_percent_link_opens_bars(self, page: Page, static_server: str):
+        page.goto(static_server + "#v=pct")
+        page.reload()
+        page.wait_for_selector("#loading", state="hidden", timeout=LOAD_TIMEOUT)
+        expect(page.locator(".view-btn[data-view='bars']")).to_have_class(re.compile(r"\bactive\b"))
+        expect(page.locator(".bars-btn[data-view='pct']")).to_have_class(re.compile(r"\bactive\b"))
 
     def test_dots_button_active_by_default(self, page: Page):
         expect(page.locator(".view-btn[data-view='dots']")).to_have_class(re.compile(r"\bactive\b"))
@@ -526,7 +550,8 @@ class TestViewToggle:
         assert page.locator("#chart-svg circle").count() == 0
 
     def test_pct_view_renders_rects(self, page: Page):
-        page.locator(".view-btn[data-view='pct']").click()
+        page.locator(".view-btn[data-view='bars']").click()
+        page.locator(".bars-btn[data-view='pct']").click()
         page.wait_for_timeout(300)
         assert page.locator("#chart-svg rect").count() > 0
 
@@ -539,7 +564,8 @@ class TestViewToggle:
         assert page.locator("#chart-svg circle").count() > 100
 
     def test_pct_then_back_to_dots(self, page: Page):
-        page.locator(".view-btn[data-view='pct']").click()
+        page.locator(".view-btn[data-view='bars']").click()
+        page.locator(".bars-btn[data-view='pct']").click()
         page.wait_for_timeout(300)
         page.locator(".view-btn[data-view='dots']").click()
         page.wait_for_timeout(300)
@@ -560,7 +586,8 @@ class TestViewToggle:
         assert "v=bars" in page.url
 
     def test_pct_view_in_url(self, page: Page):
-        page.locator(".view-btn[data-view='pct']").click()
+        page.locator(".view-btn[data-view='bars']").click()
+        page.locator(".bars-btn[data-view='pct']").click()
         page.wait_for_timeout(300)
         assert "v=pct" in page.url
 
@@ -582,7 +609,8 @@ class TestViewToggle:
         assert "M" in text
 
     def test_pct_yaxis_shows_percent(self, page: Page):
-        page.locator(".view-btn[data-view='pct']").click()
+        page.locator(".view-btn[data-view='bars']").click()
+        page.locator(".bars-btn[data-view='pct']").click()
         page.wait_for_timeout(300)
         text = page.locator("#chart-svg").text_content()
         assert "%" in text
@@ -594,7 +622,7 @@ class TestViewToggle:
 
 def open_percentiles(page: Page):
     page.locator(".view-btn[data-view='ptile']").click()
-    page.locator(".pct-tabs button[data-pt='table']").click()
+    page.locator(".pt-btn[data-pt='table']").click()
     expect(page.locator(".pct-table")).to_be_visible()
 
 
@@ -613,6 +641,29 @@ class TestPercentiles:
         expect(page.locator("#tooltip")).to_contain_text("P80")
         assert "pt=" not in page.url
 
+    def test_by_group_one_line_per_group(self, page: Page, static_server: str):
+        page.goto(static_server + "#v=ptile&ps=group&cm=age_bucket&age_bucket=2,6")
+        page.reload()
+        page.wait_for_selector("#loading", state="hidden", timeout=LOAD_TIMEOUT)
+        solid = page.locator("#pct-chart .pct-line:not(.pct-ref):not(.pct-line-cap)")
+        expect(solid).to_have_count(2)
+        expect(page.locator("#legend")).to_be_visible()
+        expect(page.locator("#pct-view")).not_to_contain_text("≈")      # each age range is precomputed
+        page.locator(".pt-btn[data-pt='table']").click()
+        expect(page.locator(".pct-table thead th")).to_have_count(4)    # percentile, two ages, all households
+        page.locator(".ps-btn[data-ps='all']").click()
+        expect(page.locator("#pct-view")).to_contain_text("≈")          # two ages pooled: from the sample
+
+    def test_gray_reference_follows_dim_others(self, page: Page):
+        page.locator(".view-btn[data-view='ptile']").click()
+        expect(page.locator("#pct-chart .pct-line").first).to_be_visible()
+        expect(page.locator("#pct-chart .pct-ref")).to_have_count(0)     # no filters: nothing to compare
+        page.locator(".tab-btn[data-tab='demo']").click()
+        page.locator('#f-educ .f-btn[data-val="4"]').click()
+        expect(page.locator("#pct-chart .pct-ref").first).to_be_visible()
+        page.locator("#btn-showall").click()
+        expect(page.locator("#pct-chart .pct-ref")).to_have_count(0)
+
     def test_table_choice_in_the_link(self, page: Page, static_server: str):
         open_percentiles(page)
         assert "pt=table" in page.url
@@ -624,7 +675,7 @@ class TestPercentiles:
     def test_table_from_the_full_survey(self, page: Page):
         open_percentiles(page)
         expect(page.locator("#chart-svg")).to_be_hidden()
-        assert page.locator(".pct-table tbody tr").count() == 29
+        assert page.locator(".pct-table tbody tr").count() == 12
         median = page.locator("#s-med").text_content().split("±")[0].strip()
         expect(pct_row(page, 50)).to_contain_text(median)          # P50 is the stats box's median
         expect(pct_row(page, 90)).to_contain_text("±$")
@@ -718,7 +769,8 @@ class TestBarTooltip:
         expect(page.locator("#tooltip")).to_be_hidden()
 
     def test_pct_view_tooltip_shows(self, page: Page):
-        page.locator(".view-btn[data-view='pct']").click()
+        page.locator(".view-btn[data-view='bars']").click()
+        page.locator(".bars-btn[data-view='pct']").click()
         page.wait_for_timeout(300)
         page.locator("#chart-svg rect[style*='cursor']").first.hover(force=True)
         expect(page.locator("#tooltip")).to_be_visible()
@@ -783,7 +835,7 @@ class TestMobile:
         mobile_page.locator(".view-btn[data-view='ptile']").tap()
         expect(mobile_page.locator("#pct-chart .pct-line").first).to_be_visible()
         assert mobile_page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
-        mobile_page.locator(".pct-tabs button[data-pt='table']").tap()
+        mobile_page.locator(".pt-btn[data-pt='table']").tap()
         expect(mobile_page.locator(".pct-table")).to_be_visible()
         assert mobile_page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
 

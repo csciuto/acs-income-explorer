@@ -147,7 +147,8 @@ document.querySelectorAll('.cm-btn').forEach(btn => {
     colorMode = btn.dataset.mode;
     _legendColorMode = null;  // force full legend rebuild
     if (viewMode === 'bars' || viewMode === 'pct') renderStackedBars();
-    else if (viewMode !== 'ptile') updateDotColors();
+    else if (viewMode === 'ptile') { if (pctSplit === 'group') renderPercentiles(); }
+    else updateDotColors();
     renderLegend();
     renderGroupBreakdown();
     renderBrushInfo();
@@ -228,14 +229,36 @@ document.getElementById('btn-clear').addEventListener('click', () => {
   render();
 });
 
-// View toggle (Dots / Bars / 100% / Percentiles)
+// Chart type (Dots / Bars / Percentiles); Bars remembers Count or 100%.
+let barsMode = 'bars';   // 'bars' | 'pct'
 document.querySelectorAll('.view-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    viewMode = btn.dataset.view;
-    document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b === btn));
+    viewMode = btn.dataset.view === 'bars' ? barsMode : btn.dataset.view;
     render();
   });
 });
+document.querySelectorAll('.bars-btn').forEach(btn => {
+  btn.addEventListener('click', () => { viewMode = barsMode = btn.dataset.view; render(); });
+});
+document.querySelectorAll('.pt-btn').forEach(btn => {
+  btn.addEventListener('click', () => { pctTab = btn.dataset.pt; render(); });
+});
+document.querySelectorAll('.ps-btn').forEach(btn => {
+  btn.addEventListener('click', () => { pctSplit = btn.dataset.ps; render(); });
+});
+
+// The second row shows only the chosen chart's controls.
+function syncViewControls() {
+  const chart = viewMode === 'pct' ? 'bars' : viewMode;
+  if (viewMode === 'bars' || viewMode === 'pct') barsMode = viewMode;
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === chart));
+  document.querySelectorAll('#view-controls [data-for]').forEach(el => {
+    el.hidden = !el.dataset.for.split(' ').includes(chart);
+  });
+  document.querySelectorAll('.bars-btn').forEach(b => b.classList.toggle('active', b.dataset.view === viewMode));
+  document.querySelectorAll('.pt-btn').forEach(b => b.classList.toggle('active', b.dataset.pt === pctTab));
+  document.querySelectorAll('.ps-btn').forEach(b => b.classList.toggle('active', b.dataset.ps === pctSplit));
+}
 
 // Dot count (1K / 3K / 5K)
 document.querySelectorAll('.dots-btn').forEach(btn => {
