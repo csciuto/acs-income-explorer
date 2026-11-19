@@ -168,13 +168,11 @@
   #n-info { font-size: 11px; color: var(--text-dimmer); margin-top: 4px; }
 
   /* ---- color mode selector ---- */
-  #color-mode { display: flex; flex-wrap: wrap; gap: 4px; }
-  #group-block { padding: 10px 12px 12px; border-bottom: 1px solid var(--border); }
+  .side-block { padding: 10px 12px 12px; border-bottom: 1px solid var(--border); }
+  #group-select { width: 100%; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; font-size: 13px; }
+  #place-search { width: 100%; box-sizing: border-box; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; font-size: 13px; }
   .block-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text); margin: 0 0 8px; }
   #filters-title { padding: 10px 12px 0; margin: 0; }
-  .cm-btn { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 5px 8px; color: var(--text-dim); font-size: 12px; cursor: pointer; text-align: left; }
-  .cm-btn:hover { border-color: var(--text-dim); color: var(--text); }
-  .cm-btn.active { border-color: var(--accent); color: var(--text); background: var(--chip-active); }
 
   /* ---- group breakdown ---- */
   #group-breakdown { margin-top: 4px; }
@@ -359,7 +357,7 @@
     /* Touch-sized tap targets */
     .f-btn    { padding: 8px 12px; min-height: 36px; font-size: 12px; }
     .tab-btn  { padding: 9px 8px;  min-height: 36px; }
-    .cm-btn   { padding: 9px 10px; min-height: 36px; }
+    #group-select, #place-search { min-height: 40px; font-size: 16px; }
     #view-controls { padding: 6px 10px; gap: 6px; min-height: 49px; }
     .view-btn, .dots-btn, .sample-btn, .bars-btn, .pt-btn, .ps-btn { padding: 7px 12px; }
     #btn-brush, #btn-clear, #btn-filters { padding: 7px 12px; min-height: 36px; font-size: 11px; }
@@ -453,35 +451,44 @@
 
     <div id="sidebar-body">
 
+      <!-- Read top to bottom: where, how to split it, which households. Any line can change on its own. -->
+      <div id="place-block" class="side-block">
+        <h2 class="block-title">Place</h2>
+        <nav id="place-current" class="place-crumbs" aria-label="Current place"></nav>
+        <input type="search" id="place-search" placeholder="State, metro area, town or neighborhood…" autocomplete="off" aria-label="Find a place">
+        <div id="place-results" role="listbox" aria-label="Places"></div>
+        <p class="geo-note warn" id="place-note" hidden></p>
+        <p class="geo-note">To compare places, open each in a new tab.</p>
+      </div>
+
       <!-- Group by: splits the households shown (colors, one line each); filters below remove households -->
-      <div id="group-block">
-        <h2 class="block-title">Group by</h2>
-        <div id="color-mode">
-          <button class="cm-btn active" data-mode="passive_pct">Income mix</button>
-          <button class="cm-btn" data-mode="passive_source">Unearned source</button>
-          <button class="cm-btn" data-mode="earner_count">Earners</button>
-          <button class="cm-btn" data-mode="breadwinner">Householder's share</button>
-          <button class="cm-btn" data-mode="work_status">Work status</button>
-          <button class="cm-btn" data-mode="age_bucket">Age</button>
-          <button class="cm-btn" data-mode="sex">Sex</button>
-          <button class="cm-btn" data-mode="educ">Education</button>
-          <button class="cm-btn" data-mode="marst">Marital status</button>
-          <button class="cm-btn" data-mode="has_roommate">Roommates</button>
-          <button class="cm-btn" data-mode="race_ethnicity">Race/ethnicity</button>
-          <button class="cm-btn" data-mode="housing">Housing</button>
-          <button class="cm-btn" data-mode="burden">Housing cost burden</button>
-          <button class="cm-btn" data-mode="kids">Kids</button>
-          <button class="cm-btn" data-mode="city">Area type</button>
-          <button class="cm-btn" data-mode="multi_job_proxy">Secondary hours</button>
-          <button class="cm-btn" data-mode="region">Region</button>
-          <button class="cm-btn" data-mode="year">Survey year</button>
-        </div>
+      <div id="group-block" class="side-block">
+        <h2 class="block-title"><label for="group-select">Group by</label></h2>
+        <select id="group-select">
+          <option value="passive_pct">Income mix</option>
+          <option value="passive_source">Unearned source</option>
+          <option value="earner_count">Earners</option>
+          <option value="breadwinner">Householder's share</option>
+          <option value="work_status">Work status</option>
+          <option value="age_bucket">Age</option>
+          <option value="sex">Sex</option>
+          <option value="educ">Education</option>
+          <option value="marst">Marital status</option>
+          <option value="has_roommate">Roommates</option>
+          <option value="race_ethnicity">Race/ethnicity</option>
+          <option value="housing">Housing</option>
+          <option value="burden">Housing cost burden</option>
+          <option value="kids">Kids</option>
+          <option value="city">Area type</option>
+          <option value="multi_job_proxy">Secondary hours</option>
+          <option value="region">Region</option>
+          <option value="year">Survey year</option>
+        </select>
       </div>
 
       <h2 class="block-title" id="filters-title">Filters</h2>
       <div id="tab-bar">
         <button class="tab-btn active" data-tab="demo">Demo</button>
-        <button class="tab-btn" data-tab="geo">Place</button>
         <button class="tab-btn" data-tab="work">Econ</button>
         <button class="tab-btn" data-tab="survey">Survey</button>
       </div>
@@ -519,18 +526,6 @@
         <div class="filter-group">
           <div class="stat-label">Area type</div>
           <div class="filter-btns" id="f-city"></div>
-        </div>
-      </div>
-
-      <!-- Place tab: one place at a time -->
-      <div id="tab-geo" class="tab-panel">
-        <div class="filter-group">
-          <div class="stat-label">Place</div>
-          <nav id="place-current" class="place-crumbs" aria-label="Current place"></nav>
-          <input type="search" id="place-search" placeholder="State, metro area, town or neighborhood…" autocomplete="off" aria-label="Find a place">
-          <div id="place-results" role="listbox" aria-label="Places"></div>
-          <p class="geo-note warn" id="place-note" hidden></p>
-          <p class="geo-note">To compare places, open each in a new tab.</p>
         </div>
       </div>
 

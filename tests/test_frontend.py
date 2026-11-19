@@ -11,8 +11,7 @@ LOAD_TIMEOUT = 45_000  # ms — CDN fetch + ~10MB Arrow data
 
 
 def pick_place(page: Page, query: str, name: str):
-    """Find a place with the Place tab's search and choose the result whose text contains `name`."""
-    page.locator(".tab-btn[data-tab='geo']").click()
+    """Find a place with Place's search and choose the result whose text contains `name`."""
     page.fill("#place-search", query)
     page.locator(".place-item", has_text=name).first.click()
     expect(page.locator("#place-title")).to_contain_text(name.split(" ·")[0])
@@ -171,24 +170,18 @@ class TestFilters:
 
 class TestColorMode:
     def test_default_color_mode_passive_pct(self, page: Page):
-        expect(page.locator(".cm-btn[data-mode='passive_pct']")).to_have_class(
-            re.compile(r"\bactive\b")
-        )
+        expect(page.locator("#group-select")).to_have_value("passive_pct")
 
     def test_switch_color_mode_updates_button(self, page: Page):
-        page.locator(".cm-btn[data-mode='work_status']").click()
-        expect(page.locator(".cm-btn[data-mode='work_status']")).to_have_class(
-            re.compile(r"\bactive\b")
-        )
-        expect(page.locator(".cm-btn[data-mode='passive_pct']")).not_to_have_class(
-            re.compile(r"\bactive\b")
-        )
+        page.select_option("#group-select", "work_status")
+        expect(page.locator("#group-select")).to_have_value("work_status")
+        assert "cm=work_status" in page.url
 
     def test_legend_has_items(self, page: Page):
         assert page.locator("#legend .legend-item").count() >= 2
 
     def test_legend_updates_with_color_mode(self, page: Page):
-        page.locator(".cm-btn[data-mode='educ']").click()
+        page.select_option("#group-select", "educ")
         assert page.locator("#legend .legend-item").count() >= 5
 
     def test_legend_always_has_topcode_entry(self, page: Page):
@@ -196,11 +189,11 @@ class TestColorMode:
 
     def test_every_color_mode_has_filter_and_vice_versa(self, page: Page):
         # 'state' has checkbox UI (not f-state filter btns)
-        SPECIAL = {'region'}  # regions are places, chosen in the Place tab
+        SPECIAL = {'region'}  # regions are places, chosen in Place
         color_modes = {
-            btn.get_attribute("data-mode")
-            for btn in page.locator(".cm-btn").all()
-            if btn.get_attribute("data-mode") not in SPECIAL
+            o.get_attribute("value")
+            for o in page.locator("#group-select option").all()
+            if o.get_attribute("value") not in SPECIAL
         }
         filter_dims = {
             el.get_attribute("id").removeprefix("f-")
@@ -213,15 +206,15 @@ class TestColorMode:
         )
 
     def test_color_by_age_shows_8_buckets(self, page: Page):
-        page.locator(".cm-btn[data-mode='age_bucket']").click()
+        page.select_option("#group-select", "age_bucket")
         assert page.locator("#legend .legend-item").count() == 9
 
     def test_color_by_sex_shows_two_entries(self, page: Page):
-        page.locator(".cm-btn[data-mode='sex']").click()
+        page.select_option("#group-select", "sex")
         assert page.locator("#legend .legend-item").count() == 3
 
     def test_color_by_sex_labels(self, page: Page):
-        page.locator(".cm-btn[data-mode='sex']").click()
+        page.select_option("#group-select", "sex")
         text = page.locator("#legend").text_content()
         assert "Male" in text and "Female" in text
 
@@ -236,27 +229,27 @@ class TestColorMode:
         assert page.locator("#active-chips .chip").count() == 0
 
     def test_color_by_housing_shows_entries(self, page: Page):
-        page.locator(".cm-btn[data-mode='housing']").click()
+        page.select_option("#group-select", "housing")
         assert page.locator("#legend .legend-item").count() >= 4
 
     def test_color_by_roommates_shows_3_entries(self, page: Page):
-        page.locator(".cm-btn[data-mode='has_roommate']").click()
+        page.select_option("#group-select", "has_roommate")
         assert page.locator("#legend .legend-item").count() == 3
 
     def test_color_by_passive_pct_shows_6_entries(self, page: Page):
-        page.locator(".cm-btn[data-mode='passive_pct']").click()
+        page.select_option("#group-select", "passive_pct")
         assert page.locator("#legend .legend-item").count() == 6
 
     def test_color_by_earner_count_shows_5_entries(self, page: Page):
-        page.locator(".cm-btn[data-mode='earner_count']").click()
+        page.select_option("#group-select", "earner_count")
         assert page.locator("#legend .legend-item").count() == 5
 
     def test_color_by_passive_source_shows_6_entries(self, page: Page):
-        page.locator(".cm-btn[data-mode='passive_source']").click()
+        page.select_option("#group-select", "passive_source")
         assert page.locator("#legend .legend-item").count() == 6
 
     def test_color_by_breadwinner_shows_6_entries(self, page: Page):
-        page.locator(".cm-btn[data-mode='breadwinner']").click()
+        page.select_option("#group-select", "breadwinner")
         assert page.locator("#legend .legend-item").count() == 6
 
     def test_color_mode_switch_preserves_dot_positions(self, page: Page):
@@ -264,7 +257,7 @@ class TestColorMode:
             Array.from(document.querySelectorAll('#chart-svg circle'))
                 .slice(0, 20).map(c => c.getAttribute('cx'))
         """)
-        page.locator(".cm-btn[data-mode='work_status']").click()
+        page.select_option("#group-select", "work_status")
         new_cx = page.evaluate("""
             Array.from(document.querySelectorAll('#chart-svg circle'))
                 .slice(0, 20).map(c => c.getAttribute('cx'))
@@ -332,7 +325,7 @@ class TestStateSelector:
         assert page.locator("#f-year .f-btn").count() == len(page.evaluate("srcInfo.years"))
 
     def test_color_by_year_shows_one_entry_per_year(self, page: Page):
-        page.locator(".cm-btn[data-mode='year']").click()
+        page.select_option("#group-select", "year")
         labels = page.locator("#legend .legend-item").all_text_contents()
         for y in page.evaluate("Object.values(srcInfo.years)"):
             assert any(y in l for l in labels), labels
@@ -583,7 +576,7 @@ class TestViewToggle:
         page.locator(".view-btn[data-view='bars']").click()
         page.wait_for_timeout(300)
         rect_count_before = page.locator("#chart-svg rect").count()
-        page.locator(".cm-btn[data-mode='work_status']").click()
+        page.select_option("#group-select", "work_status")
         page.wait_for_timeout(300)
         rect_count_after = page.locator("#chart-svg rect").count()
         assert rect_count_after > 0, "Bars disappeared after color mode change"
@@ -997,7 +990,6 @@ class TestPlace:
     """One place at a time, found by search, shown with the larger areas containing it."""
 
     def test_search_labels_each_result_with_its_type(self, page: Page):
-        page.locator(".tab-btn[data-tab='geo']").click()
         page.fill("#place-search", "medford")
         results = page.locator("#place-results")
         expect(results).to_contain_text("Malden & Medford, MA")
@@ -1051,7 +1043,6 @@ class TestPlace:
     def test_cps_local_area_falls_back_to_its_metro(self, page: Page):
         self._cps(page, "puma=2500609")
         assert page.evaluate("currentPlace()") == {"level": "metro", "code": 14460}
-        page.locator(".tab-btn[data-tab='geo']").click()
         expect(page.locator("#place-note")).to_contain_text("No local areas in the CPS")
         med = page.evaluate("precomputed['metro=14460'].med")
         expect(page.locator("#s-med")).to_contain_text(f"${med:,}")
@@ -1059,12 +1050,10 @@ class TestPlace:
     def test_cps_small_metro_falls_back_to_its_state(self, page: Page):
         self._cps(page, "metro_area=32780")  # Medford, OR: too few CPS households
         assert page.evaluate("currentPlace()") == {"level": "state", "code": 41}
-        page.locator(".tab-btn[data-tab='geo']").click()
         expect(page.locator("#place-note")).to_contain_text("Too few CPS households in Medford, OR")
 
     def test_cps_search_offers_large_metros_but_no_local_areas(self, page: Page):
         self._cps(page, "")
-        page.locator(".tab-btn[data-tab='geo']").click()
         page.fill("#place-search", "boston")
         expect(page.locator(".place-item", has_text="Boston-Cambridge")).to_contain_text("Metro area")
         page.fill("#place-search", "malden")
@@ -1072,7 +1061,7 @@ class TestPlace:
 
     def test_area_type_is_a_household_filter(self, page: Page):
         assert page.locator("#tab-demo #f-city").count() == 1
-        assert page.locator("#tab-geo #f-city").count() == 0
+        assert page.locator("#place-block #f-city").count() == 0
 
 
 class TestLocalAreaTooltip:
@@ -1122,7 +1111,7 @@ class TestSources:
         expect(page.locator("#source-switch button[data-src='acs']")).to_have_class(re.compile("active"))
         expect(page.locator(".sub")).to_contain_text("American Community Survey")
         assert page.locator("#f-burden").count() == 1 and page.locator("#place-search").count() == 1
-        assert page.locator("#f-multi_job_proxy, .cm-btn[data-mode='multi_job_proxy']").count() == 0
+        assert page.locator("#f-multi_job_proxy, #group-select option[value='multi_job_proxy']").count() == 0
 
     def test_switch_to_cps_changes_data_and_filters(self, page: Page):
         page.locator("#source-switch button[data-src='cps']").click()

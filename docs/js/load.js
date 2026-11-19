@@ -87,9 +87,8 @@ async function init() {
   // Hide groupings and filters this survey doesn't have. The codebook lists each survey's columns, so this
   // doesn't wait for the households.
   const has = dim => srcInfo.columns.includes(dim);
-  document.querySelectorAll('.cm-btn[data-mode]').forEach(b => {
-    const m = b.dataset.mode;
-    if (m !== 'state' && !has(m)) b.remove();
+  document.querySelectorAll('#group-select option').forEach(o => {
+    if (o.value !== 'state' && !has(o.value)) o.remove();
   });
   for (const { id, dim } of FILTER_DEFS) {
     if (!has(dim)) document.getElementById(id)?.closest('.filter-group')?.remove();

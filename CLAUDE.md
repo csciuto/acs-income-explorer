@@ -76,7 +76,7 @@ default, or a table with `pctTab` `table`, `#pt=table`; `pctSplit` `group`, `#ps
 Toolbar: row 1 picks the chart (Dots / Bars / Percentiles), row 2 (`#view-controls`) shows only that chart's
 controls via `data-for`; 100% is a Bars option (`viewMode` `pct`). `currentCols()` returns the local table when a local area is selected. `getStats()` picks scope
 `state=` (one state) > `puma=` > `metro=` > `national`, builds the key via `DIM_TO_KEY`, falls back to live stats.
-UI elements for columns a source lacks are removed at load. Place tab: one place at a time (US, region, state, metro, local area), stored
+UI elements for columns a source lacks are removed at load. Sidebar, top to bottom: Place (`#place-block`), Group by (`#group-select`, sets `colorMode`), then filter tabs Demo / Econ / Survey. Place: one place at a time (US, region, state, metro, local area), stored
 in the old selections so links work (`states=`, `region=`, `metro_area=`, `puma=`). `currentPlace()`, `setPlace()`,
 `normalizePlace()` (old multi-place links keep the most specific; the CPS falls back from a local area to its metro
 or state, and from a metro it doesn't list to the state, with `placeNote`), `placeChain()` (place -> larger areas) and `placeCell()` (precomputed cell for a place and
@@ -85,7 +85,7 @@ household filter in the Demo tab. Switching source rewrites the hash with
 `history.replaceState` and reloads (a hash assignment would fire popstate and drop `src`).
 
 Adding a dimension: preprocess `SHARED_DIMS`/`SOURCE_DIMS` + `LABELS` + loader column; frontend `PALETTES`,
-`.cm-btn`, filter container, `FILTER_DEFS`, `DIM_LABELS`, `DIM_TO_KEY`; tests.
+`#group-select` option, filter container, `FILTER_DEFS`, `DIM_LABELS`, `DIM_TO_KEY`; tests.
 
 ## Help page
 

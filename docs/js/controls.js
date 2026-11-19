@@ -140,20 +140,16 @@ function renderActiveChips() {
 // ============================================================
 // Color mode
 // ============================================================
-document.querySelectorAll('.cm-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.cm-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    colorMode = btn.dataset.mode;
-    _legendColorMode = null;  // force full legend rebuild
-    if (viewMode === 'bars' || viewMode === 'pct') renderStackedBars();
-    else if (viewMode === 'ptile') { if (pctSplit === 'group') renderPercentiles(); }
-    else updateDotColors();
-    renderLegend();
-    renderGroupBreakdown();
-    renderBrushInfo();
-    pushUrl();
-  });
+document.getElementById('group-select').addEventListener('change', e => {
+  colorMode = e.target.value;
+  _legendColorMode = null;  // force full legend rebuild
+  if (viewMode === 'bars' || viewMode === 'pct') renderStackedBars();
+  else if (viewMode === 'ptile') { if (pctSplit === 'group') renderPercentiles(); }
+  else updateDotColors();
+  renderLegend();
+  renderGroupBreakdown();
+  renderBrushInfo();
+  pushUrl();
 });
 
 // ============================================================

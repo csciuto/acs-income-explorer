@@ -19,7 +19,7 @@ Built with [Claude Code](https://claude.com/claude-code).
 | Households | about 6 million | about 290,000 |
 | Good at | states, metro areas, local areas, narrow slices, housing costs | income sources (pensions, interest, dividends), the official national income figures, multiple jobs |
 
-Pick one place at a time in the Place tab (the US, a region, a state, a metro area or a local area such as
+Pick one place at a time at the top of the sidebar (the US, a region, a state, a metro area or a local area such as
 Malden & Medford); the stats show the same figures for the larger areas containing it. To compare places, open
 each in its own tab: the address keeps every choice.
 

@@ -90,6 +90,14 @@ class Clip:
         self.page.wait_for_timeout(settle)
         self.snap(400)
 
+    def choose(self, locator, value, steps=10, settle=500):
+        """Point at a dropdown and pick a value (the browser's own menu isn't in screenshots)."""
+        self.to(locator, steps)
+        self.snap(150)
+        locator.select_option(value)
+        self.page.wait_for_timeout(settle)
+        self.snap(400)
+
     def type(self, text):
         for ch in text:
             self.page.keyboard.type(ch)
@@ -173,7 +181,7 @@ def clip_chart(c):
                     break
         p.wait_for_timeout(250)
         c.hold(1300)
-    c.click(p.locator(".cm-btn[data-mode='age_bucket']"), steps=14, settle=700)
+    c.choose(p.locator("#group-select"), "age_bucket", steps=14, settle=700)
     c.hold(1200)
 
 
@@ -197,7 +205,6 @@ def clip_places(c):
     p = c.page
     open_app(p)
     c.hold(600)
-    c.click(p.locator(".tab-btn[data-tab='geo']"))
     c.click(p.locator("#place-search"), settle=200)
     c.type("medford")
     c.hold(700)
@@ -318,7 +325,7 @@ def m_chart(c):
     c.hold(1800)
     c.click(p.locator("#pin-sheet .pin-close"))
     sheet(c)
-    c.click(p.locator(".cm-btn[data-mode='age_bucket']"), settle=400)
+    c.choose(p.locator("#group-select"), "age_bucket", settle=400)
     sheet(c, False)
     c.hold(1500)
 
@@ -369,7 +376,6 @@ def m_places(c):
     open_app(p)
     c.hold(500)
     sheet(c)
-    c.click(p.locator(".tab-btn[data-tab='geo']"))
     c.click(p.locator("#place-search"), settle=200)
     c.type("medford")
     c.hold(600)

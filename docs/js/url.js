@@ -32,7 +32,7 @@ function applyUrl() {
   if (cm === 'state') cm = 'region';  // older links: coloring by chosen states became coloring by region
   if (cm) {
     colorMode = cm;
-    document.querySelectorAll('.cm-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === cm));
+    document.getElementById('group-select').value = cm;
     _legendColorMode = null;
   }
 
