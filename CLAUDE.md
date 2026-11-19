@@ -71,7 +71,8 @@ same keys, plus `puma=CODE` overall; local areas with filters have none (the vie
 
 Globals: `source`, `srcInfo`, `filters` (dim → Set), `selectedFips`, `nationalTable`, `precomputed`,
 `otherPrecomputed` (other survey, for the comparison line), `localStats`/`localTables` (per state, loaded on
-demand), `pctFiles` (percentile files, loaded by the Percentiles view, `viewMode` `ptile`; `js/percentiles.js`). `currentCols()` returns the local table when a local area is selected. `getStats()` picks scope
+demand), `pctFiles` (percentile files, loaded by the Percentiles view, `viewMode` `ptile`; `js/percentiles.js`: a chart by
+default, or a table with `pctTab` `table`, `#pt=table`). `currentCols()` returns the local table when a local area is selected. `getStats()` picks scope
 `state=` (one state) > `puma=` > `metro=` > `national`, builds the key via `DIM_TO_KEY`, falls back to live stats.
 UI elements for columns a source lacks are removed at load. Place tab: one place at a time (US, region, state, metro, local area), stored
 in the old selections so links work (`states=`, `region=`, `metro_area=`, `puma=`). `currentPlace()`, `setPlace()`,

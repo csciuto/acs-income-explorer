@@ -7,7 +7,7 @@
 // ============================================================
 const ro = new ResizeObserver(() => {
   if (!nationalTable) return;  // it fires once on load, before the data has arrived
-  if (viewMode === 'ptile') return;  // a table: nothing to redraw
+  if (viewMode === 'ptile') { if (pctTab === 'chart') renderPercentiles(); return; }
   if (viewMode === 'bars' || viewMode === 'pct') renderStackedBars();
   else renderChart();
 });

@@ -94,7 +94,7 @@ Precomputed cells use every household.
   the median. A percentile with fewer than 10 sample households below it or at and above it is left blank.
 - **Standard errors:** SE = √(4/R × Σ(θᵣ − θ)²) with R = 80 (ACS) or 160 (CPS), for the median, the mean and each
   percentile.
-- **Topcoding (ACS):** a percentile is marked † from the first one where most households at or above it (by
+- **Topcoding (ACS):** a percentile is marked † (dashed in the chart) from the first one where most households at or above it (by
   weight) are topcoded: from there up, capped incomes decide where the percentile falls, and the standard error
   doesn't capture that. Many topcoded households are capped on a small item (Social Security, say), so their
   mere presence isn't the test. The CPS swaps top values instead of capping them, so it marks nothing.

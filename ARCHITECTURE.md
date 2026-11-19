@@ -81,7 +81,8 @@ flowchart LR
 - **Percentiles on demand.** P1–P99 with standard errors for every cell are too big for `stats.json` (about
   1 KB a cell), so they go in `<src>/pct/` split by place (`national`, `state-FIPS` with its local areas,
   `metro-CBSA`; `pct_file` in the pipeline, `pctFileFor` in `js/percentiles.js`). The Percentiles view fetches
-  one file the first time it needs it; anything not precomputed comes from the sample (`percentileTable`).
+  one file the first time it needs it; anything not precomputed comes from the sample (`percentileTable`). It
+  shows them as a D3 line chart (`drawPctChart`, the default) or a table (`#pt=table`).
 - **Samples that load fast.** Each survey ships a 300,000-household stratified sample (year × state, weights
   rescaled so each stratum keeps its total) as an Arrow file; local areas load per state on demand.
 - **Dots.** Incomes go on a log axis in 8-pixel bins; each bin stacks its households alternately above and below

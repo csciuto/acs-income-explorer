@@ -128,7 +128,21 @@
   .pct-table th, .pct-table td { padding: 4px 10px 4px 0; text-align: right; border-bottom: 1px solid var(--border); }
   .pct-table th:first-child { text-align: left; font-weight: 400; color: var(--text-dim); }
   .pct-table thead th { font-size: 11px; font-weight: 600; color: var(--text-dim); }
-  .pct-table tr.pct-key th, .pct-table tr.pct-key td { color: var(--text); font-weight: 600; }
+  #pct-view.pct-chart-mode { display: flex; flex-direction: column; overflow: hidden; }
+  #pct-chart { flex: 1; min-height: 200px; width: 100%; }
+  .pct-tabs { display: inline-flex; }
+  .pct-head .pct-tabs button { border-radius: 0; }
+  .pct-head .pct-tabs button:first-child { border-radius: 4px 0 0 4px; }
+  .pct-head .pct-tabs button:last-child { border-radius: 0 4px 4px 0; border-left: none; }
+  .pct-head .pct-tabs button[aria-pressed="true"] { color: var(--text); background: var(--chip-active); }
+  .pct-top { fill: var(--surface2); }
+  .pct-top-label { fill: var(--text-dim); font-size: 10px; }
+  .pct-band { fill: var(--accent); fill-opacity: 0.22; }
+  .pct-line { fill: none; stroke: var(--accent); stroke-width: 2; }
+  .pct-line-cap { stroke-dasharray: 4 3; }
+  .pct-mark { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+  .pct-label { fill: var(--text); font-size: 11px; font-variant-numeric: tabular-nums; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+  .pct-guide { stroke: var(--text-dim); stroke-width: 1; stroke-dasharray: 2 2; }
   .pct-se { color: var(--text-dim); font-size: 11px; }
   .pct-cap { color: var(--warn); }
   .pct-note, .pct-msg { font-size: 11px; color: var(--text-dim); margin-top: 8px; }

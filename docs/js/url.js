@@ -15,6 +15,7 @@ function pushUrl() {
   if (selectedFips.size > 0) params.set('states', [...selectedFips].sort().join(','));
   if (brushRange) { params.set('brush_lo', brushRange.lo); params.set('brush_hi', brushRange.hi); }
   if (viewMode !== 'dots') params.set('v', viewMode);
+  if (viewMode === 'ptile' && pctTab === 'table') params.set('pt', 'table');
   if (maxDots !== 3000) params.set('md', maxDots);
   if (!sampleMode) params.set('sm', '0');
   const qs = params.toString();
@@ -51,6 +52,8 @@ function applyUrl() {
     document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
   }
 
+  pctTab = params.get('pt') === 'table' ? 'table' : 'chart';
+
   const md = parseInt(params.get('md'));
   if ([1000, 3000, 5000].includes(md)) {
     maxDots = md;
@@ -64,7 +67,7 @@ function applyUrl() {
 
   filters = {};
   for (const [key, val] of params.entries()) {
-    if (['src', 'cm', 'states', 'brush_lo', 'brush_hi', 'v', 'md', 'sm'].includes(key)) continue;
+    if (['src', 'cm', 'states', 'brush_lo', 'brush_hi', 'v', 'pt', 'md', 'sm'].includes(key)) continue;
     const nums = val.split(',').map(Number).filter(v => !isNaN(v));
     if (nums.length) filters[key] = new Set(nums);
   }

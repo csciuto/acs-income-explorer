@@ -594,6 +594,7 @@ class TestViewToggle:
 
 def open_percentiles(page: Page):
     page.locator(".view-btn[data-view='ptile']").click()
+    page.locator(".pct-tabs button[data-pt='table']").click()
     expect(page.locator(".pct-table")).to_be_visible()
 
 
@@ -602,6 +603,25 @@ def pct_row(page: Page, k: int):
 
 
 class TestPercentiles:
+    def test_chart_by_default(self, page: Page):
+        page.locator(".view-btn[data-view='ptile']").click()
+        expect(page.locator("#pct-chart .pct-line").first).to_be_visible()
+        expect(page.locator("#pct-chart .pct-label", has_text="P90 $")).to_be_visible()
+        expect(page.locator("#pct-chart")).to_contain_text("Top 20%")
+        box = page.locator("#pct-chart .pct-hit").bounding_box()
+        page.mouse.move(box["x"] + box["width"] * 89 / 98, box["y"] + box["height"] / 2)
+        expect(page.locator("#tooltip")).to_contain_text("P90")
+        expect(page.locator("#tooltip")).to_contain_text("P80")
+        assert "pt=" not in page.url
+
+    def test_table_choice_in_the_link(self, page: Page, static_server: str):
+        open_percentiles(page)
+        assert "pt=table" in page.url
+        page.goto(static_server + "#v=ptile&pt=table")
+        page.reload()
+        page.wait_for_selector("#loading", state="hidden", timeout=LOAD_TIMEOUT)
+        expect(page.locator(".pct-table")).to_be_visible()
+
     def test_table_from_the_full_survey(self, page: Page):
         open_percentiles(page)
         expect(page.locator("#chart-svg")).to_be_hidden()
@@ -611,13 +631,6 @@ class TestPercentiles:
         expect(pct_row(page, 90)).to_contain_text("±$")
         expect(page.locator("#pct-view")).not_to_contain_text("≈")
         assert "v=ptile" in page.url
-
-    def test_all_99_and_back(self, page: Page):
-        open_percentiles(page)
-        page.locator("#pct-all").click()
-        assert page.locator(".pct-table tbody tr").count() == 99
-        page.locator("#pct-all").click()
-        assert page.locator(".pct-table tbody tr").count() == 29
 
     def test_follows_filters_and_place(self, page: Page):
         open_percentiles(page)
@@ -664,7 +677,7 @@ class TestPercentiles:
     def test_restored_from_url_and_cps(self, page: Page, static_server: str):
         page.goto(static_server + "#src=cps&v=ptile")
         page.wait_for_selector("#loading", state="hidden", timeout=LOAD_TIMEOUT)
-        expect(page.locator(".pct-table")).to_be_visible()
+        expect(page.locator("#pct-chart .pct-line").first).to_be_visible()
         expect(page.locator("#pct-view")).not_to_contain_text("≈")
 
 
@@ -777,9 +790,10 @@ class TestMobile:
 
     def test_percentiles_on_mobile(self, mobile_page: Page):
         mobile_page.locator(".view-btn[data-view='ptile']").tap()
+        expect(mobile_page.locator("#pct-chart .pct-line").first).to_be_visible()
+        assert mobile_page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+        mobile_page.locator(".pct-tabs button[data-pt='table']").tap()
         expect(mobile_page.locator(".pct-table")).to_be_visible()
-        mobile_page.locator("#pct-all").tap()
-        assert mobile_page.locator(".pct-table tbody tr").count() == 99
         assert mobile_page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
 
     def test_dots_render_on_mobile(self, mobile_page: Page):
