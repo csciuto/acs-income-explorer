@@ -4,7 +4,8 @@
 // sample, with approximate errors (lib.js percentileTable).
 // A plain script: these files share one set of globals and load in the order index.html lists them.
 
-const PCT_KEY_ROWS = [10, 25, 50, 75, 90, 95, 99];
+// every tenth plus the quartiles, then every percentile from P80 up
+const PCT_KEY_ROWS = [10, 20, 25, 30, 40, 50, 60, 70, 75, ...Array.from({ length: 20 }, (_, i) => 80 + i)];
 const pctFiles = {};      // file name -> {key: {v, se, tc}}, or null when it couldn't be fetched
 const pctLoading = {};
 let pctShowAll = false;

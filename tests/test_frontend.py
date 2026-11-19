@@ -605,7 +605,7 @@ class TestPercentiles:
     def test_table_from_the_full_survey(self, page: Page):
         open_percentiles(page)
         expect(page.locator("#chart-svg")).to_be_hidden()
-        assert page.locator(".pct-table tbody tr").count() == 7
+        assert page.locator(".pct-table tbody tr").count() == 29
         median = page.locator("#s-med").text_content().split("±")[0].strip()
         expect(pct_row(page, 50)).to_contain_text(median)          # P50 is the stats box's median
         expect(pct_row(page, 90)).to_contain_text("±$")
@@ -617,7 +617,7 @@ class TestPercentiles:
         page.locator("#pct-all").click()
         assert page.locator(".pct-table tbody tr").count() == 99
         page.locator("#pct-all").click()
-        assert page.locator(".pct-table tbody tr").count() == 7
+        assert page.locator(".pct-table tbody tr").count() == 29
 
     def test_follows_filters_and_place(self, page: Page):
         open_percentiles(page)
