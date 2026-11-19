@@ -13,7 +13,7 @@ const pctFiles = {};      // file name -> {key: {v, se, tc}}, or null when it co
 const pctLoading = {};
 let pctTab = 'chart';     // 'chart' | 'table'
 let pctSplit = 'all';     // 'all' (Combined) | 'group' (By group)
-let pctPrev = null;       // the last chart drawn: {domain, lines: {key: v[]}}, for the slide to the next one
+let pctPrev = null;       // the last chart drawn: {lines: {key: v[]}}, for the slide to the next one
 
 // Which file holds a key's percentiles (the pipeline's pct_file): national, state-FIPS (with its local areas), metro-CBSA.
 function pctFileFor(key) {
@@ -201,19 +201,20 @@ function drawPctChart(lines, ref) {
     ...lines,
   ].map(l => ({ ...l, pts: ptsOf(l.t), tc: l.t.tc || 100 }));
   const ok = d => d.v != null;
-  const top = d3.max(series, l => d3.max(l.pts, d => (ok(d) ? d.v + (single && !l.ref ? (d.se ?? 0) : 0) : null)));
   const x = d3.scaleLinear().domain([1, 99]).range([0, cw]);
-  const y = d3.scaleLinear().domain([0, top]).nice(5).range([ch, 0]);
+  // the same fixed log scale as the Dots and Bars income axis, so filters move the lines, never the axis
+  const y = d3.scaleLog().domain([1000, 2500000]).range([ch, 0]).clamp(true);
   const g = d3.select(svgEl).append('g').attr('transform', `translate(${m.l},${m.t})`);
 
   const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const prev = pctPrev;
   const dur = prev && !reduce ? 450 : 0;
-  pctPrev = { domain: y.domain(), lines: Object.fromEntries(series.map(l => [l.key, l.t.v])) };
-  const yAt = u => y.copy().domain(d3.interpolate(prev ? prev.domain : y.domain(), y.domain())(u));
+  pctPrev = { lines: Object.fromEntries(series.map(l => [l.key, l.t.v])) };
 
   const yAxis = g.append('g').attr('class', 'axis');
-  const drawY = sc => yAxis.call(d3.axisLeft(sc).ticks(5).tickSize(-cw).tickFormat(fmt$Short));
+  yAxis.call(d3.axisLeft(y).tickSize(-cw).tickFormat(fmt$Short).tickValues(isMobile()
+    ? [10000, 50000, 100000, 500000, 2000000]
+    : [5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000, 2000000]));
   g.append('g').attr('class', 'axis').attr('transform', `translate(0,${ch})`)
     .call(d3.axisBottom(x).tickValues(isMobile() ? [1, 20, 40, 60, 80, 99] : [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99])
       .tickSize(4).tickFormat(d => `P${d}`));
@@ -233,14 +234,12 @@ function drawPctChart(lines, ref) {
     }
   }
   const frame = u => {
-    const sc = yAt(u);
-    drawY(sc);
     for (const { path, l, a, b, from } of paths) {
       const pts = l.pts.filter(d => d.k >= a && d.k <= b).map(d => {
         const was = from?.[d.k - 1];
         return { k: d.k, v: d.v != null && was != null ? was + (d.v - was) * u : d.v };
       });
-      path.attr('d', d3.line().defined(ok).x(d => x(d.k)).y(d => sc(d.v))(pts));
+      path.attr('d', d3.line().defined(ok).x(d => x(d.k)).y(d => y(d.v))(pts));
     }
   };
   frame(dur ? 0 : 1);

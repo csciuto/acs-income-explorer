@@ -84,6 +84,7 @@ flowchart LR
   one file the first time it needs it; anything not precomputed comes from the sample (`percentileTable`). It
   shows them as a D3 line chart (`drawPctChart`, the default) or a table (`#pt=table`), as one line or one per
   group of the Group tab (`#ps=group`; each group's precomputed cell when the other filters are single-valued).
+  Its income axis is the same fixed log scale as Dots and Bars ($1k–$2.5M), so filters move the lines, not the axis.
   With Dim others, the place's unfiltered percentiles are drawn in gray behind; when filters change, the lines slide
   from their old values (`pctPrev`). The toolbar's second row (`#view-controls`) holds only the chosen chart's
   controls (`data-for`, `syncViewControls`); 100% is a Bars option, still `viewMode` `pct` and `#v=pct`.
