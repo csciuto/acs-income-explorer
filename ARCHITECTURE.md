@@ -83,7 +83,7 @@ flowchart LR
   `metro-CBSA`; `pct_file` in the pipeline, `pctFileFor` in `js/percentiles.js`). The Percentiles view fetches
   one file the first time it needs it; anything not precomputed comes from the sample (`percentileTable`). It
   shows them as a D3 line chart (`drawPctChart`, the default) or a table (`#pt=table`), as one line or one per
-  group of the Group tab (`#ps=group`; each group's precomputed cell when the other filters are single-valued).
+  group of Group by (`#ps=group`; each group's precomputed cell when the other filters are single-valued).
   Its income axis is the same fixed log scale as Dots and Bars ($1k–$2.5M), so filters move the lines, not the axis.
   With Dim others, the same lines with no household filters are drawn faint behind (one gray line Combined, one
   per group in its color By group, so a group filtered out stays faint); when filters change, the lines slide from

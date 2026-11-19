@@ -1,6 +1,6 @@
 // American Income Explorer: percentiles.js
 // The Percentiles view: household income at P1-P99 for the current place and filters, as a chart or a table;
-// one line for everyone who matches (Combined) or one per group of the Group tab (By group). Dim others adds the
+// one line for everyone who matches (Combined) or one per group of Group by (By group). Dim others adds the
 // same lines with no household filters, faint behind: one gray line (Combined) or one per group in its color
 // (By group), so a group filtered out stays as a faint line, the way Dots dims what doesn't match. Precomputed from the full survey (docs/data/<src>/pct/,
 // loaded on first use) where the stats table has the slice; otherwise from the chart's sample, with approximate
@@ -56,7 +56,7 @@ function pctFor(p, dimFilter, rows) {
   return t ? { ...t, live: true, n: rows.length } : { n: rows.length };
 }
 
-// The household filters with the Group tab's dimension set to one group, as a stats key; null when another filter
+// The household filters with Group by's dimension set to one group, as a stats key; null when another filter
 // has several values or the dimension isn't in the stats table.
 function groupDimFilter(colName, g) {
   const kd = DIM_TO_KEY[colName];
