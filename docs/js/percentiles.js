@@ -116,7 +116,7 @@ function renderPercentiles() {
   if (!table && t.v) drawPctChart(t);
 }
 
-// Income against percentile, the ±SE band around it, the top 20% shaded, a few points labelled.
+// Income against percentile, the ±SE band around it, a few points labelled.
 function drawPctChart(t) {
   const svgEl = document.getElementById('pct-chart');
   const W = svgEl.clientWidth, H = svgEl.clientHeight;
@@ -128,9 +128,6 @@ function drawPctChart(t) {
   const x = d3.scaleLinear().domain([1, 99]).range([0, cw]);
   const y = d3.scaleLinear().domain([0, d3.max(pts, d => (ok(d) ? d.v + (d.se ?? 0) : null))]).nice(5).range([ch, 0]);
   const g = d3.select(svgEl).append('g').attr('transform', `translate(${m.l},${m.t})`);
-
-  g.append('rect').attr('class', 'pct-top').attr('x', x(80)).attr('width', cw - x(80)).attr('height', ch);
-  g.append('text').attr('class', 'pct-top-label').attr('x', x(80) + 4).attr('y', -6).text('Top 20%');
 
   const style = s => s
     .call(a => a.select('.domain').remove())

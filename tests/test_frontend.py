@@ -607,7 +607,6 @@ class TestPercentiles:
         page.locator(".view-btn[data-view='ptile']").click()
         expect(page.locator("#pct-chart .pct-line").first).to_be_visible()
         expect(page.locator("#pct-chart .pct-label", has_text="P90 $")).to_be_visible()
-        expect(page.locator("#pct-chart")).to_contain_text("Top 20%")
         box = page.locator("#pct-chart .pct-hit").bounding_box()
         page.mouse.move(box["x"] + box["width"] * 89 / 98, box["y"] + box["height"] / 2)
         expect(page.locator("#tooltip")).to_contain_text("P90")
