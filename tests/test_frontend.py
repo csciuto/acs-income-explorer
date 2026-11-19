@@ -525,6 +525,14 @@ class TestViewToggle:
         page.locator(".view-btn[data-view='ptile']").click()
         assert shown() == {"pt-toggle", "ps-toggle", "sample-toggle"}
 
+    def test_leaving_percentiles_hides_its_chart(self, page: Page):
+        page.locator(".view-btn[data-view='ptile']").click()
+        expect(page.locator("#pct-chart")).to_be_visible()
+        for view in ["dots", "bars"]:
+            page.locator(".view-btn[data-view='ptile']").click()
+            page.locator(f".view-btn[data-view='{view}']").click()
+            expect(page.locator("#pct-view")).to_be_hidden()
+
     def test_bars_remembers_100_percent(self, page: Page):
         page.locator(".view-btn[data-view='bars']").click()
         page.locator(".bars-btn[data-view='pct']").click()
